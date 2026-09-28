@@ -6,12 +6,14 @@ import pygame
 from settings import (
     WIDTH, HEIGHT, FPS, TITLE,
     WORLD_WIDTH, SKY_COLOR, STAR_COLOR, TEXT_COLOR,
+    LIVES, HEART_COLOR, HEART_EMPTY_COLOR, VICTORY_TEXT_COLOR,
+    INVULN_TIME,
 )
 from player import Player
-from platform import Platform
 from camera import Camera
-from enemy import Enemy
-from collectible import Pixel
+from flag import Flag
+from fireworks import Firework
+import levels
 
 
 def create_stars(count: int = 80):
@@ -25,51 +27,22 @@ def create_stars(count: int = 80):
     return stars
 
 
-def create_level():
-    platforms = [
-        Platform(0, HEIGHT - 40, WORLD_WIDTH, 40),
-
-        Platform(120, HEIGHT - 160, 160, 20),
-        Platform(360, HEIGHT - 240, 160, 20),
-        Platform(600, HEIGHT - 160, 160, 20),
-
-        Platform(820, HEIGHT - 300, 100, 20),
-        Platform(980, HEIGHT - 380, 100, 20),
-        Platform(1140, HEIGHT - 300, 100, 20),
-
-        Platform(1360, HEIGHT - 160, 160, 20),
-        Platform(1600, HEIGHT - 240, 160, 20),
-        Platform(1840, HEIGHT - 320, 200, 20),
-
-        Platform(2150, HEIGHT - 400, 200, 20),
-    ]
-    return platforms
-
-
-def create_enemies():
-    return [
-        Enemy(380, HEIGHT - 240 - 28),
-        Enemy(640, HEIGHT - 160 - 28),
-        Enemy(1000, HEIGHT - 380 - 28),
-        Enemy(1400, HEIGHT - 160 - 28),
-        Enemy(1640, HEIGHT - 240 - 28),
-        Enemy(1900, HEIGHT - 320 - 28),
-    ]
-
-
-def create_pixels():
-    coords = [
-        (150, HEIGHT - 200), (200, HEIGHT - 200),
-        (400, HEIGHT - 280), (460, HEIGHT - 280),
-        (640, HEIGHT - 200), (700, HEIGHT - 200),
-        (840, HEIGHT - 340), (1000, HEIGHT - 420),
-        (1160, HEIGHT - 340),
-        (1400, HEIGHT - 200), (1450, HEIGHT - 200),
-        (1640, HEIGHT - 280), (1700, HEIGHT - 280),
-        (1880, HEIGHT - 360), (1940, HEIGHT - 360),
-        (2200, HEIGHT - 440), (2280, HEIGHT - 440),
-    ]
-    return [Pixel(x, y) for x, y in coords]
+def load_level(index: int) -> dict:
+    platforms, enemies, pixels, flag_pos = levels.LEVELS[index]()
+    return {
+        "platforms": platforms,
+        "enemies": enemies,
+        "pixels": pixels,
+        "flag": Flag(*flag_pos),
+        "player": Player(x=40, y=HEIGHT - 200),
+        "camera": Camera(WIDTH, WORLD_WIDTH),
+        "score": 0,
+        "total_pixels": len(pixels),
+        "invuln": 0,
+        "state": "playing",     # playing / victory / all_clear / game_over
+        "fireworks": [],
+        "victory_timer": 0,
+    }
 
 
 def draw_background(screen, stars, camera):
@@ -80,23 +53,75 @@ def draw_background(screen, stars, camera):
             pygame.draw.rect(screen, STAR_COLOR, (sx, y, size, size))
 
 
-def draw_hud(screen, font_big, font_small, score, total, game_over):
+def draw_pixel_heart(surface, x, y, scale, color):
+    """Пиксельное сердце. scale — размер 'пикселя' в px."""
+    pattern = [
+        " xx xx ",
+        "xxxxxxx",
+        "xxxxxxx",
+        " xxxxx ",
+        "  xxx  ",
+        "   x   ",
+    ]
+    for row, line in enumerate(pattern):
+        for col, ch in enumerate(line):
+            if ch == "x":
+                pygame.draw.rect(
+                    surface, color,
+                    (x + col * scale, y + row * scale, scale, scale)
+                )
+
+
+def draw_hearts(screen, lives: int, max_lives: int):
+    scale = 3
+    gap = 8
+    heart_w = 7 * scale
+    for i in range(max_lives):
+        hx = 14 + i * (heart_w + gap)
+        hy = 12
+        color = HEART_COLOR if i < lives else HEART_EMPTY_COLOR
+        draw_pixel_heart(screen, hx, hy, scale, color)
+
+
+def draw_hud(screen, font_big, font_small, L, lives, level_index):
+    score = L["score"]
+    total = L["total_pixels"]
     score_txt = font_big.render(f"{score} / {total}", True, TEXT_COLOR)
     screen.blit(score_txt, (WIDTH - score_txt.get_width() - 20, 15))
 
-    hint = font_small.render("← →  Space   Esc", True, (150, 150, 150))
-    screen.blit(hint, (10, 10))
+    lvl_txt = font_small.render(f"Уровень {level_index + 1} / {len(levels.LEVELS)}",
+                                True, TEXT_COLOR)
+    screen.blit(lvl_txt, (WIDTH - lvl_txt.get_width() - 20, 55))
 
-    if game_over:
+    draw_hearts(screen, lives, LIVES)
+
+    state = L["state"]
+    if state in ("victory", "all_clear", "game_over"):
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 170))
+        overlay.fill((0, 0, 0, 140))
         screen.blit(overlay, (0, 0))
 
-        over = font_big.render("GAME OVER", True, (240, 90, 90))
-        screen.blit(over, (WIDTH // 2 - over.get_width() // 2, HEIGHT // 2 - 40))
+    if state == "victory":
+        txt = font_big.render("УРОВЕНЬ ПРОЙДЕН!", True, VICTORY_TEXT_COLOR)
+        screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, 40))
 
-        info = font_small.render("R — заново    Esc — выход", True, TEXT_COLOR)
+    elif state == "all_clear":
+        txt = font_big.render("ВСЕ УРОВНИ ПРОЙДЕНЫ!", True, VICTORY_TEXT_COLOR)
+        screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, 40))
+        info = font_small.render("R — заново   Esc — выход", True, TEXT_COLOR)
+        screen.blit(info, (WIDTH // 2 - info.get_width() // 2, 90))
+
+    elif state == "game_over":
+        txt = font_big.render("GAME OVER", True, (240, 90, 90))
+        screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 40))
+        info = font_small.render("R — заново   Esc — выход", True, TEXT_COLOR)
         screen.blit(info, (WIDTH // 2 - info.get_width() // 2, HEIGHT // 2 + 20))
+
+
+def spawn_firework(L):
+    fx = random.randint(80, WIDTH - 80)
+    fy = random.randint(80, HEIGHT // 2)
+    L["fireworks"].append(Firework(fx, fy))
 
 
 def main() -> None:
@@ -108,70 +133,124 @@ def main() -> None:
     font_small = pygame.font.SysFont("monospace", 18)
 
     stars = create_stars()
-
-    def new_game():
-        platforms = create_level()
-        enemies = create_enemies()
-        pixels = create_pixels()
-        player = Player(x=40, y=HEIGHT - 200)
-        camera = Camera(WIDTH, WORLD_WIDTH)
-        return platforms, enemies, pixels, player, camera, 0, False
-
-    platforms, enemies, pixels, player, camera, score, game_over = new_game()
+    level_index = 0
+    lives = LIVES
+    L = load_level(level_index)
 
     running = True
     while running:
+        dt = clock.tick(FPS) / 1000.0
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
-                elif event.key == pygame.K_r and game_over:
-                    platforms, enemies, pixels, player, camera, score, game_over = new_game()
+                elif event.key == pygame.K_r and L["state"] in ("game_over", "all_clear"):
+                    level_index = 0
+                    lives = LIVES
+                    L = load_level(level_index)
 
-        if not game_over:
+        state = L["state"]
+
+        # ---------- UPDATE ----------
+        if state == "playing":
             keys = pygame.key.get_pressed()
-            player.handle_input(keys)
-            player.update(platforms)
-            for e in enemies:
-                e.update(platforms)
-            camera.update(player.rect)
+            L["player"].handle_input(keys)
+            L["player"].update(L["platforms"])
+            for e in L["enemies"]:
+                e.update(L["platforms"])
+            L["camera"].update(L["player"].rect)
+
+            if L["invuln"] > 0:
+                L["invuln"] -= 1
 
             # сбор пикселей
-            for px in pixels:
-                if px.alive and player.rect.colliderect(px.rect):
+            for px in L["pixels"]:
+                if px.alive and L["player"].rect.colliderect(px.rect):
                     px.alive = False
-                    score += 1
+                    L["score"] += 1
 
-                        # столкновение с врагами — прыжок сверху убивает врага
-            for e in enemies:
+            # враги
+            for e in L["enemies"]:
                 if not e.alive:
                     continue
-                if player.rect.colliderect(e.rect):
-                    # удар сверху: игрок падает И его ноги были выше макушки врага
-                    if player.vel_y > 0 and player.rect.bottom - player.vel_y <= e.rect.top + 8:
-                        e.alive = False       # враг умирает
-                        player.vel_y = -12    # отскок
-                    else:
-                        game_over = True
+                if L["player"].rect.colliderect(e.rect):
+                    stomp = (
+                        L["player"].vel_y > 0
+                        and L["player"].rect.bottom - L["player"].vel_y <= e.rect.top + 8
+                    )
+                    if stomp:
+                        e.alive = False
+                        L["player"].vel_y = -12
+                        L["score"] += 5
+                    elif L["invuln"] == 0:
+                        lives -= 1
+                        if lives <= 0:
+                            L["state"] = "game_over"
+                        else:
+                            # респаун
+                            L["player"] = Player(x=40, y=HEIGHT - 200)
+                            L["camera"] = Camera(WIDTH, WORLD_WIDTH)
+                            L["invuln"] = INVULN_TIME
 
-        # --- draw ---
-        draw_background(screen, stars, camera)
-        for p in platforms:
-            p.draw(screen, camera.ox)
-        for px in pixels:
-            px.draw(screen, camera.ox)
-        for e in enemies:
-            e.draw(screen, camera.ox)
-        player.draw(screen, camera.ox)
+            # флаг
+            if L["player"].rect.colliderect(L["flag"].rect):
+                L["flag"].lower()
+                if L["score"] >= L["total_pixels"]:
+                    L["state"] = "victory"
+                    L["victory_timer"] = 0
 
-        total_pixels = len([p for p in create_pixels() if True])  # просто кол-во
-        total_pixels = len(pixels)
-        draw_hud(screen, font_big, font_small, score, total_pixels, game_over)
+        elif state == "victory":
+            L["victory_timer"] += 1
+            L["camera"].update(L["player"].rect)
+
+            if L["victory_timer"] % 18 == 0:
+                spawn_firework(L)
+
+            if L["victory_timer"] > 180:      # ~3 сек
+                level_index += 1
+                if level_index >= len(levels.LEVELS):
+                    L = load_level(0)
+                    L["state"] = "all_clear"
+                else:
+                    L = load_level(level_index)
+
+        elif state == "all_clear":
+            L["victory_timer"] += 1
+            if L["victory_timer"] % 18 == 0:
+                spawn_firework(L)
+
+        # анимация флага идёт всегда
+        L["flag"].animate(dt)
+
+        # фейерверки
+        for fw in L["fireworks"]:
+            fw.update(dt)
+        L["fireworks"] = [fw for fw in L["fireworks"] if not fw.dead]
+
+        # ---------- DRAW ----------
+        draw_background(screen, stars, L["camera"])
+        for p in L["platforms"]:
+            p.draw(screen, L["camera"].ox)
+        L["flag"].draw(screen, L["camera"].ox)
+        for px in L["pixels"]:
+            px.draw(screen, L["camera"].ox)
+        for e in L["enemies"]:
+            e.draw(screen, L["camera"].ox)
+
+        # мерцание при неуязвимости
+        blink = L["invuln"] > 0 and (L["invuln"] // 4) % 2 == 0
+        if not blink:
+            L["player"].draw(screen, L["camera"].ox)
+
+        for fw in L["fireworks"]:
+            fw.draw(screen)
+
+        draw_hud(screen, font_big, font_small, L, lives, level_index)
 
         pygame.display.flip()
-        clock.tick(FPS)
 
     pygame.quit()
     sys.exit()
