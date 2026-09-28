@@ -51,5 +51,5 @@ class Player:
                     self.vel_y = 0
 
         def draw(self, surface: pygame.Surface, offset_x: int = 0) -> None:
-        r = self.rect.move(-offset_x, 0)
-        pygame.draw.rect(surface, PLAYER_COLOR, r)
+	        r = self.rect.move(-offset_x, 0)
+        	pygame.draw.rect(surface, PLAYER_COLOR, r)
