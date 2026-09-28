@@ -23,33 +23,29 @@ class Player:
             self.on_ground = False
 
     def update(self, platforms) -> None:
-        # --- гравитация ---
         self.vel_y += GRAVITY
-        # ограничим падение, чтобы не пролетать сквозь платформы
         self.vel_y = min(self.vel_y, 20)
 
-        # --- движение по X и коллизии ---
         self.rect.x += int(self.vel_x)
         for p in platforms:
             if self.rect.colliderect(p.rect):
-                if self.vel_x > 0:                # идём вправо — выталкиваем влево
+                if self.vel_x > 0:
                     self.rect.right = p.rect.left
-                elif self.vel_x < 0:              # идём влево — выталкиваем вправо
+                elif self.vel_x < 0:
                     self.rect.left = p.rect.right
 
-        # --- движение по Y и коллизии ---
         self.on_ground = False
         self.rect.y += int(self.vel_y)
         for p in platforms:
             if self.rect.colliderect(p.rect):
-                if self.vel_y > 0:                # падаем — стоим на платформе
+                if self.vel_y > 0:
                     self.rect.bottom = p.rect.top
                     self.vel_y = 0
                     self.on_ground = True
-                elif self.vel_y < 0:              # летим вверх — бьёмся головой
+                elif self.vel_y < 0:
                     self.rect.top = p.rect.bottom
                     self.vel_y = 0
 
-        def draw(self, surface: pygame.Surface, offset_x: int = 0) -> None:
-	        r = self.rect.move(-offset_x, 0)
-        	pygame.draw.rect(surface, PLAYER_COLOR, r)
+    def draw(self, surface: pygame.Surface, offset_x: int = 0) -> None:
+        r = self.rect.move(-offset_x, 0)
+        pygame.draw.rect(surface, PLAYER_COLOR, r)
