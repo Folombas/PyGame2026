@@ -7,7 +7,8 @@ from settings import (
     WIDTH, HEIGHT, FPS, TITLE,
     WORLD_WIDTH, SKY_COLOR, STAR_COLOR, TEXT_COLOR,
     LIVES, HEART_COLOR, HEART_EMPTY_COLOR, VICTORY_TEXT_COLOR,
-    INVULN_TIME,
+    INVULN_TIME, MAX_HP, HIT_DAMAGE,
+    HP_BAR_BG, HP_BAR_BORDER, HP_COLOR_HIGH, HP_COLOR_MID, HP_COLOR_LOW,
 )
 from player import Player
 from camera import Camera
@@ -39,7 +40,8 @@ def load_level(index: int) -> dict:
         "score": 0,
         "total_pixels": len(pixels),
         "invuln": 0,
-        "state": "playing",     # playing / victory / all_clear / game_over
+        "hp": MAX_HP,
+        "state": "playing",
         "fireworks": [],
         "victory_timer": 0,
     }
@@ -54,7 +56,6 @@ def draw_background(screen, stars, camera):
 
 
 def draw_pixel_heart(surface, x, y, scale, color):
-    """Пиксельное сердце. scale — размер 'пикселя' в px."""
     pattern = [
         " xx xx ",
         "xxxxxxx",
@@ -83,17 +84,46 @@ def draw_hearts(screen, lives: int, max_lives: int):
         draw_pixel_heart(screen, hx, hy, scale, color)
 
 
+def draw_health_bar(screen, font_small, hp: int, max_hp: int):
+    x, y = 14, 46
+    w, h = 200, 16
+
+    # рамка и фон
+    pygame.draw.rect(screen, HP_BAR_BORDER, (x - 2, y - 2, w + 4, h + 4))
+    pygame.draw.rect(screen, HP_BAR_BG, (x, y, w, h))
+
+    ratio = max(0.0, hp / max_hp)
+    fill_w = int(w * ratio)
+
+    if ratio > 0.6:
+        color = HP_COLOR_HIGH
+    elif ratio > 0.3:
+        color = HP_COLOR_MID
+    else:
+        color = HP_COLOR_LOW
+
+    if fill_w > 0:
+        pygame.draw.rect(screen, color, (x, y, fill_w, h))
+
+    # текст поверх
+    label = font_small.render(f"HP {max(0, hp)}/{max_hp}", True, (255, 255, 255))
+    screen.blit(label, (x + 8, y + 1))
+
+
 def draw_hud(screen, font_big, font_small, L, lives, level_index):
     score = L["score"]
     total = L["total_pixels"]
     score_txt = font_big.render(f"{score} / {total}", True, TEXT_COLOR)
     screen.blit(score_txt, (WIDTH - score_txt.get_width() - 20, 15))
 
-    lvl_txt = font_small.render(f"Уровень {level_index + 1} / {len(levels.LEVELS)}",
-                                True, TEXT_COLOR)
+    lvl_txt = font_small.render(
+        f"Уровень {level_index + 1} / {len(levels.LEVELS)}",
+        True, TEXT_COLOR
+    )
     screen.blit(lvl_txt, (WIDTH - lvl_txt.get_width() - 20, 55))
 
     draw_hearts(screen, lives, LIVES)
+    draw_health_bar(screen, font_small, L["hp"], MAX_HP)
 
     state = L["state"]
     if state in ("victory", "all_clear", "game_over"):
@@ -186,14 +216,19 @@ def main() -> None:
                         L["player"].vel_y = -12
                         L["score"] += 5
                     elif L["invuln"] == 0:
-                        lives -= 1
-                        if lives <= 0:
-                            L["state"] = "game_over"
-                        else:
-                            # респаун
-                            L["player"] = Player(x=40, y=HEIGHT - 200)
-                            L["camera"] = Camera(WIDTH, WORLD_WIDTH)
-                            L["invuln"] = INVULN_TIME
+                        # урон сначала идёт в HP-бар
+                        L["hp"] -= HIT_DAMAGE
+                        L["invuln"] = INVULN_TIME
+                        if L["hp"] <= 0:
+                            # HP обнулился — теряем сердце
+                            lives -= 1
+                            if lives <= 0:
+                                L["state"] = "game_over"
+                            else:
+                                # респаун с полным HP
+                                L["player"] = Player(x=40, y=HEIGHT - 200)
+                                L["camera"] = Camera(WIDTH, WORLD_WIDTH)
+                                L["hp"] = MAX_HP
 
             # флаг
             if L["player"].rect.colliderect(L["flag"].rect):
@@ -206,26 +241,25 @@ def main() -> None:
             L["victory_timer"] += 1
             L["camera"].update(L["player"].rect)
 
-            if L["victory_timer"] % 18 == 0:
-                spawn_firework(L)
-
-            if L["victory_timer"] > 180:      # ~3 сек
-                level_index += 1
-                if level_index >= len(levels.LEVELS):
-                    L = load_level(0)
-                    L["state"] = "all_clear"
-                else:
-                    L = load_level(level_index)
+        if L["victory_timer"] > 180:
+            level_index += 1
+            if level_index >= len(levels.LEVELS):
+                # сохраняем финальный счёт перед загрузкой
+                final_score = L["score"]
+                L = load_level(0)
+                L["score"] = final_score
+                L["state"] = "all_clear"
+                level_index = len(levels.LEVELS)   # ← фиксим "Уровень 3 / 2"
+            else:
+                L = load_level(level_index)
 
         elif state == "all_clear":
             L["victory_timer"] += 1
             if L["victory_timer"] % 18 == 0:
                 spawn_firework(L)
 
-        # анимация флага идёт всегда
         L["flag"].animate(dt)
 
-        # фейерверки
         for fw in L["fireworks"]:
             fw.update(dt)
         L["fireworks"] = [fw for fw in L["fireworks"] if not fw.dead]
@@ -240,7 +274,6 @@ def main() -> None:
         for e in L["enemies"]:
             e.draw(screen, L["camera"].ox)
 
-        # мерцание при неуязвимости
         blink = L["invuln"] > 0 and (L["invuln"] // 4) % 2 == 0
         if not blink:
             L["player"].draw(screen, L["camera"].ox)
