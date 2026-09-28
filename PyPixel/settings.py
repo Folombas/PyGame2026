@@ -23,3 +23,9 @@ PLATFORM_COLOR = (90, 75, 120)
 WORLD_WIDTH = 2400          # уровень в 3 экрана шириной
 SKY_COLOR = (18, 16, 30)
 STAR_COLOR = (200, 200, 230)
+
+# Враги и очки
+ENEMY_COLOR = (230, 90, 90)
+PIXEL_COLOR = (255, 220, 90)
+TEXT_COLOR = (230, 230, 240)
+ENEMY_SPEED = 2
