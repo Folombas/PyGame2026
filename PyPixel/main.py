@@ -48,7 +48,6 @@ def create_level():
 
 def create_enemies():
     return [
-        Enemy(200, HEIGHT - 40 - 28),
         Enemy(380, HEIGHT - 240 - 28),
         Enemy(640, HEIGHT - 160 - 28),
         Enemy(1000, HEIGHT - 380 - 28),
@@ -145,10 +144,17 @@ def main() -> None:
                     px.alive = False
                     score += 1
 
-            # столкновение с врагами
+                        # столкновение с врагами — прыжок сверху убивает врага
             for e in enemies:
+                if not e.alive:
+                    continue
                 if player.rect.colliderect(e.rect):
-                    game_over = True
+                    # удар сверху: игрок падает И его ноги были выше макушки врага
+                    if player.vel_y > 0 and player.rect.bottom - player.vel_y <= e.rect.top + 8:
+                        e.alive = False       # враг умирает
+                        player.vel_y = -12    # отскок
+                    else:
+                        game_over = True
 
         # --- draw ---
         draw_background(screen, stars, camera)
