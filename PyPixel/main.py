@@ -1,15 +1,9 @@
-"""PyPixel — 2D-платформер на PyGame. Точка входа."""
-import pygame
+"""PyPixel — 2D-платформер на PyGame."""
 import sys
+import pygame
 
-# --- Константы ---
-WIDTH, HEIGHT = 800, 600
-FPS = 60
-TITLE = "PyPixel"
-
-# --- Цвета (пиксельная палитра) ---
-BG_COLOR = (24, 20, 37)
-PLAYER_COLOR = (120, 200, 120)
+from settings import WIDTH, HEIGHT, FPS, TITLE, BG_COLOR, GROUND_COLOR, GROUND_Y
+from player import Player
 
 
 def main() -> None:
@@ -18,19 +12,26 @@ def main() -> None:
     pygame.display.set_caption(TITLE)
     clock = pygame.time.Clock()
 
+    player = Player(x=WIDTH // 2 - 16, y=GROUND_Y - 32)
+
     running = True
     while running:
+        # --- events ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
 
+        # --- update ---
+        keys = pygame.key.get_pressed()
+        player.handle_input(keys)
+        player.update()
+
+        # --- draw ---
         screen.fill(BG_COLOR)
-        pygame.draw.rect(
-            screen, PLAYER_COLOR,
-            (WIDTH // 2 - 16, HEIGHT // 2 - 16, 32, 32)
-        )
+        pygame.draw.rect(screen, GROUND_COLOR, (0, GROUND_Y, WIDTH, HEIGHT - GROUND_Y))
+        player.draw(screen)
         pygame.display.flip()
 
         clock.tick(FPS)
@@ -41,4 +42,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
