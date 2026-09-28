@@ -1,7 +1,7 @@
 """Игрок."""
 import pygame
 from settings import (
-    PLAYER_COLOR, GRAVITY, PLAYER_SPEED, JUMP_POWER, GROUND_Y
+    PLAYER_COLOR, GRAVITY, PLAYER_SPEED, JUMP_POWER
 )
 
 
@@ -22,21 +22,33 @@ class Player:
             self.vel_y = JUMP_POWER
             self.on_ground = False
 
-    def update(self) -> None:
-        # Гравитация
+    def update(self, platforms) -> None:
+        # --- гравитация ---
         self.vel_y += GRAVITY
+        # ограничим падение, чтобы не пролетать сквозь платформы
+        self.vel_y = min(self.vel_y, 20)
 
-        # Горизонталь
+        # --- движение по X и коллизии ---
         self.rect.x += int(self.vel_x)
+        for p in platforms:
+            if self.rect.colliderect(p.rect):
+                if self.vel_x > 0:                # идём вправо — выталкиваем влево
+                    self.rect.right = p.rect.left
+                elif self.vel_x < 0:              # идём влево — выталкиваем вправо
+                    self.rect.left = p.rect.right
 
-        # Вертикаль
+        # --- движение по Y и коллизии ---
+        self.on_ground = False
         self.rect.y += int(self.vel_y)
-
-        # Коллизия с "землёй" (пока простая, потом заменим на платформы)
-        if self.rect.bottom >= GROUND_Y:
-            self.rect.bottom = GROUND_Y
-            self.vel_y = 0
-            self.on_ground = True
+        for p in platforms:
+            if self.rect.colliderect(p.rect):
+                if self.vel_y > 0:                # падаем — стоим на платформе
+                    self.rect.bottom = p.rect.top
+                    self.vel_y = 0
+                    self.on_ground = True
+                elif self.vel_y < 0:              # летим вверх — бьёмся головой
+                    self.rect.top = p.rect.bottom
+                    self.vel_y = 0
 
     def draw(self, surface: pygame.Surface) -> None:
         pygame.draw.rect(surface, PLAYER_COLOR, self.rect)

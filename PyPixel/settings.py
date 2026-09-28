@@ -15,3 +15,6 @@ GRAVITY = 0.9
 PLAYER_SPEED = 5
 JUMP_POWER = -16
 GROUND_Y = HEIGHT - 60  # высота "земли" от верха экрана
+
+# Платформы
+PLATFORM_COLOR = (90, 75, 120)
