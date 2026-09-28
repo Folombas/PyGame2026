@@ -7,10 +7,10 @@ class Platform:
     def __init__(self, x: int, y: int, w: int, h: int = 20):
         self.rect = pygame.Rect(x, y, w, h)
 
-    def draw(self, surface: pygame.Surface) -> None:
-        pygame.draw.rect(surface, PLATFORM_COLOR, self.rect)
-        # тонкая подсветка сверху — чтобы визуально читалось
+    def draw(self, surface: pygame.Surface, offset_x: int = 0) -> None:
+        r = self.rect.move(-offset_x, 0)
+        pygame.draw.rect(surface, PLATFORM_COLOR, r)
         pygame.draw.rect(
             surface, (140, 120, 170),
-            (self.rect.x, self.rect.y, self.rect.w, 3)
+            (r.x, r.y, r.w, 3)
         )

@@ -11,10 +11,15 @@ PLAYER_COLOR = (120, 200, 120)
 GROUND_COLOR = (60, 50, 80)
 
 # Физика
-GRAVITY = 0.9
+GRAVITY = 0.7
 PLAYER_SPEED = 5
-JUMP_POWER = -16
+JUMP_POWER = -15
 GROUND_Y = HEIGHT - 60  # высота "земли" от верха экрана
 
 # Платформы
 PLATFORM_COLOR = (90, 75, 120)
+
+# Мир
+WORLD_WIDTH = 2400          # уровень в 3 экрана шириной
+SKY_COLOR = (18, 16, 30)
+STAR_COLOR = (200, 200, 230)
