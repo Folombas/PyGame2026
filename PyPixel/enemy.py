@@ -1,6 +1,7 @@
 """Враг — патрулирует платформу, разворачивается на краю."""
 import pygame
-from settings import ENEMY_COLOR, ENEMY_SPEED, GRAVITY
+from settings import GRAVITY, ENEMY_SPEED
+from pixel_art import build_sprite, ENEMY_SPRITES, ENEMY_PALETTE
 
 
 class Enemy:
@@ -10,6 +11,17 @@ class Enemy:
         self.vel_y = 0.0
         self.alive = True
         self.on_ground = False
+        self.facing_right = True
+
+        self.sprites = {}
+        for name, pattern in ENEMY_SPRITES.items():
+            self.sprites[name] = {
+                "right": build_sprite(pattern, ENEMY_PALETTE, scale=4, flip_x=False),
+                "left":  build_sprite(pattern, ENEMY_PALETTE, scale=4, flip_x=True),
+            }
+
+        self.anim_frame = 0
+        self.anim_timer = 0
 
     def _ground_ahead(self, platforms) -> bool:
         probe_x = self.rect.right + 2 if self.vel_x > 0 else self.rect.left - 4
@@ -48,10 +60,22 @@ class Enemy:
             self.rect.x -= int(self.vel_x)
             self.vel_x = -self.vel_x
 
+        self.facing_right = self.vel_x > 0
+
+        # анимация — медленнее, чем у игрока
+        self.anim_timer += 1
+        if self.anim_timer >= 14:
+            self.anim_timer = 0
+            self.anim_frame = (self.anim_frame + 1) % 2
+
     def draw(self, surface: pygame.Surface, offset_x: int = 0) -> None:
         if not self.alive:
             return
-        r = self.rect.move(-offset_x, 0)
-        pygame.draw.rect(surface, ENEMY_COLOR, r)
-        eye_x = r.x + (r.w - 8 if self.vel_x > 0 else 4)
-        pygame.draw.rect(surface, (255, 255, 255), (eye_x, r.y + 6, 4, 4))
+        name = "walk_1" if self.anim_frame == 0 else "walk_2"
+        direction = "right" if self.facing_right else "left"
+        img = self.sprites[name][direction]
+
+        r = img.get_rect()
+        r.midbottom = self.rect.midbottom
+        r.x -= offset_x
+        surface.blit(img, r)
