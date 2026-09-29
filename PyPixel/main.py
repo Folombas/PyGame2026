@@ -6,19 +6,21 @@ import pygame
 from settings import (
     WIDTH, HEIGHT, FPS, TITLE,
     WORLD_WIDTH, SKY_COLOR, STAR_COLOR, TEXT_COLOR,
-    LIVES, HEART_COLOR, HEART_EMPTY_COLOR, VICTORY_TEXT_COLOR,
-    INVULN_TIME, MAX_HP, HIT_DAMAGE,
+    HEART_COLOR, HEART_EMPTY_COLOR, VICTORY_TEXT_COLOR,
+    INVULN_TIME,
     HP_BAR_BG, HP_BAR_BORDER, HP_COLOR_HIGH, HP_COLOR_MID, HP_COLOR_LOW,
+    DIFFICULTIES, DEFAULT_DIFFICULTY,
 )
 from player import Player
 from camera import Camera
 from flag import Flag
 from fireworks import Firework
+from menu import Menu
 import levels
 import sounds
 
 
-def create_stars(count: int = 80):
+def create_stars(count=80):
     stars = []
     for _ in range(count):
         x = random.randint(0, WORLD_WIDTH)
@@ -29,8 +31,12 @@ def create_stars(count: int = 80):
     return stars
 
 
-def load_level(index: int) -> dict:
+def load_level(index, difficulty):
     platforms, enemies, pixels, flag_pos = levels.LEVELS[index]()
+    speed = difficulty["enemy_speed"]
+    for e in enemies:
+        e.vel_x = speed if e.vel_x > 0 else -speed
+
     return {
         "platforms": platforms,
         "enemies": enemies,
@@ -41,8 +47,10 @@ def load_level(index: int) -> dict:
         "score": 0,
         "total_pixels": len(pixels),
         "invuln": 0,
-        "hp": MAX_HP,
-        "state": "playing",
+        "max_hp": difficulty["max_hp"],
+        "hp": difficulty["max_hp"],
+        "hit_damage": difficulty["hit_damage"],
+        "state": "playing",   # playing / paused / victory / all_clear / game_over
         "fireworks": [],
         "victory_timer": 0,
     }
@@ -68,13 +76,11 @@ def draw_pixel_heart(surface, x, y, scale, color):
     for row, line in enumerate(pattern):
         for col, ch in enumerate(line):
             if ch == "x":
-                pygame.draw.rect(
-                    surface, color,
-                    (x + col * scale, y + row * scale, scale, scale)
-                )
+                pygame.draw.rect(surface, color,
+                                 (x + col * scale, y + row * scale, scale, scale))
 
 
-def draw_hearts(screen, lives: int, max_lives: int):
+def draw_hearts(screen, lives, max_lives):
     scale = 3
     gap = 8
     heart_w = 7 * scale
@@ -85,67 +91,66 @@ def draw_hearts(screen, lives: int, max_lives: int):
         draw_pixel_heart(screen, hx, hy, scale, color)
 
 
-def draw_health_bar(screen, font_small, hp: int, max_hp: int):
+def draw_health_bar(screen, font_small, hp, max_hp):
     x, y = 14, 46
     w, h = 200, 16
-
-    # рамка и фон
     pygame.draw.rect(screen, HP_BAR_BORDER, (x - 2, y - 2, w + 4, h + 4))
     pygame.draw.rect(screen, HP_BAR_BG, (x, y, w, h))
-
     ratio = max(0.0, hp / max_hp)
     fill_w = int(w * ratio)
-
     if ratio > 0.6:
         color = HP_COLOR_HIGH
     elif ratio > 0.3:
         color = HP_COLOR_MID
     else:
         color = HP_COLOR_LOW
-
     if fill_w > 0:
         pygame.draw.rect(screen, color, (x, y, fill_w, h))
-
-    # текст поверх
     label = font_small.render(f"HP {max(0, hp)}/{max_hp}", True, (255, 255, 255))
     screen.blit(label, (x + 8, y + 1))
 
 
-def draw_hud(screen, font_big, font_small, L, lives, level_index):
+def draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key):
     score = L["score"]
     total = L["total_pixels"]
     score_txt = font_big.render(f"{score} / {total}", True, TEXT_COLOR)
     screen.blit(score_txt, (WIDTH - score_txt.get_width() - 20, 15))
 
     lvl_txt = font_small.render(
-        f"Уровень {level_index + 1} / {len(levels.LEVELS)}",
+        f"Уровень {level_index + 1} / {len(levels.LEVELS)}    {DIFFICULTIES[difficulty_key]['label']}",
         True, TEXT_COLOR
     )
     screen.blit(lvl_txt, (WIDTH - lvl_txt.get_width() - 20, 55))
 
-    draw_hearts(screen, lives, LIVES)
-    draw_health_bar(screen, font_small, L["hp"], MAX_HP)
+    draw_hearts(screen, lives, DIFFICULTIES[difficulty_key]["lives"])
+    draw_health_bar(screen, font_small, L["hp"], L["max_hp"])
 
     state = L["state"]
-    if state in ("victory", "all_clear", "game_over"):
+    if state in ("victory", "all_clear", "game_over", "paused"):
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 140))
+        overlay.fill((0, 0, 0, 150))
         screen.blit(overlay, (0, 0))
 
-    if state == "victory":
+    if state == "paused":
+        txt = font_big.render("ПАУЗА", True, (255, 240, 120))
+        screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 60))
+        info = font_small.render("Esc — продолжить    M — в меню", True, TEXT_COLOR)
+        screen.blit(info, (WIDTH // 2 - info.get_width() // 2, HEIGHT // 2 + 10))
+
+    elif state == "victory":
         txt = font_big.render("УРОВЕНЬ ПРОЙДЕН!", True, VICTORY_TEXT_COLOR)
         screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, 40))
 
     elif state == "all_clear":
         txt = font_big.render("ВСЕ УРОВНИ ПРОЙДЕНЫ!", True, VICTORY_TEXT_COLOR)
         screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, 40))
-        info = font_small.render("R — заново   Esc — выход", True, TEXT_COLOR)
+        info = font_small.render("R — заново    M — меню    Esc — выход", True, TEXT_COLOR)
         screen.blit(info, (WIDTH // 2 - info.get_width() // 2, 90))
 
     elif state == "game_over":
         txt = font_big.render("GAME OVER", True, (240, 90, 90))
         screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 40))
-        info = font_small.render("R — заново   Esc — выход", True, TEXT_COLOR)
+        info = font_small.render("R — заново    M — меню    Esc — выход", True, TEXT_COLOR)
         screen.blit(info, (WIDTH // 2 - info.get_width() // 2, HEIGHT // 2 + 20))
 
 
@@ -155,7 +160,7 @@ def spawn_firework(L):
     L["fireworks"].append(Firework(fx, fy))
 
 
-def main() -> None:
+def main():
     pygame.init()
     sounds.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -165,28 +170,73 @@ def main() -> None:
     font_small = pygame.font.SysFont("monospace", 18)
 
     stars = create_stars()
+    menu = Menu(font_big, font_small)
+
+    app_state = "menu"     # menu / playing
+    difficulty_key = DEFAULT_DIFFICULTY
+    difficulty = DIFFICULTIES[difficulty_key]
+    lives = difficulty["lives"]
     level_index = 0
-    lives = LIVES
-    L = load_level(level_index)
+    L = None
 
     running = True
     while running:
         dt = clock.tick(FPS) / 1000.0
 
+        # ================= EVENTS =================
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                continue
+
+            # ----- МЕНЮ -----
+            if app_state == "menu":
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     running = False
-                elif event.key == pygame.K_r and L["state"] in ("game_over", "all_clear"):
+                    continue
+                action = menu.handle_event(event)
+                if action == "start":
+                    difficulty_key = menu.difficulty_key
+                    difficulty = DIFFICULTIES[difficulty_key]
+                    lives = difficulty["lives"]
                     level_index = 0
-                    lives = LIVES
-                    L = load_level(level_index)
+                    L = load_level(level_index, difficulty)
+                    app_state = "playing"
+                elif action == "quit":
+                    running = False
+                continue
+
+            # ----- ИГРА -----
+            if event.type != pygame.KEYDOWN:
+                continue
+
+            state = L["state"]
+
+            if event.key == pygame.K_ESCAPE:
+                if state == "playing":
+                    L["state"] = "paused"
+                elif state == "paused":
+                    L["state"] = "playing"
+                else:
+                    running = False
+
+            elif event.key == pygame.K_m and state in ("paused", "game_over", "all_clear"):
+                app_state = "menu"
+
+            elif event.key == pygame.K_r and state in ("game_over", "all_clear"):
+                lives = difficulty["lives"]
+                level_index = 0
+                L = load_level(level_index, difficulty)
+
+        # ================= UPDATE =================
+        if app_state == "menu":
+            menu.update()
+            menu.draw(screen)
+            pygame.display.flip()
+            continue
 
         state = L["state"]
 
-        # ---------- UPDATE ----------
         if state == "playing":
             keys = pygame.key.get_pressed()
             L["player"].handle_input(keys)
@@ -220,21 +270,18 @@ def main() -> None:
                         L["score"] += 5
                         sounds.play("stomp")
                     elif L["invuln"] == 0:
-                        # урон сначала идёт в HP-бар
-                        L["hp"] -= HIT_DAMAGE
+                        L["hp"] -= L["hit_damage"]
                         L["invuln"] = INVULN_TIME
                         sounds.play("hit")
                         if L["hp"] <= 0:
-                            # HP обнулился — теряем сердце
                             lives -= 1
                             if lives <= 0:
                                 L["state"] = "game_over"
                                 sounds.play("game_over")
                             else:
-                                # респаун с полным HP
                                 L["player"] = Player(x=40, y=HEIGHT - 200)
                                 L["camera"] = Camera(WIDTH, WORLD_WIDTH)
-                                L["hp"] = MAX_HP
+                                L["hp"] = L["max_hp"]
 
             # флаг
             if L["player"].rect.colliderect(L["flag"].rect):
@@ -247,18 +294,18 @@ def main() -> None:
         elif state == "victory":
             L["victory_timer"] += 1
             L["camera"].update(L["player"].rect)
-
-        if L["victory_timer"] > 180:
-            level_index += 1
-            if level_index >= len(levels.LEVELS):
-                # сохраняем финальный счёт перед загрузкой
-                final_score = L["score"]
-                L = load_level(0)
-                L["score"] = final_score
-                L["state"] = "all_clear"
-                level_index = len(levels.LEVELS)   # ← фиксим "Уровень 3 / 2"
-            else:
-                L = load_level(level_index)
+            if L["victory_timer"] % 18 == 0:
+                spawn_firework(L)
+            if L["victory_timer"] > 180:
+                level_index += 1
+                if level_index >= len(levels.LEVELS):
+                    final_score = L["score"]
+                    L = load_level(0, difficulty)
+                    L["score"] = final_score
+                    L["state"] = "all_clear"
+                    level_index = len(levels.LEVELS)
+                else:
+                    L = load_level(level_index, difficulty)
 
         elif state == "all_clear":
             L["victory_timer"] += 1
@@ -266,12 +313,11 @@ def main() -> None:
                 spawn_firework(L)
 
         L["flag"].animate(dt)
-
         for fw in L["fireworks"]:
             fw.update(dt)
         L["fireworks"] = [fw for fw in L["fireworks"] if not fw.dead]
 
-        # ---------- DRAW ----------
+        # ================= DRAW =================
         draw_background(screen, stars, L["camera"])
         for p in L["platforms"]:
             p.draw(screen, L["camera"].ox)
@@ -288,8 +334,7 @@ def main() -> None:
         for fw in L["fireworks"]:
             fw.draw(screen)
 
-        draw_hud(screen, font_big, font_small, L, lives, level_index)
-
+        draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key)
         pygame.display.flip()
 
     pygame.quit()

@@ -47,3 +47,12 @@ HP_BAR_BORDER = (110, 90, 140)
 HP_COLOR_HIGH = (100, 220, 120)
 HP_COLOR_MID = (240, 200, 80)
 HP_COLOR_LOW = (240, 80, 90)
+
+
+# Сложности
+DIFFICULTIES = {
+    "easy":   {"lives": 5, "max_hp": 100, "hit_damage": 15, "enemy_speed": 1.5, "label": "Лёгкий"},
+    "normal": {"lives": 5, "max_hp": 100, "hit_damage": 25, "enemy_speed": 2.0, "label": "Обычный"},
+    "hard":   {"lives": 3, "max_hp": 75,  "hit_damage": 40, "enemy_speed": 3.0, "label": "Сложный"},
+}
+DEFAULT_DIFFICULTY = "normal"
