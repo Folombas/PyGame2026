@@ -1,28 +1,69 @@
-"""Яблоня с яблоками, которые можно собирать."""
+"""Яблоня с яблоками, которые можно собирать. Пиксель-арт."""
 import pygame
 
 
-class AppleTree:
-    TRUNK_COLOR = (110, 70, 40)
-    TRUNK_DARK = (75, 45, 25)
-    CROWN_DARK = (40, 100, 50)
-    CROWN_MAIN = (65, 150, 75)
-    CROWN_LIGHT = (105, 190, 105)
-    APPLE_COLOR = (220, 50, 60)
-    APPLE_SHINE = (255, 150, 150)
-    LEAF_COLOR = (100, 200, 100)
+# ---------- Спрайт дерева (матрица символов) ----------
+# '.' — прозрачный, 'K' — контур ствола, 'T' — ствол, 'C' — крона,
+# 'D' — тёмная крона, 'L' — светлая крона
+TREE_SPRITE = [
+    "....DDDDDDDDDDDD....",
+    "..DDCCCCCCCCCCCCDD..",
+    ".DCCCCCCCCCCCCCCCCD.",
+    "DCCCCCCCCCCCCCCCCCCD",
+    "DCCLLCCCCCCCCLLCCCCD",
+    "DCCCCCCCCCCCCCCCCCCD",
+    "DCCCCCCCCCCCCCCCCCCD",
+    ".DCCCCCCCCCCCCCCCCD.",
+    "..DDCCCCCCCCCCCCDD..",
+    "....DDDDCCCCDDDD....",
+    ".........TT.........",
+    ".........TT.........",
+    ".........TT.........",
+    ".........TT.........",
+    ".........TT.........",
+    "........KTTK........",
+]
 
-    # (offset_x, offset_y) относительно основания ствола.
-    # отрицательный offset_y = выше земли
+PALETTE = {
+    "T": (110, 70, 40),      # ствол
+    "K": (75, 45, 25),       # тёмный ствол
+    "C": (65, 150, 75),      # крона
+    "D": (40, 100, 50),      # тёмная крона (контур)
+    "L": (105, 190, 105),    # светлый блик
+}
+
+SCALE = 4
+APPLE_RADIUS = 6
+
+
+class AppleTree:
+    # Относительно (base_x, base_y) — базовая точка внизу ствола
     DEFAULT_APPLES = [
-        (-35, -75),
-        (-50, -95),
-        (-25, -110),
-        (5, -115),
-        (30, -110),
-        (48, -95),
-        (25, -75),
+        (-30, -78),
+        (-44, -60),
+        (-14, -66),
+        (10, -78),
+        (32, -62),
+        (44, -78),
+        (8, -52),
     ]
+
+    _cached_sprite = None
+
+    @classmethod
+    def _get_sprite(cls):
+        if cls._cached_sprite is not None:
+            return cls._cached_sprite
+        h = len(TREE_SPRITE)
+        w = len(TREE_SPRITE[0])
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        for y, row in enumerate(TREE_SPRITE):
+            for x, ch in enumerate(row):
+                color = PALETTE.get(ch)
+                if color is not None:
+                    surf.set_at((x, y), color)
+        cls._cached_sprite = pygame.transform.scale(surf, (w * SCALE, h * SCALE))
+        return cls._cached_sprite
 
     def __init__(self, base_x, base_y):
         self.base_x = base_x
@@ -30,14 +71,14 @@ class AppleTree:
         self.apples = [(ax, ay, False) for ax, ay in self.DEFAULT_APPLES]
 
     def apple_world_rects(self):
-        """Список (index, world_rect) для несобранных яблок."""
         result = []
         for i, (ax, ay, collected) in enumerate(self.apples):
             if not collected:
                 r = pygame.Rect(
-                    self.base_x + ax - 6,
-                    self.base_y + ay - 6,
-                    12, 12
+                    self.base_x + ax - APPLE_RADIUS,
+                    self.base_y + ay - APPLE_RADIUS,
+                    APPLE_RADIUS * 2,
+                    APPLE_RADIUS * 2,
                 )
                 result.append((i, r))
         return result
@@ -47,39 +88,22 @@ class AppleTree:
         self.apples[index] = (ax, ay, True)
 
     def draw(self, surface, offset_x=0):
-        x = self.base_x - offset_x
-        y = self.base_y
+        sprite = self._get_sprite()
+        r = sprite.get_rect()
+        r.midbottom = (self.base_x - offset_x, self.base_y)
+        surface.blit(sprite, r)
 
-        # ствол
-        pygame.draw.rect(surface, self.TRUNK_COLOR, (x - 7, y - 55, 14, 55))
-        pygame.draw.rect(surface, self.TRUNK_DARK, (x + 1, y - 55, 6, 55))
-
-        # ветки
-        pygame.draw.rect(surface, self.TRUNK_COLOR, (x - 22, y - 75, 22, 6))
-        pygame.draw.rect(surface, self.TRUNK_COLOR, (x, y - 88, 22, 6))
-
-        # крона — задний тёмный слой
-        crown_cx = x
-        crown_cy = y - 95
-        pygame.draw.circle(surface, self.CROWN_DARK, (crown_cx - 22, crown_cy + 4), 28)
-        pygame.draw.circle(surface, self.CROWN_DARK, (crown_cx + 22, crown_cy + 4), 28)
-        pygame.draw.circle(surface, self.CROWN_DARK, (crown_cx, crown_cy - 14), 31)
-
-        # основной слой
-        pygame.draw.circle(surface, self.CROWN_MAIN, (crown_cx - 20, crown_cy), 25)
-        pygame.draw.circle(surface, self.CROWN_MAIN, (crown_cx + 20, crown_cy), 25)
-        pygame.draw.circle(surface, self.CROWN_MAIN, (crown_cx, crown_cy - 16), 27)
-
-        # светлые блики
-        pygame.draw.circle(surface, self.CROWN_LIGHT, (crown_cx - 15, crown_cy - 22), 9)
-        pygame.draw.circle(surface, self.CROWN_LIGHT, (crown_cx + 17, crown_cy - 10), 7)
-
-        # яблоки
+        # яблоки — поверх спрайта
         for ax, ay, collected in self.apples:
             if collected:
                 continue
-            apx = x + ax
-            apy = y + ay
-            pygame.draw.circle(surface, self.APPLE_COLOR, (apx, apy), 5)
-            pygame.draw.rect(surface, self.APPLE_SHINE, (apx - 2, apy - 2, 2, 2))
-            pygame.draw.rect(surface, self.LEAF_COLOR, (apx, apy - 8, 3, 3))
+            apx = self.base_x + ax - offset_x
+            apy = self.base_y + ay
+            # тень / контур
+            pygame.draw.circle(surface, (140, 30, 40), (apx, apy), APPLE_RADIUS)
+            # тело
+            pygame.draw.circle(surface, (220, 50, 60), (apx, apy), APPLE_RADIUS - 1)
+            # блик
+            pygame.draw.rect(surface, (255, 180, 180), (apx - 3, apy - 3, 2, 2))
+            # листик
+            pygame.draw.rect(surface, (100, 200, 100), (apx + 2, apy - APPLE_RADIUS - 2, 3, 3))

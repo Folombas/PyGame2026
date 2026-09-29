@@ -113,19 +113,33 @@ def draw_health_bar(screen, font_small, hp, max_hp):
 
 
 def draw_apples_counter(screen, font_big, apples):
-    """Счётчик собранных яблок в правом верхнем углу с иконкой."""
-    text = font_big.render(str(apples), True, (255, 220, 220))
-    right_x = WIDTH - 20
-    y = 90
-    text_x = right_x - text.get_width()
-    icon_x = text_x - 26
-    icon_y = y + 8
-    # яблоко
-    pygame.draw.circle(screen, (220, 50, 60), (icon_x + 7, icon_y + 4), 7)
-    pygame.draw.rect(screen, (255, 150, 150), (icon_x + 4, icon_y + 1, 3, 3))
-    # листик
-    pygame.draw.rect(screen, (100, 200, 100), (icon_x + 7, icon_y - 6, 5, 4))
-    screen.blit(text, (text_x, y))
+    """Счётчик собранных яблок — яркая плашка в правом верхнем углу."""
+    text = font_big.render(str(apples), True, (255, 240, 240))
+
+    pad_x, pad_y = 14, 6
+    icon_w = 18
+    inner_gap = 8
+    box_w = pad_x * 2 + icon_w + inner_gap + text.get_width()
+    box_h = max(text.get_height() + pad_y * 2, 36)
+    box_x = WIDTH - box_w - 20
+    box_y = 92
+
+    # фон-плашка
+    pygame.draw.rect(screen, (45, 30, 45), (box_x, box_y, box_w, box_h))
+    pygame.draw.rect(screen, (180, 80, 90), (box_x, box_y, box_w, box_h), 2)
+
+    # иконка яблока
+    ix = box_x + pad_x + icon_w // 2
+    iy = box_y + box_h // 2
+    pygame.draw.circle(screen, (140, 30, 40), (ix, iy), 8)
+    pygame.draw.circle(screen, (220, 50, 60), (ix, iy), 7)
+    pygame.draw.rect(screen, (255, 180, 180), (ix - 3, iy - 3, 2, 2))
+    pygame.draw.rect(screen, (100, 200, 100), (ix + 1, iy - 11, 4, 4))
+
+    # число
+    tx = box_x + pad_x + icon_w + inner_gap
+    ty = box_y + (box_h - text.get_height()) // 2
+    screen.blit(text, (tx, ty))
 
 
 def draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key):
