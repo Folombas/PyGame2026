@@ -16,8 +16,8 @@ class Player:
         self.sprites = {}
         for name, pattern in PLAYER_SPRITES.items():
             self.sprites[name] = {
-                "right": build_sprite(pattern, PLAYER_PALETTE, scale=4, flip_x=False),
-                "left":  build_sprite(pattern, PLAYER_PALETTE, scale=4, flip_x=True),
+                "right": build_sprite(pattern, PLAYER_PALETTE, scale=3, flip_x=False),
+                "left":  build_sprite(pattern, PLAYER_PALETTE, scale=3, flip_x=True),
             }
 
         self.state = "idle"

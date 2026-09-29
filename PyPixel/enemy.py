@@ -16,8 +16,8 @@ class Enemy:
         self.sprites = {}
         for name, pattern in ENEMY_SPRITES.items():
             self.sprites[name] = {
-                "right": build_sprite(pattern, ENEMY_PALETTE, scale=4, flip_x=False),
-                "left":  build_sprite(pattern, ENEMY_PALETTE, scale=4, flip_x=True),
+                "right": build_sprite(pattern, ENEMY_PALETTE, scale=3, flip_x=False),
+                "left":  build_sprite(pattern, ENEMY_PALETTE, scale=3, flip_x=True),
             }
 
         self.anim_frame = 0

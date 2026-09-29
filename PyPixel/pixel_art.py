@@ -1,8 +1,11 @@
 """Программный пиксель-арт: строим спрайты из текстовых матриц.
 
-Символ в матрице = пиксель:
+Символы:
   '.' — прозрачный
-  остальные — смотрятся в палитре
+  'K' — контур (тёмный)
+  'G' — тело игрока
+  'R' — тело врага
+  'B' — зрачок глаза
 """
 import pygame
 
@@ -10,58 +13,68 @@ import pygame
 # ---------- ПАЛИТРЫ ----------
 PLAYER_PALETTE = {
     "G": (120, 200, 120),   # тело
-    "B": (30, 30, 40),      # глаза
+    "B": (30, 30, 40),      # зрачки
+    "K": (40, 80, 50),      # контур (тёмно-зелёный)
 }
 
 ENEMY_PALETTE = {
     "R": (230, 90, 90),
     "B": (30, 30, 40),
+    "K": (110, 40, 45),     # контур (тёмно-красный)
 }
 
 
-# ---------- ИГРОК (8x8, scale 4 = 32x32) ----------
+# ---------- ИГРОК (10x10, scale=3 = 30x30) ----------
 PLAYER_IDLE = [
-    "..GGGG..",
-    ".GGGGGG.",
-    "G.B..B.G",
-    "GGGGGGGG",
-    "GGGGGGGG",
-    ".G.GG.G.",
-    ".G....G.",
-    ".G....G.",
+    "..KKKKKK..",
+    ".KGGGGGGK.",
+    "KGGGGGGGGK",
+    "KG.BB.BBGK",
+    "KGGGGGGGGK",
+    ".KGGGGGGK.",
+    "..KKKKKK..",
+    "..KGGGGK..",
+    "..KG..GK..",
+    "..KK..KK..",
 ]
 
 PLAYER_WALK_1 = [
-    "..GGGG..",
-    ".GGGGGG.",
-    "G.B..B.G",
-    "GGGGGGGG",
-    "GGGGGGGG",
-    ".G.GG.G.",
-    "G......G",
-    ".G....G.",
+    "..KKKKKK..",
+    ".KGGGGGGK.",
+    "KGGGGGGGGK",
+    "KG.BB.BBGK",
+    "KGGGGGGGGK",
+    ".KGGGGGGK.",
+    "..KKKKKK..",
+    "..KGGGGK..",
+    ".KG....GK.",
+    ".KK....KK.",
 ]
 
 PLAYER_WALK_2 = [
-    "..GGGG..",
-    ".GGGGGG.",
-    "G.B..B.G",
-    "GGGGGGGG",
-    "GGGGGGGG",
-    ".G.GG.G.",
-    ".G....G.",
-    "G......G",
+    "..KKKKKK..",
+    ".KGGGGGGK.",
+    "KGGGGGGGGK",
+    "KG.BB.BBGK",
+    "KGGGGGGGGK",
+    ".KGGGGGGK.",
+    "..KKKKKK..",
+    "..KGGGGK..",
+    "..KG..GK..",
+    "..KK..KK..",
 ]
 
 PLAYER_JUMP = [
-    "..GGGG..",
-    ".GGGGGG.",
-    "G.B..B.G",
-    "GGGGGGGG",
-    "GGGGGGGG",
-    "G.GGGG.G",
-    "..G..G..",
-    "........",
+    "..KKKKKK..",
+    ".KGGGGGGK.",
+    "KGGGGGGGGK",
+    "KG.BB.BBGK",
+    "KGGGGGGGGK",
+    "KKGGGGGGKK",
+    "..KKKKKK..",
+    "..KGGGGK..",
+    ".KG....GK.",
+    ".KK....KK.",
 ]
 
 PLAYER_SPRITES = {
@@ -72,25 +85,31 @@ PLAYER_SPRITES = {
 }
 
 
-# ---------- ВРАГ (7x7, scale 4 = 28x28) ----------
+# ---------- ВРАГ (10x10, scale=3 = 30x30) ----------
 ENEMY_WALK_1 = [
-    ".RRRRR.",
-    "RRRRRRR",
-    "R.B.B.R",
-    "RRRRRRR",
-    "R.R.R.R",
-    ".RRRRR.",
-    ".......",
+    ".KKKKKKKK.",
+    "KRRRRRRRRK",
+    "KR.BB.BBRK",
+    "KRRRRRRRRK",
+    "KRRKKKKRRK",
+    "KRRRRRRRRK",
+    ".KKKKKKKK.",
+    "..KRRRRK..",
+    ".KR....RK.",
+    ".KK....KK.",
 ]
 
 ENEMY_WALK_2 = [
-    ".RRRRR.",
-    "RRRRRRR",
-    "R.B.B.R",
-    "RRRRRRR",
-    ".R.R.R.",
-    "R.....R",
-    ".......",
+    ".KKKKKKKK.",
+    "KRRRRRRRRK",
+    "KR.BB.BBRK",
+    "KRRRRRRRRK",
+    "KRRKKKKRRK",
+    "KRRRRRRRRK",
+    ".KKKKKKKK.",
+    "..KRRRRK..",
+    "..KR..RK..",
+    "..KK..KK..",
 ]
 
 ENEMY_SPRITES = {
@@ -100,7 +119,7 @@ ENEMY_SPRITES = {
 
 
 # ---------- ФУНКЦИЯ СБОРКИ ----------
-def build_sprite(pattern, palette, scale=4, flip_x=False):
+def build_sprite(pattern, palette, scale=3, flip_x=False):
     """Превращает матрицу символов в pygame.Surface нужного размера."""
     h = len(pattern)
     w = len(pattern[0])
