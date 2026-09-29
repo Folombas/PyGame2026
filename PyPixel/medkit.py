@@ -6,12 +6,12 @@ import pygame
 # 'K' — тёмный контур
 MEDKIT_SPRITE = [
     ".KKKKKK.",
-    "KRRRRRRK",
-    "KRRRRRRK",
+    "KRRWWRRK",
+    "KRRWWRRK",
     "KRWWWWRK",
     "KRWWWWRK",
-    "KRRRRRRK",
-    "KRRRRRRK",
+    "KRRWWRRK",
+    "KRRWWRRK",
     ".KKKKKK.",
 ]
 
