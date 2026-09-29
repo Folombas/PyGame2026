@@ -2,6 +2,7 @@
 import pygame
 from settings import GRAVITY, PLAYER_SPEED, JUMP_POWER
 from pixel_art import build_sprite, PLAYER_SPRITES, PLAYER_PALETTE
+from sounds import play as play_sound
 
 
 class Player:
@@ -35,6 +36,7 @@ class Player:
         if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w]) and self.on_ground:
             self.vel_y = JUMP_POWER
             self.on_ground = False
+            play_sound("jump")
 
     def update(self, platforms) -> None:
         # --- физика ---

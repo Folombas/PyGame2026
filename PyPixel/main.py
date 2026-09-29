@@ -15,6 +15,7 @@ from camera import Camera
 from flag import Flag
 from fireworks import Firework
 import levels
+import sounds
 
 
 def create_stars(count: int = 80):
@@ -156,6 +157,7 @@ def spawn_firework(L):
 
 def main() -> None:
     pygame.init()
+    sounds.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption(TITLE)
     clock = pygame.time.Clock()
@@ -201,6 +203,7 @@ def main() -> None:
                 if px.alive and L["player"].rect.colliderect(px.rect):
                     px.alive = False
                     L["score"] += 1
+                    sounds.play("collect")
 
             # враги
             for e in L["enemies"]:
@@ -215,15 +218,18 @@ def main() -> None:
                         e.alive = False
                         L["player"].vel_y = -12
                         L["score"] += 5
+                        sounds.play("stomp")
                     elif L["invuln"] == 0:
                         # урон сначала идёт в HP-бар
                         L["hp"] -= HIT_DAMAGE
                         L["invuln"] = INVULN_TIME
+                        sounds.play("hit")
                         if L["hp"] <= 0:
                             # HP обнулился — теряем сердце
                             lives -= 1
                             if lives <= 0:
                                 L["state"] = "game_over"
+                                sounds.play("game_over")
                             else:
                                 # респаун с полным HP
                                 L["player"] = Player(x=40, y=HEIGHT - 200)
@@ -236,6 +242,7 @@ def main() -> None:
                 if L["score"] >= L["total_pixels"]:
                     L["state"] = "victory"
                     L["victory_timer"] = 0
+                    sounds.play("victory")
 
         elif state == "victory":
             L["victory_timer"] += 1
