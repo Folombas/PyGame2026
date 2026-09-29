@@ -1,9 +1,9 @@
-"""Данные уровней. Каждый уровень — функция без аргументов,
-возвращающая (platforms, enemies, pixels, flag_pos)."""
+"""Данные уровней."""
 from settings import HEIGHT, WORLD_WIDTH
 from platform import Platform
 from enemy import Enemy
 from collectible import Pixel
+from tree import AppleTree
 
 
 def level_1():
@@ -39,24 +39,27 @@ def level_1():
         Pixel(1880, HEIGHT - 360), Pixel(1940, HEIGHT - 360),
         Pixel(2200, HEIGHT - 440), Pixel(2280, HEIGHT - 440),
     ]
+    trees = [
+        AppleTree(400, HEIGHT - 40),
+        AppleTree(1000, HEIGHT - 40),
+        AppleTree(1700, HEIGHT - 40),
+        AppleTree(2200, HEIGHT - 40),
+    ]
     flag_pos = (2330, HEIGHT - 400)
-    return platforms, enemies, pixels, flag_pos
+    return platforms, enemies, pixels, trees, flag_pos
 
 
 def level_2():
     platforms = [
         Platform(0, HEIGHT - 40, WORLD_WIDTH, 40),
-        # арка из платформ
         Platform(200, HEIGHT - 150, 120, 20),
         Platform(400, HEIGHT - 250, 120, 20),
         Platform(600, HEIGHT - 350, 120, 20),
         Platform(800, HEIGHT - 250, 120, 20),
         Platform(1000, HEIGHT - 150, 120, 20),
-        # спуск
         Platform(1250, HEIGHT - 200, 200, 20),
         Platform(1550, HEIGHT - 300, 200, 20),
         Platform(1850, HEIGHT - 200, 200, 20),
-        # финал
         Platform(2150, HEIGHT - 300, 200, 20),
     ]
     enemies = [
@@ -77,8 +80,14 @@ def level_2():
         Pixel(1880, HEIGHT - 240), Pixel(1900, HEIGHT - 240),
         Pixel(2200, HEIGHT - 340), Pixel(2260, HEIGHT - 340),
     ]
+    trees = [
+        AppleTree(100, HEIGHT - 40),
+        AppleTree(1300, HEIGHT - 40),
+        AppleTree(1800, HEIGHT - 40),
+        AppleTree(2150, HEIGHT - 40),
+    ]
     flag_pos = (2330, HEIGHT - 300)
-    return platforms, enemies, pixels, flag_pos
+    return platforms, enemies, pixels, trees, flag_pos
 
 
 LEVELS = [level_1, level_2]

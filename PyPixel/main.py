@@ -31,8 +31,8 @@ def create_stars(count=80):
     return stars
 
 
-def load_level(index, difficulty):
-    platforms, enemies, pixels, flag_pos = levels.LEVELS[index]()
+def load_level(index, difficulty, apples=0):
+    platforms, enemies, pixels, trees, flag_pos = levels.LEVELS[index]()
     speed = difficulty["enemy_speed"]
     for e in enemies:
         e.vel_x = speed if e.vel_x > 0 else -speed
@@ -41,6 +41,8 @@ def load_level(index, difficulty):
         "platforms": platforms,
         "enemies": enemies,
         "pixels": pixels,
+        "trees": trees,
+        "apples": apples,
         "flag": Flag(*flag_pos),
         "player": Player(x=40, y=HEIGHT - 200),
         "camera": Camera(WIDTH, WORLD_WIDTH),
@@ -110,6 +112,22 @@ def draw_health_bar(screen, font_small, hp, max_hp):
     screen.blit(label, (x + 8, y + 1))
 
 
+def draw_apples_counter(screen, font_big, apples):
+    """Счётчик собранных яблок в правом верхнем углу с иконкой."""
+    text = font_big.render(str(apples), True, (255, 220, 220))
+    right_x = WIDTH - 20
+    y = 90
+    text_x = right_x - text.get_width()
+    icon_x = text_x - 26
+    icon_y = y + 8
+    # яблоко
+    pygame.draw.circle(screen, (220, 50, 60), (icon_x + 7, icon_y + 4), 7)
+    pygame.draw.rect(screen, (255, 150, 150), (icon_x + 4, icon_y + 1, 3, 3))
+    # листик
+    pygame.draw.rect(screen, (100, 200, 100), (icon_x + 7, icon_y - 6, 5, 4))
+    screen.blit(text, (text_x, y))
+
+
 def draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key):
     score = L["score"]
     total = L["total_pixels"]
@@ -124,6 +142,7 @@ def draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key
 
     draw_hearts(screen, lives, DIFFICULTIES[difficulty_key]["lives"])
     draw_health_bar(screen, font_small, L["hp"], L["max_hp"])
+    draw_apples_counter(screen, font_big, L["apples"])
 
     state = L["state"]
     if state in ("victory", "all_clear", "game_over", "paused"):
@@ -255,6 +274,14 @@ def main():
                     L["score"] += 1
                     sounds.play("collect")
 
+            # сбор яблок с деревьев
+            for tree in L["trees"]:
+                for idx, arect in tree.apple_world_rects():
+                    if L["player"].rect.colliderect(arect):
+                        tree.collect(idx)
+                        L["apples"] += 1
+                        sounds.play("collect")
+
             # враги
             for e in L["enemies"]:
                 if not e.alive:
@@ -300,12 +327,13 @@ def main():
                 level_index += 1
                 if level_index >= len(levels.LEVELS):
                     final_score = L["score"]
-                    L = load_level(0, difficulty)
+                    final_apples = L["apples"]
+                    L = load_level(0, difficulty, final_apples)
                     L["score"] = final_score
                     L["state"] = "all_clear"
                     level_index = len(levels.LEVELS)
                 else:
-                    L = load_level(level_index, difficulty)
+                    L = load_level(level_index, difficulty, L["apples"])
 
         elif state == "all_clear":
             L["victory_timer"] += 1
@@ -321,6 +349,8 @@ def main():
         draw_background(screen, stars, L["camera"])
         for p in L["platforms"]:
             p.draw(screen, L["camera"].ox)
+        for t in L["trees"]:
+            t.draw(screen, L["camera"].ox)
         L["flag"].draw(screen, L["camera"].ox)
         for px in L["pixels"]:
             px.draw(screen, L["camera"].ox)
