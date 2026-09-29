@@ -6,19 +6,19 @@ import pygame
 # 'K' — тёмный контур
 MEDKIT_SPRITE = [
     ".KKKKKK.",
-    "KWWWWWWK",
-    "KWWWWWWK",
-    "KWRRRRWK",
-    "KWRRRRWK",
-    "KWWWWWWK",
-    "KWWWWWWK",
+    "KRRRRRRK",
+    "KRRRRRRK",
+    "KRWWWWRK",
+    "KRWWWWRK",
+    "KRRRRRRK",
+    "KRRRRRRK",
     ".KKKKKK.",
 ]
 
 PALETTE = {
-    "K": (140, 30, 40),      # контур
-    "W": (250, 250, 250),    # коробка
-    "R": (220, 50, 60),      # крест
+    "K": (110, 20, 30),      # тёмно-красный контур
+    "W": (250, 250, 250),    # белый крест
+    "R": (220, 50, 60),      # красная коробка
 }
 
 SCALE = 4
