@@ -4,6 +4,7 @@ from platform import Platform
 from enemy import Enemy
 from collectible import Pixel
 from tree import AppleTree
+from medkit import Medkit
 
 
 def level_1():
@@ -45,8 +46,13 @@ def level_1():
         AppleTree(1700, HEIGHT - 40),
         AppleTree(2200, HEIGHT - 40),
     ]
+    medkits = [
+        Medkit(700, HEIGHT - 220),
+        Medkit(1500, HEIGHT - 100),
+        Medkit(2050, HEIGHT - 380),
+    ]
     flag_pos = (2330, HEIGHT - 400)
-    return platforms, enemies, pixels, trees, flag_pos
+    return platforms, enemies, pixels, trees, medkits, flag_pos
 
 
 def level_2():
@@ -86,8 +92,13 @@ def level_2():
         AppleTree(1800, HEIGHT - 40),
         AppleTree(2150, HEIGHT - 40),
     ]
+    medkits = [
+        Medkit(320, HEIGHT - 220),
+        Medkit(700, HEIGHT - 420),
+        Medkit(1700, HEIGHT - 380),
+    ]
     flag_pos = (2330, HEIGHT - 300)
-    return platforms, enemies, pixels, trees, flag_pos
+    return platforms, enemies, pixels, trees, medkits, flag_pos
 
 
 LEVELS = [level_1, level_2]

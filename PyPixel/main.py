@@ -32,7 +32,7 @@ def create_stars(count=80):
 
 
 def load_level(index, difficulty, apples=0):
-    platforms, enemies, pixels, trees, flag_pos = levels.LEVELS[index]()
+    platforms, enemies, pixels, trees, medkits, flag_pos = levels.LEVELS[index]()
     speed = difficulty["enemy_speed"]
     for e in enemies:
         e.vel_x = speed if e.vel_x > 0 else -speed
@@ -42,6 +42,7 @@ def load_level(index, difficulty, apples=0):
         "enemies": enemies,
         "pixels": pixels,
         "trees": trees,
+        "medkits": medkits,
         "apples": apples,
         "flag": Flag(*flag_pos),
         "player": Player(x=40, y=HEIGHT - 200),
@@ -311,6 +312,13 @@ def main():
                         L["apples"] += 1
                         sounds.play("collect")
 
+            # сбор аптечек — восстанавливают HP
+            for mk in L["medkits"]:
+                if mk.alive and L["player"].rect.colliderect(mk.rect):
+                    mk.alive = False
+                    L["hp"] = min(L["hp"] + 30, L["max_hp"])
+                    sounds.play("collect")
+
             # враги
             for e in L["enemies"]:
                 if not e.alive:
@@ -380,6 +388,8 @@ def main():
             p.draw(screen, L["camera"].ox)
         for t in L["trees"]:
             t.draw(screen, L["camera"].ox)
+        for mk in L["medkits"]:
+            mk.draw(screen, L["camera"].ox)
         L["flag"].draw(screen, L["camera"].ox)
         for px in L["pixels"]:
             px.draw(screen, L["camera"].ox)
