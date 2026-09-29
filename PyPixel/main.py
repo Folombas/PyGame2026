@@ -196,7 +196,17 @@ def spawn_firework(L):
 def main():
     pygame.init()
     sounds.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    fullscreen = True
+
+    def create_screen(fs):
+        flags = (pygame.SCALED | pygame.FULLSCREEN) if fs else 0
+        try:
+            return pygame.display.set_mode((WIDTH, HEIGHT), flags, vsync=1)
+        except pygame.error:
+            return pygame.display.set_mode((WIDTH, HEIGHT), flags)
+
+    screen = create_screen(fullscreen)
+    pygame.mouse.set_visible(False)
     pygame.display.set_caption(TITLE)
     clock = pygame.time.Clock()
     font_big = pygame.font.SysFont("monospace", 28, bold=True)
@@ -220,6 +230,11 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                continue
+
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                fullscreen = not fullscreen
+                screen = create_screen(fullscreen)
                 continue
 
             # ----- МЕНЮ -----
