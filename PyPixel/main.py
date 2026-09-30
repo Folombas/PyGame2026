@@ -379,7 +379,8 @@ def main():
                 sound_settings.save(cfg)
                 sounds.reload_settings()
                 sounds.play("collect")
-            elif event.key in (pygame.K_e, pygame.K_f) and L["state"] == "playing":
+            elif (event.key in (pygame.K_e, pygame.K_f)
+                  or event.scancode in (8, 9)) and L["state"] == "playing":
                 mx, my = pygame.mouse.get_pos()
                 wx = mx + L["camera"].ox
                 wy = my + L["camera"].oy
