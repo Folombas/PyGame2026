@@ -15,6 +15,7 @@ from player import Player
 from camera import Camera
 from flag import Flag
 from fireworks import Firework
+from boss import Boss
 from menu import Menu
 import levels
 import sounds
@@ -33,7 +34,8 @@ def create_stars(count=80):
 
 
 def load_level(index, difficulty, apples=0):
-    platforms, enemies, pixels, trees, medkits, flag_pos = levels.LEVELS[index]()
+    platforms, enemies, pixels, trees, medkits, flag_pos, boss_pos = levels.LEVELS[index]()
+    boss = Boss(boss_pos[0], boss_pos[1], patrol_range=500) if boss_pos else None
     speed = difficulty["enemy_speed"]
     for e in enemies:
         e.vel_x = speed if e.vel_x > 0 else -speed
@@ -44,6 +46,7 @@ def load_level(index, difficulty, apples=0):
         "pixels": pixels,
         "trees": trees,
         "medkits": medkits,
+        "boss": boss,
         "apples": apples,
         "flag": Flag(*flag_pos),
         "player": Player(x=40, y=HEIGHT - 200),
@@ -116,6 +119,30 @@ def draw_health_bar(screen, font_small, hp, max_hp):
     screen.blit(label, (x + 8, y + 1))
 
 
+def draw_boss_hp_bar(screen, font_small, boss):
+    """Полоска HP босса — вверху по центру."""
+    bar_w = 420
+    bar_h = 22
+    x = (WIDTH - bar_w) // 2
+    y = 20
+
+    # фон и рамка
+    pygame.draw.rect(screen, (40, 15, 15), (x - 3, y - 3, bar_w + 6, bar_h + 6))
+    pygame.draw.rect(screen, (230, 80, 80), (x - 3, y - 3, bar_w + 6, bar_h + 6), 2)
+    pygame.draw.rect(screen, (60, 20, 20), (x, y, bar_w, bar_h))
+
+    # заполнение
+    ratio = max(0.0, boss.hp / boss.max_hp)
+    fill = int(bar_w * ratio)
+    if fill > 0:
+        pygame.draw.rect(screen, (220, 40, 40), (x, y, fill, bar_h))
+        pygame.draw.rect(screen, (255, 120, 120), (x, y, fill, 4))
+
+    # текст
+    text = font_small.render(f"БОСС   {boss.hp} / {boss.max_hp}", True, (255, 255, 255))
+    screen.blit(text, (WIDTH // 2 - text.get_width() // 2, y + 2))
+
+
 def draw_apples_counter(screen, font_big, apples):
     """Счётчик собранных яблок — яркая плашка в правом верхнем углу."""
     text = font_big.render(str(apples), True, (255, 240, 240))
@@ -167,6 +194,9 @@ def draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key
     draw_hearts(screen, lives, DIFFICULTIES[difficulty_key]["lives"])
     draw_health_bar(screen, font_small, L["hp"], L["max_hp"])
     draw_apples_counter(screen, font_big, L["apples"])
+
+    if L.get("boss") is not None and L["boss"].alive:
+        draw_boss_hp_bar(screen, font_small, L["boss"])
 
     state = L["state"]
     if state in ("victory", "all_clear", "game_over", "paused"):
@@ -330,6 +360,72 @@ def main():
                     L["hp"] = min(L["hp"] + 30, L["max_hp"])
                     sounds.play("collect")
 
+            # ---------- БОСС ----------
+            if L.get("boss") is not None and L["boss"].alive:
+                L["boss"].update(L["player"], L["platforms"])
+
+                # столкновение снарядов с игроком
+                for pr in L["boss"].projectiles:
+                    if pr.alive and L["player"].rect.colliderect(pr.rect):
+                        pr.alive = False
+                        if L["invuln"] == 0:
+                            L["hp"] -= L["hit_damage"]
+                            L["invuln"] = INVULN_TIME
+                            sounds.play("hit")
+                            if L["hp"] <= 0:
+                                lives -= 1
+                                if lives <= 0:
+                                    L["state"] = "game_over"
+                                    sounds.play("game_over")
+                                    save_record(
+                                        L["score"], L["pixels_collected"], L["total_pixels"],
+                                        L["kills"], L["apples"], level_index + 1, difficulty_key
+                                    )
+                                else:
+                                    L["player"] = Player(x=40, y=HEIGHT - 200)
+                                    L["camera"] = Camera(WIDTH, WORLD_WIDTH)
+                                    L["hp"] = L["max_hp"]
+
+                # столкновение игрока с боссом
+                if L["player"].rect.colliderect(L["boss"].rect):
+                    stomp = (
+                        L["player"].vel_y > 0
+                        and L["player"].rect.bottom - L["player"].vel_y <= L["boss"].rect.top + 12
+                    )
+                    if stomp:
+                        if L["boss"].take_damage():
+                            # БОСС УБИТ — победа
+                            L["kills"] += 1
+                            L["score"] += 100
+                            L["state"] = "victory"
+                            L["victory_timer"] = 0
+                            sounds.play("victory")
+                            save_record(
+                                L["score"], L["pixels_collected"], L["total_pixels"],
+                                L["kills"], L["apples"], level_index + 1, difficulty_key
+                            )
+                        else:
+                            L["player"].vel_y = -13
+                            L["score"] += 5
+                            sounds.play("stomp")
+                    elif L["invuln"] == 0:
+                        L["hp"] -= L["hit_damage"]
+                        L["invuln"] = INVULN_TIME
+                        sounds.play("hit")
+                        if L["hp"] <= 0:
+                            lives -= 1
+                            if lives <= 0:
+                                L["state"] = "game_over"
+                                sounds.play("game_over")
+                                save_record(
+                                    L["score"], L["pixels_collected"], L["total_pixels"],
+                                    L["kills"], L["apples"], level_index + 1, difficulty_key
+                                )
+                            else:
+                                L["player"] = Player(x=40, y=HEIGHT - 200)
+                                L["camera"] = Camera(WIDTH, WORLD_WIDTH)
+                                L["hp"] = L["max_hp"]
+
             # враги
             for e in L["enemies"]:
                 if not e.alive:
@@ -365,11 +461,16 @@ def main():
 
             # флаг
             if L["player"].rect.colliderect(L["flag"].rect):
-                L["flag"].lower()
-                if L["score"] >= L["total_pixels"]:
+                boss_alive = L.get("boss") is not None and L["boss"].alive
+                if not boss_alive and L["pixels_collected"] >= L["total_pixels"]:
+                    L["flag"].lower()
                     L["state"] = "victory"
                     L["victory_timer"] = 0
                     sounds.play("victory")
+                    save_record(
+                        L["score"], L["pixels_collected"], L["total_pixels"],
+                        L["kills"], L["apples"], level_index + 1, difficulty_key
+                    )
 
         elif state == "victory":
             L["victory_timer"] += 1
@@ -411,6 +512,8 @@ def main():
             t.draw(screen, L["camera"].ox)
         for mk in L["medkits"]:
             mk.draw(screen, L["camera"].ox)
+        if L.get("boss") is not None:
+            L["boss"].draw(screen, L["camera"].ox)
         L["flag"].draw(screen, L["camera"].ox)
         for px in L["pixels"]:
             px.draw(screen, L["camera"].ox)

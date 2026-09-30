@@ -52,7 +52,8 @@ def level_1():
         Medkit(2050, HEIGHT - 380),
     ]
     flag_pos = (2330, HEIGHT - 400)
-    return platforms, enemies, pixels, trees, medkits, flag_pos
+    boss_pos = None
+    return platforms, enemies, pixels, trees, medkits, flag_pos, boss_pos
 
 
 def level_2():
@@ -98,7 +99,9 @@ def level_2():
         Medkit(1700, HEIGHT - 380),
     ]
     flag_pos = (2330, HEIGHT - 300)
-    return platforms, enemies, pixels, trees, medkits, flag_pos
+    # Босс летает над ареной в середине уровня
+    boss_pos = (1200, HEIGHT - 380)
+    return platforms, enemies, pixels, trees, medkits, flag_pos, boss_pos
 
 
 LEVELS = [level_1, level_2]
