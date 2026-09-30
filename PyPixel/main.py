@@ -21,6 +21,7 @@ from background import draw_sky_gradient, draw_mountains, draw_fog_between_layer
 from terrain import draw_terrain_polygon, draw_surface_details
 from records import save_record
 import sounds
+import sound_settings
 
 
 # ---------- ФОН ----------
@@ -242,6 +243,23 @@ def main():
             elif event.key == pygame.K_r and L["state"] == "game_over":
                 L = new_session(difficulty)
                 lives = difficulty["lives"]
+            elif event.key == pygame.K_m and L["state"] == "playing":
+                # быстрый мьют прямо в игре
+                cfg = sound_settings.load()
+                cfg["enabled"] = not cfg["enabled"]
+                sound_settings.save(cfg)
+                sounds.reload_settings()
+            elif event.key in (pygame.K_MINUS, pygame.K_KP_MINUS) and L["state"] == "playing":
+                cfg = sound_settings.load()
+                cfg["volume"] = max(0.0, round(cfg["volume"] - 0.1, 2))
+                sound_settings.save(cfg)
+                sounds.reload_settings()
+            elif event.key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS) and L["state"] == "playing":
+                cfg = sound_settings.load()
+                cfg["volume"] = min(1.0, round(cfg["volume"] + 0.1, 2))
+                sound_settings.save(cfg)
+                sounds.reload_settings()
+                sounds.play("collect")
 
         # ============ МЕНЮ ============
         if app_state == "menu":

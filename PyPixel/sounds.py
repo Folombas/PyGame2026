@@ -5,11 +5,30 @@
 import math
 import struct
 import pygame
+import sound_settings
 
 SAMPLE_RATE = 22050
 
 _sounds: dict = {}
 _ok = False
+_settings = None
+
+def _cfg():
+    global _settings
+    if _settings is None:
+        _settings = sound_settings.load()
+    return _settings
+
+
+def reload_settings():
+    """Перечитать настройки из файла."""
+    global _settings
+    _settings = sound_settings.load()
+    return _settings
+
+
+def current_volume():
+    return _cfg().get("volume", 0.5) if _cfg().get("enabled", True) else 0.0
 
 
 def _tone(freq_start, freq_end, duration, volume=0.3, wave="square", decay=1.5):
@@ -78,6 +97,10 @@ def init():
 def play(name: str) -> None:
     if not _ok:
         return
+    cfg = _cfg()
+    if not cfg.get("enabled", True):
+        return
     snd = _sounds.get(name)
     if snd is not None:
+        snd.set_volume(cfg.get("volume", 0.5))
         snd.play()

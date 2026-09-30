@@ -7,3 +7,4 @@ env/
 .vscode/
 *.log
 PyPixel/records.json
+PyPixel/sound_settings.json
