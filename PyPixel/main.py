@@ -80,44 +80,77 @@ def load_level(index, difficulty, apples=0):
     }
 
 
-def _biome_bounds(key):
-    for y_min, y_max, k in BIOME_BOUNDS:
-        if k == key:
-            return y_min, y_max
-    return 0, 1
+def draw_distant_mountains(screen, camera):
+    """Силуэты гор на фоне для глубины."""
+    oy = camera.offset_y
+    ground_screen_y = SURFACE_Y - oy
+    if ground_screen_y < -400 or ground_screen_y > HEIGHT + 400:
+        return
+
+    ox = camera.offset_x
+    # (параллакс, цвет, высота, период) — дальние светлее и ниже
+    layers = [
+        (0.15, (165, 190, 220), 130, 420),
+        (0.30, (135, 165, 205), 190, 360),
+        (0.45, (105, 140, 185), 250, 300),
+    ]
+
+    for parallax, color, height, spacing in layers:
+        shift = int(ox * parallax) % spacing
+        start_x = -shift - spacing
+        cx = start_x
+        while cx <= WIDTH + spacing:
+            pygame.draw.polygon(screen, color, [
+                (cx, ground_screen_y),
+                (cx + spacing // 2, ground_screen_y - height),
+                (cx + spacing, ground_screen_y),
+            ])
+            cx += spacing
 
 
 def draw_background(screen, clouds, camera):
-    """Рисует фон построчно по биомам + облака (только выше земли)."""
-    ox = camera.offset_x
+    """Чистый фон: синее небо над землёй, тёмные пещеры под землёй."""
     oy = camera.offset_y
+    ox = camera.offset_x
 
-    # --- вертикальный фон: для каждой строки экрана определяем биом ---
+    sky_top = (90, 155, 220)      # тёмнее вверху
+    sky_bot = (185, 220, 245)     # светлее у земли
+    cave_top = (45, 28, 25)       # коричнево-тёмный у земли
+    cave_bot = (8, 5, 10)         # почти чёрный в глубине
+
+    ground_screen_y = SURFACE_Y - oy
+
     for y_screen in range(HEIGHT):
-        world_y = oy + y_screen
-        biome_key = get_biome(world_y)
-        biome = BIOMES[biome_key]
-
-        y_min, y_max = _biome_bounds(biome_key)
-        span = max(1, y_max - y_min)
-        t = (world_y - y_min) / span
-        t = max(0.0, min(1.0, t))
-
-        c1 = biome["bg_top"]
-        c2 = biome["bg_bot"]
-        col = (
-            int(c1[0] * (1 - t) + c2[0] * t),
-            int(c1[1] * (1 - t) + c2[1] * t),
-            int(c1[2] * (1 - t) + c2[2] * t),
-        )
+        if y_screen < ground_screen_y:
+            # --- НЕБО ---
+            depth = max(0, ground_screen_y - y_screen)
+            t = min(1.0, depth / 500.0)
+            col = (
+                int(sky_bot[0] * (1 - t) + sky_top[0] * t),
+                int(sky_bot[1] * (1 - t) + sky_top[1] * t),
+                int(sky_bot[2] * (1 - t) + sky_top[2] * t),
+            )
+        else:
+            # --- ПЕЩЕРЫ ---
+            depth = y_screen - ground_screen_y
+            t = min(1.0, depth / 600.0)
+            col = (
+                int(cave_top[0] * (1 - t) + cave_bot[0] * t),
+                int(cave_top[1] * (1 - t) + cave_bot[1] * t),
+                int(cave_top[2] * (1 - t) + cave_bot[2] * t),
+            )
         pygame.draw.line(screen, col, (0, y_screen), (WIDTH, y_screen))
 
-    # --- облака: только те, что ВЫШЕ земли по мировой Y ---
+    # --- Силуэты гор на фоне (только над землёй) ---
+    if ground_screen_y > -50:
+        draw_distant_mountains(screen, camera)
+
+    # --- Облака ---
     for x, y, size, layer in clouds:
-        if y >= SURFACE_Y - 40:      # облако у самой земли или ниже — не рисуем
+        if y >= SURFACE_Y - 40:
             continue
         sx = int(x - ox * layer)
-        sy = int(y - oy)             # без layer по Y — облака "в небе"
+        sy = int(y - oy)
         if -size < sx < WIDTH + size and -size < sy < HEIGHT + size:
             draw_cloud(screen, sx + 3, sy + 3, size, (200, 210, 225))
             draw_cloud(screen, sx, sy, size, (255, 255, 255))
