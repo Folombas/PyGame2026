@@ -275,6 +275,48 @@ def main():
                     running = False
                 continue
 
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # обрабатываем мышь отдельно (не через key-chain)
+                if L and L["state"] == "playing":
+                    mx, my = pygame.mouse.get_pos()
+                    wx = mx + L["camera"].ox
+                    wy = my + L["camera"].oy
+                    if event.button == 3:
+                        bt = L["inventory"].selected_type()
+                        if bt is not None:
+                            if L["world"].place(wx, wy, bt):
+                                L["inventory"].take_selected(1)
+                    elif event.button == 1:
+                        sel_tool = L["inventory"].selected_tool()
+                        if sel_tool:
+                            L["swing_timer"] = 12
+                        if sel_tool == SWORD:
+                            sword_range = TOOLS[SWORD]["attack_range_px"]
+                            _, enemies, _, _, _ = L["world"].collect()
+                            hit_any = False
+                            for e in enemies:
+                                if not e.alive:
+                                    continue
+                                dx = e.rect.centerx - L["player"].rect.centerx
+                                dy = e.rect.centery - L["player"].rect.centery
+                                if abs(dx) < sword_range and abs(dy) < sword_range:
+                                    e.alive = False
+                                    L["kills"] += 1
+                                    L["score"] += 5
+                                    hit_any = True
+                                    L["particles"].spawn_blood(
+                                        e.rect.centerx, e.rect.centery, count=16)
+                            sounds.play("stomp" if hit_any else "hit")
+                        elif sel_tool == AXE:
+                            pos = L["world"].chop_tree(wx, wy, radius_px=140)
+                            if pos:
+                                L["inventory"].add(WOOD, 4)
+                                L["score"] += 3
+                                L["particles"].spawn_leaves(pos[0], pos[1], count=20)
+                                L["particles"].spawn_dirt(pos[0], pos[1], count=10, color=(110, 70, 40))
+                                sounds.play("stomp")
+                continue
+
             if event.type != pygame.KEYDOWN:
                 continue
 
@@ -441,6 +483,9 @@ def main():
             dist = max(abs(tx - px_tx), abs(ty - py_ty))
 
             if mouse_pressed[0] and dist <= 5:
+                # поддерживаем анимацию взмаха, пока копаем
+                if L["swing_timer"] <= 0 and L["inventory"].selected_tool():
+                    L["swing_timer"] = 8
                 bt = L["world"].get_block_type(wx, wy)
                 if bt is not None and bt != AIR and bt in BLOCKS:
                     if L["mining"] and L["mining"]["tx"] == tx and L["mining"]["ty"] == ty:
