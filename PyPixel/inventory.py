@@ -21,7 +21,7 @@ class Inventory:
             return False
         # сначала докидываем в существующий стак
         for slot in self.slots:
-            if slot and slot["type"] == block_type:
+            if slot and slot.get("type") == block_type:
                 slot["count"] += count
                 return True
         # иначе — в пустой
@@ -33,7 +33,7 @@ class Inventory:
 
     def take_selected(self, count=1):
         slot = self.slots[self.selected]
-        if not slot or slot["count"] < count:
+        if not slot or "tool" in slot or slot.get("count", 0) < count:
             return None
         t = slot["type"]
         slot["count"] -= count

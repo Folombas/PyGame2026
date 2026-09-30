@@ -22,7 +22,7 @@ from terrain import draw_terrain_polygon, draw_surface_details
 from records import save_record
 from inventory import Inventory, SLOTS
 from tools import TOOLS, PICKAXE, AXE, SWORD, draw_tool_icon, get_tool_sprite
-from blocks import BLOCKS, TILE_SIZE, draw_block, draw_dig_progress, AIR
+from blocks import BLOCKS, TILE_SIZE, draw_block, draw_dig_progress, AIR, WOOD
 from blocks import DIRT as B_DIRT
 import sounds
 import sound_settings
@@ -320,13 +320,12 @@ def main():
                     if bt is not None:
                         if L["world"].place(wx, wy, bt):
                             L["inventory"].take_selected(1)
-                elif event.button == 1:  # ЛКМ — атака мечом, если меч
+                elif event.button == 1:  # ЛКМ
                     sel_tool = L["inventory"].selected_tool()
                     if sel_tool == SWORD:
                         sword_range = TOOLS[SWORD]["attack_range_px"]
-                        dmg = TOOLS[SWORD]["damage"]
-                        # убиваем врагов в радиусе вокруг игрока (проверяем их)
-                        platforms, enemies, pixels, trees, medkits = L["world"].collect()
+                        _, enemies, _, _, _ = L["world"].collect()
+                        hit_any = False
                         for e in enemies:
                             if not e.alive:
                                 continue
@@ -336,8 +335,14 @@ def main():
                                 e.alive = False
                                 L["kills"] += 1
                                 L["score"] += 5
-                                sounds.play("stomp")
-                        sounds.play("hit")
+                                hit_any = True
+                        sounds.play("stomp" if hit_any else "hit")
+                    elif sel_tool == AXE:
+                        pos = L["world"].chop_tree(wx, wy, radius_px=140)
+                        if pos:
+                            L["inventory"].add(WOOD, 4)
+                            L["score"] += 3
+                            sounds.play("stomp")
 
         # ============ МЕНЮ ============
         if app_state == "menu":
@@ -526,6 +531,19 @@ def main():
         blink = L["invuln"] > 0 and (L["invuln"] // 4) % 2 == 0
         if not blink:
             L["player"].draw(screen, ox, oy)
+
+        # Инструмент в руке
+        tool_id = L["inventory"].selected_tool()
+        if tool_id:
+            sprite = get_tool_sprite(tool_id, 20)
+            if sprite:
+                pr = L["player"].rect
+                if L["player"].facing_right:
+                    tx = pr.right - ox - 4
+                else:
+                    tx = pr.left - ox - 16
+                ty = pr.centery - oy - 10
+                screen.blit(sprite, (tx, ty))
 
         # Прогресс копания на блоке
         if L["mining"]:

@@ -277,6 +277,25 @@ class World:
         self.modifications[(tx, ty)] = block_type
         return True
 
+
+    def chop_tree(self, wx, wy, radius_px=120):
+        """Ищет дерево рядом с точкой. Удаляет и возвращает его координаты или None."""
+        cx = wx // CHUNK_SIZE
+        cy = wy // CHUNK_SIZE
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                key = (cx + dx, cy + dy)
+                ch = self.chunks.get(key)
+                if not ch:
+                    continue
+                for i, t in enumerate(ch.trees):
+                    tx = t.base_x
+                    ty = t.base_y - 80
+                    if (tx - wx) ** 2 + (ty - wy) ** 2 < radius_px ** 2:
+                        ch.trees.pop(i)
+                        return (tx, ty)
+        return None
+
     def update(self, camera):
         cx0 = int((camera.offset_x - CHUNK_SIZE) // CHUNK_SIZE)
         cx1 = int((camera.offset_x + camera.view_width + CHUNK_SIZE) // CHUNK_SIZE)
