@@ -128,8 +128,8 @@ class Menu:
                     f"{i}. {r.get('score', 0):>5} очк.  "
                     f"Ур.{r.get('level', '?')}  "
                     f"{r.get('difficulty', '?'):<6}  "
-                    f"🍎{r.get('apples', 0)}  "
-                    f"👾{r.get('kills', 0)}  "
+                    f"Ябл:{r.get('apples', 0):<3} "
+                    f"Вр:{r.get('kills', 0):<3} "
                     f"{r.get('date', '')}"
                 )
                 color = (255, 240, 120) if i == 1 else (200, 200, 220)
