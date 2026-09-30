@@ -18,6 +18,7 @@ from fireworks import Firework
 from menu import Menu
 import levels
 import sounds
+from records import save_record
 
 
 def create_stars(count=80):
@@ -48,6 +49,8 @@ def load_level(index, difficulty, apples=0):
         "player": Player(x=40, y=HEIGHT - 200),
         "camera": Camera(WIDTH, WORLD_WIDTH),
         "score": 0,
+        "pixels_collected": 0,
+        "kills": 0,
         "total_pixels": len(pixels),
         "invuln": 0,
         "max_hp": difficulty["max_hp"],
@@ -123,7 +126,7 @@ def draw_apples_counter(screen, font_big, apples):
     box_w = pad_x * 2 + icon_w + inner_gap + text.get_width()
     box_h = max(text.get_height() + pad_y * 2, 36)
     box_x = WIDTH - box_w - 20
-    box_y = 92
+    box_y = 108
 
     # фон-плашка
     pygame.draw.rect(screen, (45, 30, 45), (box_x, box_y, box_w, box_h))
@@ -145,15 +148,22 @@ def draw_apples_counter(screen, font_big, apples):
 
 def draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key):
     score = L["score"]
-    total = L["total_pixels"]
-    score_txt = font_big.render(f"{score} / {total}", True, TEXT_COLOR)
+    score_txt = font_big.render(f"Очки: {score}", True, TEXT_COLOR)
     screen.blit(score_txt, (WIDTH - score_txt.get_width() - 20, 15))
+
+    stats = (
+        f"Пиксели: {L['pixels_collected']}/{L['total_pixels']}   "
+        f"Враги: {L['kills']}   "
+        f"Яблоки: {L['apples']}"
+    )
+    stats_surf = font_small.render(stats, True, TEXT_COLOR)
+    screen.blit(stats_surf, (WIDTH - stats_surf.get_width() - 20, 55))
 
     lvl_txt = font_small.render(
         f"Уровень {level_index + 1} / {len(levels.LEVELS)}    {DIFFICULTIES[difficulty_key]['label']}",
         True, TEXT_COLOR
     )
-    screen.blit(lvl_txt, (WIDTH - lvl_txt.get_width() - 20, 55))
+    screen.blit(lvl_txt, (WIDTH - lvl_txt.get_width() - 20, 78))
 
     draw_hearts(screen, lives, DIFFICULTIES[difficulty_key]["lives"])
     draw_health_bar(screen, font_small, L["hp"], L["max_hp"])
@@ -301,6 +311,7 @@ def main():
             for px in L["pixels"]:
                 if px.alive and L["player"].rect.colliderect(px.rect):
                     px.alive = False
+                    L["pixels_collected"] += 1
                     L["score"] += 1
                     sounds.play("collect")
 
@@ -310,6 +321,7 @@ def main():
                     if L["player"].rect.colliderect(arect):
                         tree.collect(idx)
                         L["apples"] += 1
+                        L["score"] += 2
                         sounds.play("collect")
 
             # сбор аптечек — восстанавливают HP
@@ -331,6 +343,7 @@ def main():
                     if stomp:
                         e.alive = False
                         L["player"].vel_y = -12
+                        L["kills"] += 1
                         L["score"] += 5
                         sounds.play("stomp")
                     elif L["invuln"] == 0:
@@ -342,6 +355,10 @@ def main():
                             if lives <= 0:
                                 L["state"] = "game_over"
                                 sounds.play("game_over")
+                                save_record(
+                                    L["score"], L["pixels_collected"], L["total_pixels"],
+                                    L["kills"], L["apples"], level_index + 1, difficulty_key
+                                )
                             else:
                                 L["player"] = Player(x=40, y=HEIGHT - 200)
                                 L["camera"] = Camera(WIDTH, WORLD_WIDTH)
@@ -369,6 +386,11 @@ def main():
                     L["score"] = final_score
                     L["state"] = "all_clear"
                     level_index = len(levels.LEVELS)
+                    sounds.play("victory")
+                    save_record(
+                        L["score"], L["pixels_collected"], L["total_pixels"],
+                        L["kills"], L["apples"], len(levels.LEVELS), difficulty_key
+                    )
                 else:
                     L = load_level(level_index, difficulty, L["apples"])
 

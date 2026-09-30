@@ -6,3 +6,4 @@ env/
 .idea/
 .vscode/
 *.log
+PyPixel/records.json
