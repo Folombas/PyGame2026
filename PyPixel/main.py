@@ -21,6 +21,7 @@ from background import draw_sky_gradient, draw_mountains, draw_fog_between_layer
 from terrain import draw_terrain_polygon, draw_surface_details
 from records import save_record
 from inventory import Inventory, SLOTS
+from tools import TOOLS, PICKAXE, AXE, SWORD, draw_tool_icon, get_tool_sprite
 from blocks import BLOCKS, TILE_SIZE, draw_block, draw_dig_progress, AIR
 from blocks import DIRT as B_DIRT
 import sounds
@@ -114,10 +115,12 @@ def draw_hotbar(screen, font_small, inventory):
         slot = inventory.slots[i]
         if slot:
             rect = pygame.Rect(x + 6, y0 + 6, box - 12, box - 12)
-            draw_block(screen, rect, slot["type"])
-            # счётчик
-            cnt = font_small.render(str(slot["count"]), True, (255, 255, 255))
-            screen.blit(cnt, (x + box - cnt.get_width() - 4, y0 + box - 20))
+            if "tool" in slot:
+                draw_tool_icon(screen, rect, slot["tool"])
+            else:
+                draw_block(screen, rect, slot["type"])
+                cnt = font_small.render(str(slot["count"]), True, (255, 255, 255))
+                screen.blit(cnt, (x + box - cnt.get_width() - 4, y0 + box - 20))
 
         # номер слота
         num = font_small.render(str((i + 1) % 10), True, (180, 180, 200))
@@ -202,6 +205,10 @@ def new_session(difficulty):
     player = Player(x=0, y=surface_y(0) - 100)
     camera = Camera(WIDTH)
     camera.update(player.rect)
+    inv = Inventory()
+    inv.add_tool(PICKAXE)
+    inv.add_tool(AXE)
+    inv.add_tool(SWORD)
     return {
         "player": player,
         "camera": camera,
@@ -219,7 +226,7 @@ def new_session(difficulty):
         "body_temp": 100.0,
         "freeze_tick": 0,
         "weather": Weather(),
-        "inventory": Inventory(),
+        "inventory": inv,
         "mining": None,            # {"tx", "ty", "progress"}
     }
 
@@ -313,6 +320,24 @@ def main():
                     if bt is not None:
                         if L["world"].place(wx, wy, bt):
                             L["inventory"].take_selected(1)
+                elif event.button == 1:  # ЛКМ — атака мечом, если меч
+                    sel_tool = L["inventory"].selected_tool()
+                    if sel_tool == SWORD:
+                        sword_range = TOOLS[SWORD]["attack_range_px"]
+                        dmg = TOOLS[SWORD]["damage"]
+                        # убиваем врагов в радиусе вокруг игрока (проверяем их)
+                        platforms, enemies, pixels, trees, medkits = L["world"].collect()
+                        for e in enemies:
+                            if not e.alive:
+                                continue
+                            dx = e.rect.centerx - L["player"].rect.centerx
+                            dy = e.rect.centery - L["player"].rect.centery
+                            if abs(dx) < sword_range and abs(dy) < sword_range:
+                                e.alive = False
+                                L["kills"] += 1
+                                L["score"] += 5
+                                sounds.play("stomp")
+                        sounds.play("hit")
 
         # ============ МЕНЮ ============
         if app_state == "menu":
@@ -385,7 +410,14 @@ def main():
                 bt = L["world"].get_block_type(wx, wy)
                 if bt is not None and bt != AIR and bt in BLOCKS:
                     if L["mining"] and L["mining"]["tx"] == tx and L["mining"]["ty"] == ty:
-                        L["mining"]["progress"] += 1.0 / BLOCKS[bt]["hardness"]
+                        # скорость зависит от инструмента
+                        speed_mult = 1.0
+                        sel_tool = L["inventory"].selected_tool()
+                        if sel_tool and BLOCKS[bt].get("tool") == sel_tool:
+                            speed_mult = TOOLS[sel_tool]["speed"]
+                        elif not sel_tool:
+                            speed_mult = 0.6   # руками медленнее
+                        L["mining"]["progress"] += speed_mult / BLOCKS[bt]["hardness"]
                         if L["mining"]["progress"] >= 1.0:
                             dug = L["world"].dig(wx, wy)
                             if dug is not None:

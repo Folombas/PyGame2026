@@ -15,15 +15,15 @@ LEAVES = 8
 SAND = 9
 
 BLOCKS = {
-    DIRT:   {"name": "Земля",  "color": (120, 80, 50),  "top": (140, 100, 65), "hardness": 12, "drop": DIRT},
-    GRASS:  {"name": "Трава",  "color": (120, 80, 50),  "top": (85, 175, 75),  "hardness": 12, "drop": DIRT},
-    STONE:  {"name": "Камень", "color": (110, 100, 95), "top": (130, 120, 115),"hardness": 32, "drop": STONE},
-    COPPER: {"name": "Медь",   "color": (110, 100, 95), "top": (180, 110, 60), "hardness": 38, "drop": COPPER, "ore": (200, 120, 60)},
-    IRON:   {"name": "Железо", "color": (110, 100, 95), "top": (180, 175, 170),"hardness": 48, "drop": IRON,   "ore": (210, 200, 195)},
-    GOLD:   {"name": "Золото", "color": (110, 100, 95), "top": (230, 200, 80), "hardness": 58, "drop": GOLD,   "ore": (250, 220, 90)},
-    WOOD:   {"name": "Дерево", "color": (110, 70, 40),  "top": (130, 90, 55),  "hardness": 15, "drop": WOOD},
-    LEAVES: {"name": "Листья", "color": (60, 140, 60),  "top": (80, 170, 80),  "hardness": 5,  "drop": LEAVES},
-    SAND:   {"name": "Песок",  "color": (210, 190, 130),"top": (225, 205, 145),"hardness": 10, "drop": SAND},
+    DIRT:   {"name": "Земля",  "color": (120, 80, 50),  "top": (140, 100, 65), "hardness": 14, "drop": DIRT, "tool": None},
+    GRASS:  {"name": "Трава",  "color": (120, 80, 50),  "top": (85, 175, 75),  "hardness": 14, "drop": DIRT, "tool": None},
+    STONE:  {"name": "Камень", "color": (110, 100, 95), "top": (130, 120, 115),"hardness": 48, "drop": STONE, "tool": "pickaxe"},
+    COPPER: {"name": "Медь",   "color": (110, 100, 95), "top": (180, 110, 60), "hardness": 55, "drop": COPPER, "ore": (200, 120, 60), "tool": "pickaxe"},
+    IRON:   {"name": "Железо", "color": (110, 100, 95), "top": (180, 175, 170),"hardness": 75, "drop": IRON,   "ore": (210, 200, 195), "tool": "pickaxe"},
+    GOLD:   {"name": "Золото", "color": (110, 100, 95), "top": (230, 200, 80), "hardness": 95, "drop": GOLD,   "ore": (250, 220, 90), "tool": "pickaxe"},
+    WOOD:   {"name": "Дерево", "color": (110, 70, 40),  "top": (130, 90, 55),  "hardness": 40, "drop": WOOD, "tool": "axe"},
+    LEAVES: {"name": "Листья", "color": (60, 140, 60),  "top": (80, 170, 80),  "hardness": 10, "drop": LEAVES, "tool": "axe"},
+    SAND:   {"name": "Песок",  "color": (210, 190, 130),"top": (225, 205, 145),"hardness": 12, "drop": SAND, "tool": None},
 }
 
 

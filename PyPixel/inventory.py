@@ -41,6 +41,28 @@ class Inventory:
             self.slots[self.selected] = None
         return t
 
+# ---------- ИНСТРУМЕНТЫ ----------
+    def add_tool(self, tool_id):
+        # уже есть?
+        for slot in self.slots:
+            if slot and slot.get("tool") == tool_id:
+                return True
+        for i in range(SLOTS):
+            if self.slots[i] is None:
+                self.slots[i] = {"tool": tool_id}
+                return True
+        return False
+
+    def selected_tool(self):
+        slot = self.slots[self.selected]
+        if slot and "tool" in slot:
+            return slot["tool"]
+        return None
+
+    def selected_is_tool(self):
+        slot = self.slots[self.selected]
+        return bool(slot and "tool" in slot)
+
     def selected_type(self):
         slot = self.slots[self.selected]
         return slot["type"] if slot else None
