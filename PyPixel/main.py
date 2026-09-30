@@ -229,6 +229,9 @@ def new_session(difficulty):
         "weather": Weather(),
         "inventory": inv,
         "mining": None,            # {"tx", "ty", "progress"}
+        "particles": ParticleSystem(),
+        "swing_timer": 0,
+        "swing_angle": 0,
     }
 
 
