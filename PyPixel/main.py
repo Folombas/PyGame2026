@@ -12,7 +12,11 @@ from settings import (
 from player import Player
 from camera import Camera
 from menu import Menu
-from world import World, surface_y, DEATH_Y, SURFACE_Y
+from world import (
+    World, surface_y, DEATH_Y, SURFACE_Y,
+    get_ambient_temp, weather_zone,
+)
+from weather import Weather
 from records import save_record
 import sounds
 
@@ -117,6 +121,29 @@ def draw_health_bar(screen, font_small, hp, max_hp):
     screen.blit(label, (x + 8, y + 1))
 
 
+def draw_temperature_bar(screen, font_small, body_temp):
+    x, y = 14, 68
+    w, h = 200, 14
+    pygame.draw.rect(screen, (30, 30, 45), (x - 2, y - 2, w + 4, h + 4))
+    pygame.draw.rect(screen, (90, 110, 140), (x - 2, y - 2, w + 4, h + 4), 1)
+    pygame.draw.rect(screen, (20, 20, 30), (x, y, w, h))
+
+    ratio = max(0.0, min(1.0, body_temp / 100.0))
+    fill = int(w * ratio)
+    # Градиент: холодный — синий, нормальный — зелёный, тёплый — жёлтый
+    if ratio < 0.3:
+        color = (90, 140, 220)   # холодно
+    elif ratio < 0.6:
+        color = (140, 200, 240)
+    else:
+        color = (240, 180, 100)  # тепло
+    if fill > 0:
+        pygame.draw.rect(screen, color, (x, y, fill, h))
+
+    label = font_small.render(f"Темп. тела  {int(body_temp)}°", True, (255, 255, 255))
+    screen.blit(label, (x + 6, y - 1))
+
+
 def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
     distance = max(0, L["max_x"]) // 10
     depth = max(0, L["max_y"] - SURFACE_Y) // 10
@@ -124,13 +151,23 @@ def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
     score_txt = font_big.render(f"Очки: {L['score']}", True, TEXT_COLOR)
     screen.blit(score_txt, (WIDTH - score_txt.get_width() - 20, 15))
 
+    zone_names = {
+        "freezing": "❄ Вьюга",
+        "snow": "🌨 Снега",
+        "cold": "Холод",
+        "mild": "Погода",
+        "cave_warm": "Пещеры",
+        "cave_hot": "Лава",
+    }
+    zone = zone_names.get(weather_zone(L["player"].rect.centery), "")
     stats = (f"Дистанция: {distance} м   Глубина: {depth} м   "
-             f"Враги: {L['kills']}   Яблоки: {L['apples']}")
+             f"{zone}   Враги: {L['kills']}   Яблоки: {L['apples']}")
     s = font_small.render(stats, True, TEXT_COLOR)
     screen.blit(s, (WIDTH - s.get_width() - 20, 55))
 
     draw_hearts(screen, lives, DIFFICULTIES[difficulty_key]["lives"])
     draw_health_bar(screen, font_small, L["hp"], L["max_hp"])
+    draw_temperature_bar(screen, font_small, L["body_temp"])
 
     if L["state"] == "game_over":
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
@@ -174,6 +211,9 @@ def new_session(difficulty):
         "max_x": 0,
         "max_y": surface_y(0),
         "state": "playing",
+        "body_temp": 100.0,          # 0..100
+        "freeze_tick": 0,
+        "weather": Weather(),
     }
 
 
@@ -256,6 +296,38 @@ def main():
             # обновляем рекордные координаты
             L["max_x"] = max(L["max_x"], L["player"].rect.x)
             L["max_y"] = max(L["max_y"], L["player"].rect.y)
+
+            # --- ТЕМПЕРАТУРА ТЕЛА ---
+            ambient = get_ambient_temp(L["player"].rect.centery)
+            if L["body_temp"] > ambient:
+                # остывает: чем дальше от комфорта, тем быстрее
+                delta = (L["body_temp"] - ambient)
+                L["body_temp"] -= 0.15 + delta * 0.002
+            else:
+                L["body_temp"] += 0.25
+            L["body_temp"] = max(0.0, min(100.0, L["body_temp"]))
+
+            # обморожение: при body_temp < 15 теряем HP каждые 60 кадров
+            L["freeze_tick"] += 1
+            if L["body_temp"] < 15 and L["freeze_tick"] >= 60:
+                L["freeze_tick"] = 0
+                L["hp"] -= 4
+                sounds.play("hit")
+                if L["hp"] <= 0:
+                    lives -= 1
+                    if lives <= 0:
+                        L["state"] = "game_over"
+                        sounds.play("game_over")
+                        save_record(L["score"], 0, 0, L["kills"], L["apples"],
+                                    L["max_x"] // 10, difficulty_key)
+                    else:
+                        L["player"] = Player(x=0, y=surface_y(0) - 100)
+                        L["camera"] = Camera(WIDTH)
+                        L["hp"] = L["max_hp"]
+                        L["body_temp"] = 100.0
+
+            # --- ПОГОДА ---
+            L["weather"].update(L["camera"].offset_y)
 
             if L["invuln"] > 0:
                 L["invuln"] -= 1
@@ -347,6 +419,9 @@ def main():
         blink = L["invuln"] > 0 and (L["invuln"] // 4) % 2 == 0
         if not blink:
             L["player"].draw(screen, ox, oy)
+
+        # Погода — поверх мира, но под HUD
+        L["weather"].draw(screen, L["camera"].offset_y)
 
         draw_hud(screen, font_big, font_small, L, lives, difficulty_key)
         pygame.display.flip()

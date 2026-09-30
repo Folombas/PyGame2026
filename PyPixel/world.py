@@ -1,4 +1,4 @@
-"""Бесконечный процедурно генерируемый мир. Без уровней, без границ."""
+"""Бесконечный процедурный мир: горы, пещеры с входами, погодные зоны."""
 import pygame
 from platform import Platform
 from enemy import Enemy
@@ -8,14 +8,43 @@ from medkit import Medkit
 
 
 CHUNK_SIZE = 400
-SURFACE_Y = 1200          # средний уровень земли
-GROUND_DEPTH = 600        # насколько глубоко под землёй генерировать породу
-COLUMN_W = 32             # ширина столбца земли
-DEATH_Y = SURFACE_Y + 1800  # глубже — смерть от падения в бездну
+SURFACE_Y = 1200          # базовый уровень земли
+GROUND_DEPTH = 600
+COLUMN_W = 32
+DEATH_Y = SURFACE_Y + 1800
+
+# Высотные зоны (по мировой Y)
+TEMP_ZONES = [
+    (0,     200,  "freezing"),   # ледяные вершины
+    (200,   500,  "snow"),       # снега
+    (500,   800,  "cold"),       # холодные горы
+    (800,   SURFACE_Y, "mild"),  # умеренно
+    (SURFACE_Y, SURFACE_Y + 400, "cave_warm"),  # пещеры тёплые
+    (SURFACE_Y + 400, 99999, "cave_hot"),       # глубоко — жарко
+]
+
+
+def weather_zone(world_y):
+    for y_min, y_max, key in TEMP_ZONES:
+        if y_min <= world_y < y_max:
+            return key
+    return "mild"
+
+
+def get_ambient_temp(world_y):
+    """Температура среды в мировой точке (0..100)."""
+    if world_y < SURFACE_Y:
+        # Над землёй: 100 у поверхности → 0 на 1000px вверх
+        altitude = (SURFACE_Y - world_y)
+        return max(0.0, 100.0 - altitude * 0.1)
+    else:
+        # Под землёй: тёплые пещеры (70), глубже — жарче (до 95)
+        depth = world_y - SURFACE_Y
+        t = min(1.0, depth / 1500.0)
+        return 70.0 + t * 25.0
 
 
 def _hash(x, y, seed=0):
-    """Детерминированный хеш 0..1 (одинаковый для одинаковых координат)."""
     n = (x * 374761393 + y * 668265263 + seed * 1274126177) & 0xFFFFFFFF
     n = (n ^ (n >> 13)) * 1274126177 & 0xFFFFFFFF
     n = n ^ (n >> 16)
@@ -23,7 +52,6 @@ def _hash(x, y, seed=0):
 
 
 def _smooth1d(x, scale, seed=0):
-    """Сглаженный 1D шум (для высоты поверхности)."""
     xf = x / scale
     x0 = int(xf)
     if xf < 0:
@@ -36,28 +64,44 @@ def _smooth1d(x, scale, seed=0):
 
 
 def surface_y(x):
-    """Мировой Y поверхности для столбца X (плавно колеблется ±120px)."""
-    n = ((_smooth1d(x, 350, 1) - 0.5) * 130
-         + (_smooth1d(x, 140, 2) - 0.5) * 50
-         + (_smooth1d(x, 60, 3) - 0.5) * 20)
-    return SURFACE_Y + int(n)
+    """Рельеф: холмы + редкие горы с пиками."""
+    # Базовые холмы
+    base = SURFACE_Y
+    base += int((_smooth1d(x, 350, 1) - 0.5) * 60)
+    base += int((_smooth1d(x, 140, 2) - 0.5) * 25)
+
+    # Горы: горный шум, редкие высокие пики
+    m = _smooth1d(x, 800, 10)
+    if m > 0.65:
+        peak_t = (m - 0.65) / 0.35  # 0..1
+        peak_h = peak_t * peak_t * 750  # до 750 px вверх
+        base -= int(peak_h)
+    return base
+
+
+def is_cave_entrance(x, y):
+    """Вертикальный вход-шахта на поверхности."""
+    sy = surface_y(x)
+    col = x // 24
+    if _hash(col, 0, 77) > 0.94:
+        if sy + 5 < y < sy + 300:
+            return True
+    return False
 
 
 def is_cave(x, y):
-    """True — если в этой мировой точке пустота (пещера)."""
+    """True — пустота (пещера или вход)."""
     sy = surface_y(x)
-    if y < sy + 90:
-        return False   # верхний слой земли всегда сплошной
+    if y < sy + 60:
+        return is_cave_entrance(x, y)
+
     v = (_hash(x // 25, y // 25, 5) * 0.5
          + _hash(x // 50, y // 50, 6) * 0.5)
-    # Чем глубже — тем больше пустот
-    depth_factor = min(0.25, (y - sy) / 3000.0)
+    depth_factor = min(0.30, (y - sy) / 3000.0)
     return v > 0.60 - depth_factor
 
 
 class Chunk:
-    """Один чанк мира 400x400 px. Генерируется один раз, кешируется."""
-
     def __init__(self, cx, cy, difficulty):
         self.cx = cx
         self.cy = cy
@@ -75,7 +119,6 @@ class Chunk:
         x1 = x0 + CHUNK_SIZE
         y1 = y0 + CHUNK_SIZE
 
-        # ----- Земля: столбцы твёрдой породы -----
         col_start = (x0 // COLUMN_W - 1) * COLUMN_W
         for col_x in range(col_start, x1 + COLUMN_W, COLUMN_W):
             sy = surface_y(col_x)
@@ -91,7 +134,7 @@ class Chunk:
                     self.platforms.append(Platform(col_x, gy, COLUMN_W + 1, COLUMN_W))
                 gy += COLUMN_W
 
-        # ----- Висячие платформы в воздухе -----
+        # Висячие платформы в воздухе (только над землёй)
         step = 240
         start = (x0 // step) * step
         for px in range(start, x1 + step, step):
@@ -105,16 +148,18 @@ class Chunk:
                     if _hash(px // step, 3, 10) > 0.35:
                         self.pixels.append(Pixel(px + w // 2 - 7, py - 22))
 
-        # ----- Деревья на поверхности -----
+        # Деревья (только в умеренной зоне, Y > 700)
         step = 350
         start = (x0 // step) * step
         for tx in range(start, x1 + step, step):
             if _hash(tx // step, 0, 20) > 0.5:
                 sy = surface_y(tx)
+                if sy < 700:
+                    continue  # выше снеговой линии деревьев нет
                 if y0 - 200 <= sy <= y1 + 200:
                     self.trees.append(AppleTree(tx, sy))
 
-        # ----- Враги -----
+        # Враги
         density = self.difficulty.get("enemy_density", 0.4)
         step = 300
         start = (x0 // step) * step
@@ -124,7 +169,7 @@ class Chunk:
                 if y0 - 28 <= sy - 28 <= y1:
                     self.enemies.append(Enemy(ex, sy - 28))
 
-        # ----- Аптечки -----
+        # Аптечки
         step = 600
         start = (x0 // step) * step
         for mx in range(start, x1 + step, step):
@@ -135,8 +180,6 @@ class Chunk:
 
 
 class World:
-    """Хранилище чанков, генерирует по мере движения."""
-
     def __init__(self, difficulty):
         self.difficulty = difficulty
         self.chunks = {}
@@ -148,26 +191,21 @@ class World:
         return self.chunks[key]
 
     def update(self, camera):
-        """Подгружает видимые чанки, выгружает далёкие."""
         cx0 = int((camera.offset_x - CHUNK_SIZE) // CHUNK_SIZE)
         cx1 = int((camera.offset_x + camera.view_width + CHUNK_SIZE) // CHUNK_SIZE)
         cy0 = int((camera.offset_y - CHUNK_SIZE) // CHUNK_SIZE)
         cy1 = int((camera.offset_y + camera.view_height + CHUNK_SIZE) // CHUNK_SIZE)
 
-        active = set()
         for cx in range(cx0, cx1 + 1):
             for cy in range(cy0, cy1 + 1):
                 self._get_chunk(cx, cy)
-                active.add((cx, cy))
 
-        # Выгружаем очень далёкие чанки (экономия памяти)
         for key in list(self.chunks.keys()):
             cx, cy = key
             if abs(cx - cx0) > 5 or abs(cy - cy0) > 5:
                 del self.chunks[key]
 
     def collect(self):
-        """Собирает все объекты из всех загруженных чанков."""
         platforms, enemies, pixels, trees, medkits = [], [], [], [], []
         for ch in self.chunks.values():
             platforms.extend(ch.platforms)
