@@ -24,15 +24,28 @@ import sounds
 from records import save_record
 
 
-def create_stars(count=80):
-    stars = []
+def create_clouds(count=30):
+    """Облака для параллакс-фона. (x, y, размер, слой)."""
+    clouds = []
     for _ in range(count):
         x = random.randint(0, WORLD_WIDTH)
-        y = random.randint(0, SURFACE_Y)
-        size = random.choice([1, 1, 1, 2, 2, 3])
-        layer = random.choice([0.2, 0.4, 0.6])
-        stars.append((x, y, size, layer))
-    return stars
+        # облака только в верхней половине (небесные биомы)
+        y = random.randint(0, SURFACE_Y - 100)
+        size = random.choice([30, 45, 60, 80])
+        layer = random.choice([0.15, 0.3, 0.5])
+        clouds.append((x, y, size, layer))
+    return clouds
+
+
+def draw_cloud(surface, cx, cy, size, color=(255, 255, 255)):
+    """Пушистое облако из нескольких эллипсов."""
+    w = size
+    h = size // 3
+    # три кружка + основание
+    pygame.draw.ellipse(surface, color, (cx - w // 2, cy - h // 4, w, h))
+    pygame.draw.ellipse(surface, color, (cx - w // 3, cy - h // 2, w // 2, h))
+    pygame.draw.ellipse(surface, color, (cx, cy - h // 2, w // 2, h))
+    pygame.draw.ellipse(surface, color, (cx - w // 4, cy - h + h // 2, w // 3, h))
 
 
 def load_level(index, difficulty, apples=0):
@@ -67,19 +80,32 @@ def load_level(index, difficulty, apples=0):
     }
 
 
-def draw_background(screen, stars, camera):
+def draw_background(screen, clouds, camera):
     center_y = camera.offset_y + HEIGHT // 2
     biome_key = get_biome(center_y)
     biome = BIOMES[biome_key]
-    screen.fill(biome["bg"])
 
-    # звёзды — только в небесных биомах
-    if biome_key in ("forest", "hills", "mountains"):
-        for x, y, size, layer in stars:
+    # вертикальный градиент неба
+    top_col = biome["bg_top"]
+    bot_col = biome["bg_bot"]
+    for y in range(HEIGHT):
+        t = y / HEIGHT
+        col = (
+            int(top_col[0] * (1 - t) + bot_col[0] * t),
+            int(top_col[1] * (1 - t) + bot_col[1] * t),
+            int(top_col[2] * (1 - t) + bot_col[2] * t),
+        )
+        pygame.draw.line(screen, col, (0, y), (WIDTH, y))
+
+    # облака — только в небесных биомах
+    if biome_key in ("forest", "hills", "mountains", "snow_peaks"):
+        for x, y, size, layer in clouds:
             sx = int(x - camera.offset_x * layer)
             sy = int(y - camera.offset_y * layer)
-            if -10 < sx < WIDTH + 10 and -10 < sy < HEIGHT + 10:
-                pygame.draw.rect(screen, STAR_COLOR, (sx, sy, size, size))
+            if -size < sx < WIDTH + size and -size < sy < HEIGHT + size:
+                # мягкая тень под облаком
+                draw_cloud(screen, sx + 3, sy + 3, size, (200, 210, 225))
+                draw_cloud(screen, sx, sy, size, (255, 255, 255))
 
 
 def draw_pixel_heart(surface, x, y, scale, color):
@@ -261,7 +287,7 @@ def main():
     font_big = pygame.font.SysFont("monospace", 28, bold=True)
     font_small = pygame.font.SysFont("monospace", 18)
 
-    stars = create_stars()
+    clouds = create_clouds()
     menu = Menu(font_big, font_small)
 
     app_state = "menu"     # menu / playing
@@ -529,7 +555,7 @@ def main():
         L["fireworks"] = [fw for fw in L["fireworks"] if not fw.dead]
 
         # ================= DRAW =================
-        draw_background(screen, stars, L["camera"])
+        draw_background(screen, clouds, L["camera"])
         for p in L["platforms"]:
             p.draw(screen, L["camera"].ox, L["camera"].oy)
         for t in L["trees"]:
