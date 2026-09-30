@@ -17,7 +17,7 @@ from camera import Camera
 from flag import Flag
 from fireworks import Firework
 from boss import Boss
-from biomes import get_biome, BIOMES
+from biomes import get_biome, BIOMES, BIOME_BOUNDS
 from menu import Menu
 import levels
 import sounds
@@ -80,36 +80,47 @@ def load_level(index, difficulty, apples=0):
     }
 
 
+def _biome_bounds(key):
+    for y_min, y_max, k in BIOME_BOUNDS:
+        if k == key:
+            return y_min, y_max
+    return 0, 1
+
+
 def draw_background(screen, clouds, camera):
-    center_y = camera.offset_y + HEIGHT // 2
-    biome_key = get_biome(center_y)
-    biome = BIOMES[biome_key]
+    """Рисует фон построчно по биомам + облака (только выше земли)."""
+    ox = camera.offset_x
+    oy = camera.offset_y
 
-    # вертикальный градиент неба
-    top_col = biome["bg_top"]
-    bot_col = biome["bg_bot"]
-    for y in range(HEIGHT):
-        t = y / HEIGHT
+    # --- вертикальный фон: для каждой строки экрана определяем биом ---
+    for y_screen in range(HEIGHT):
+        world_y = oy + y_screen
+        biome_key = get_biome(world_y)
+        biome = BIOMES[biome_key]
+
+        y_min, y_max = _biome_bounds(biome_key)
+        span = max(1, y_max - y_min)
+        t = (world_y - y_min) / span
+        t = max(0.0, min(1.0, t))
+
+        c1 = biome["bg_top"]
+        c2 = biome["bg_bot"]
         col = (
-            int(top_col[0] * (1 - t) + bot_col[0] * t),
-            int(top_col[1] * (1 - t) + bot_col[1] * t),
-            int(top_col[2] * (1 - t) + bot_col[2] * t),
+            int(c1[0] * (1 - t) + c2[0] * t),
+            int(c1[1] * (1 - t) + c2[1] * t),
+            int(c1[2] * (1 - t) + c2[2] * t),
         )
-        pygame.draw.line(screen, col, (0, y), (WIDTH, y))
+        pygame.draw.line(screen, col, (0, y_screen), (WIDTH, y_screen))
 
-    # облака — только в небесных биомах и НАД линией земли
-    if biome_key in ("forest", "hills", "mountains", "snow_peaks"):
-        # экранная Y линии земли
-        ground_screen_y = SURFACE_Y - camera.offset_y
-        for x, y, size, layer in clouds:
-            sx = int(x - camera.offset_x * layer)
-            sy = int(y - camera.offset_y * layer)
-            # не рисуем, если облако ниже линии земли
-            if sy + size > ground_screen_y:
-                continue
-            if -size < sx < WIDTH + size and -size < sy < HEIGHT + size:
-                draw_cloud(screen, sx + 3, sy + 3, size, (200, 210, 225))
-                draw_cloud(screen, sx, sy, size, (255, 255, 255))
+    # --- облака: только те, что ВЫШЕ земли по мировой Y ---
+    for x, y, size, layer in clouds:
+        if y >= SURFACE_Y - 40:      # облако у самой земли или ниже — не рисуем
+            continue
+        sx = int(x - ox * layer)
+        sy = int(y - oy)             # без layer по Y — облака "в небе"
+        if -size < sx < WIDTH + size and -size < sy < HEIGHT + size:
+            draw_cloud(screen, sx + 3, sy + 3, size, (200, 210, 225))
+            draw_cloud(screen, sx, sy, size, (255, 255, 255))
 
 
 def draw_pixel_heart(surface, x, y, scale, color):
