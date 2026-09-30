@@ -12,6 +12,7 @@ class Player:
         self.vel_y = 0.0
         self.on_ground = False
         self.facing_right = True
+        self.jump_held = False
 
         # Собираем все спрайты по одному разу
         self.sprites = {}
@@ -33,14 +34,21 @@ class Player:
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.vel_x = PLAYER_SPEED
             self.facing_right = True
-        if (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w]) and self.on_ground:
+        jump_keys = (pygame.K_SPACE, pygame.K_UP, pygame.K_w)
+        jump_pressed = any(keys[k] for k in jump_keys)
+        if jump_pressed and self.on_ground:
             self.vel_y = JUMP_POWER
             self.on_ground = False
             play_sound("jump")
+        self.jump_held = jump_pressed
 
     def update(self, platforms) -> None:
-        # --- физика ---
-        self.vel_y += GRAVITY
+        # --- физика с variable jump ---
+        # Если летим вверх И игрок держит прыжок → ослабляем гравитацию
+        if self.jump_held and self.vel_y < 0:
+            self.vel_y += GRAVITY * 0.45
+        else:
+            self.vel_y += GRAVITY
         self.vel_y = min(self.vel_y, 20)
 
         self.rect.x += int(self.vel_x)

@@ -97,13 +97,17 @@ def draw_background(screen, clouds, camera):
         )
         pygame.draw.line(screen, col, (0, y), (WIDTH, y))
 
-    # облака — только в небесных биомах
+    # облака — только в небесных биомах и НАД линией земли
     if biome_key in ("forest", "hills", "mountains", "snow_peaks"):
+        # экранная Y линии земли
+        ground_screen_y = SURFACE_Y - camera.offset_y
         for x, y, size, layer in clouds:
             sx = int(x - camera.offset_x * layer)
             sy = int(y - camera.offset_y * layer)
+            # не рисуем, если облако ниже линии земли
+            if sy + size > ground_screen_y:
+                continue
             if -size < sx < WIDTH + size and -size < sy < HEIGHT + size:
-                # мягкая тень под облаком
                 draw_cloud(screen, sx + 3, sy + 3, size, (200, 210, 225))
                 draw_cloud(screen, sx, sy, size, (255, 255, 255))
 
