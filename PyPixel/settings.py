@@ -56,3 +56,21 @@ DIFFICULTIES = {
     "hard":   {"lives": 3, "max_hp": 75,  "hit_damage": 40, "enemy_speed": 3.0, "label": "Сложный"},
 }
 DEFAULT_DIFFICULTY = "normal"
+
+
+# ===== РАСШИРЕНИЕ МИРА =====
+WORLD_HEIGHT = 2200        # высота мира (было HEIGHT=600)
+SURFACE_Y = 1200           # мировая Y, где уровень земли
+
+# Точка спавна игрока
+SPAWN_X, SPAWN_Y = 40, SURFACE_Y - 200
+
+# Границы биомов (по мировой Y)
+BIOME_BOUNDS = [
+    (0,    250,  "snow_peaks"),
+    (250,  500,  "mountains"),
+    (500,  800,  "hills"),
+    (800,  SURFACE_Y, "forest"),
+    (SURFACE_Y, SURFACE_Y + 400, "caves"),
+    (SURFACE_Y + 400, WORLD_HEIGHT + 1000, "deep_caves"),
+]

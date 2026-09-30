@@ -97,12 +97,13 @@ class Projectile:
                 self.alive = False
                 return
 
-    def draw(self, surface, offset_x=0):
+    def draw(self, surface, offset_x=0, offset_y=0):
         if not self.alive:
             return
         sprite = self._get_sprite()
         r = sprite.get_rect(center=self.rect.center)
         r.x -= offset_x
+        r.y -= offset_y
         surface.blit(sprite, r)
 
 

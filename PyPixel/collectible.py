@@ -8,10 +8,10 @@ class Pixel:
         self.rect = pygame.Rect(x, y, size, size)
         self.alive = True
 
-    def draw(self, surface: pygame.Surface, offset_x: int = 0) -> None:
+    def draw(self, surface, offset_x=0, offset_y=0):
         if not self.alive:
             return
-        r = self.rect.move(-offset_x, 0)
+        r = self.rect.move(-offset_x, -offset_y)
         # чуть побольше для «свечения»
         glow = r.inflate(4, 4)
         pygame.draw.rect(surface, (120, 100, 40), glow)

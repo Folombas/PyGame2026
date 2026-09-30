@@ -87,10 +87,10 @@ class AppleTree:
         ax, ay, _ = self.apples[index]
         self.apples[index] = (ax, ay, True)
 
-    def draw(self, surface, offset_x=0):
+    def draw(self, surface, offset_x=0, offset_y=0):
         sprite = self._get_sprite()
         r = sprite.get_rect()
-        r.midbottom = (self.base_x - offset_x, self.base_y)
+        r.midbottom = (self.base_x - offset_x, self.base_y - offset_y)
         surface.blit(sprite, r)
 
         # яблоки — поверх спрайта
@@ -98,7 +98,7 @@ class AppleTree:
             if collected:
                 continue
             apx = self.base_x + ax - offset_x
-            apy = self.base_y + ay
+            apy = self.base_y + ay - offset_y
             # тень / контур
             pygame.draw.circle(surface, (140, 30, 40), (apx, apy), APPLE_RADIUS)
             # тело

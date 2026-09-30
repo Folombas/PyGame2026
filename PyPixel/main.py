@@ -5,7 +5,8 @@ import pygame
 
 from settings import (
     WIDTH, HEIGHT, FPS, TITLE,
-    WORLD_WIDTH, SKY_COLOR, STAR_COLOR, TEXT_COLOR,
+    WORLD_WIDTH, WORLD_HEIGHT, SURFACE_Y, SKY_COLOR, STAR_COLOR, TEXT_COLOR,
+    SPAWN_X, SPAWN_Y,
     HEART_COLOR, HEART_EMPTY_COLOR, VICTORY_TEXT_COLOR,
     INVULN_TIME,
     HP_BAR_BG, HP_BAR_BORDER, HP_COLOR_HIGH, HP_COLOR_MID, HP_COLOR_LOW,
@@ -16,6 +17,7 @@ from camera import Camera
 from flag import Flag
 from fireworks import Firework
 from boss import Boss
+from biomes import get_biome, BIOMES
 from menu import Menu
 import levels
 import sounds
@@ -26,7 +28,7 @@ def create_stars(count=80):
     stars = []
     for _ in range(count):
         x = random.randint(0, WORLD_WIDTH)
-        y = random.randint(0, HEIGHT - 100)
+        y = random.randint(0, SURFACE_Y)
         size = random.choice([1, 1, 1, 2, 2, 3])
         layer = random.choice([0.2, 0.4, 0.6])
         stars.append((x, y, size, layer))
@@ -49,7 +51,7 @@ def load_level(index, difficulty, apples=0):
         "boss": boss,
         "apples": apples,
         "flag": Flag(*flag_pos),
-        "player": Player(x=40, y=HEIGHT - 200),
+        "player": Player(x=SPAWN_X, y=SPAWN_Y),
         "camera": Camera(WIDTH, WORLD_WIDTH),
         "score": 0,
         "pixels_collected": 0,
@@ -66,11 +68,18 @@ def load_level(index, difficulty, apples=0):
 
 
 def draw_background(screen, stars, camera):
-    screen.fill(SKY_COLOR)
-    for x, y, size, layer in stars:
-        sx = int(x - camera.offset_x * layer)
-        if -10 < sx < WIDTH + 10:
-            pygame.draw.rect(screen, STAR_COLOR, (sx, y, size, size))
+    center_y = camera.offset_y + HEIGHT // 2
+    biome_key = get_biome(center_y)
+    biome = BIOMES[biome_key]
+    screen.fill(biome["bg"])
+
+    # звёзды — только в небесных биомах
+    if biome_key in ("forest", "hills", "mountains"):
+        for x, y, size, layer in stars:
+            sx = int(x - camera.offset_x * layer)
+            sy = int(y - camera.offset_y * layer)
+            if -10 < sx < WIDTH + 10 and -10 < sy < HEIGHT + 10:
+                pygame.draw.rect(screen, STAR_COLOR, (sx, sy, size, size))
 
 
 def draw_pixel_heart(surface, x, y, scale, color):
@@ -336,6 +345,21 @@ def main():
             if L["invuln"] > 0:
                 L["invuln"] -= 1
 
+            # падение за пределы мира — смерть
+            if L["player"].rect.top > WORLD_HEIGHT:
+                lives -= 1
+                if lives <= 0:
+                    L["state"] = "game_over"
+                    sounds.play("game_over")
+                    save_record(
+                        L["score"], L["pixels_collected"], L["total_pixels"],
+                        L["kills"], L["apples"], level_index + 1, difficulty_key
+                    )
+                else:
+                    L["player"] = Player(x=SPAWN_X, y=SPAWN_Y)
+                    L["camera"] = Camera(WIDTH, WORLD_WIDTH)
+                    L["hp"] = L["max_hp"]
+
             # сбор пикселей
             for px in L["pixels"]:
                 if px.alive and L["player"].rect.colliderect(px.rect):
@@ -382,7 +406,7 @@ def main():
                                         L["kills"], L["apples"], level_index + 1, difficulty_key
                                     )
                                 else:
-                                    L["player"] = Player(x=40, y=HEIGHT - 200)
+                                    L["player"] = Player(x=SPAWN_X, y=SPAWN_Y)
                                     L["camera"] = Camera(WIDTH, WORLD_WIDTH)
                                     L["hp"] = L["max_hp"]
 
@@ -422,7 +446,7 @@ def main():
                                     L["kills"], L["apples"], level_index + 1, difficulty_key
                                 )
                             else:
-                                L["player"] = Player(x=40, y=HEIGHT - 200)
+                                L["player"] = Player(x=SPAWN_X, y=SPAWN_Y)
                                 L["camera"] = Camera(WIDTH, WORLD_WIDTH)
                                 L["hp"] = L["max_hp"]
 
@@ -455,7 +479,7 @@ def main():
                                     L["kills"], L["apples"], level_index + 1, difficulty_key
                                 )
                             else:
-                                L["player"] = Player(x=40, y=HEIGHT - 200)
+                                L["player"] = Player(x=SPAWN_X, y=SPAWN_Y)
                                 L["camera"] = Camera(WIDTH, WORLD_WIDTH)
                                 L["hp"] = L["max_hp"]
 
@@ -507,22 +531,22 @@ def main():
         # ================= DRAW =================
         draw_background(screen, stars, L["camera"])
         for p in L["platforms"]:
-            p.draw(screen, L["camera"].ox)
+            p.draw(screen, L["camera"].ox, L["camera"].oy)
         for t in L["trees"]:
-            t.draw(screen, L["camera"].ox)
+            t.draw(screen, L["camera"].ox, L["camera"].oy)
         for mk in L["medkits"]:
-            mk.draw(screen, L["camera"].ox)
+            mk.draw(screen, L["camera"].ox, L["camera"].oy)
         if L.get("boss") is not None:
-            L["boss"].draw(screen, L["camera"].ox)
-        L["flag"].draw(screen, L["camera"].ox)
+            L["boss"].draw(screen, L["camera"].ox, L["camera"].oy)
+        L["flag"].draw(screen, L["camera"].ox, L["camera"].oy)
         for px in L["pixels"]:
-            px.draw(screen, L["camera"].ox)
+            px.draw(screen, L["camera"].ox, L["camera"].oy)
         for e in L["enemies"]:
-            e.draw(screen, L["camera"].ox)
+            e.draw(screen, L["camera"].ox, L["camera"].oy)
 
         blink = L["invuln"] > 0 and (L["invuln"] // 4) % 2 == 0
         if not blink:
-            L["player"].draw(screen, L["camera"].ox)
+            L["player"].draw(screen, L["camera"].ox, L["camera"].oy)
 
         for fw in L["fireworks"]:
             fw.draw(screen)

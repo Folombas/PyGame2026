@@ -80,7 +80,7 @@ class Player:
             self.anim_timer = 0
             self.anim_frame = 0
 
-    def draw(self, surface: pygame.Surface, offset_x: int = 0) -> None:
+    def draw(self, surface, offset_x=0, offset_y=0):
         if self.state == "walk":
             name = "walk_1" if self.anim_frame == 0 else "walk_2"
         else:
@@ -90,6 +90,5 @@ class Player:
         img = self.sprites[name][direction]
 
         r = img.get_rect()
-        r.midbottom = self.rect.midbottom
-        r.x -= offset_x
+        r.midbottom = (self.rect.midbottom[0] - offset_x, self.rect.midbottom[1] - offset_y)
         surface.blit(img, r)

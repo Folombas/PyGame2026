@@ -20,19 +20,20 @@ class Flag:
         if self.lowered and self.flag_offset < 1.0:
             self.flag_offset = min(1.0, self.flag_offset + 1.6 * dt)
 
-    def draw(self, surface: pygame.Surface, offset_x: int = 0) -> None:
+    def draw(self, surface, offset_x=0, offset_y=0):
         x = self.base_x - offset_x
+        yy = self.base_y - offset_y
         # шест
         pygame.draw.rect(
             surface, FLAG_POLE_COLOR,
-            (x + 10, self.base_y - self.pole_h, 4, self.pole_h)
+            (x + 10, yy - self.pole_h, 4, self.pole_h)
         )
         # шарик наверху
-        pygame.draw.rect(surface, FLAG_POLE_COLOR, (x + 6, self.base_y - self.pole_h - 6, 12, 6))
+        pygame.draw.rect(surface, FLAG_POLE_COLOR, (x + 6, yy - self.pole_h - 6, 12, 6))
 
         # флажок — треугольник, опускается по мере animate()
         travel = max(0, self.pole_h - 36)
-        flag_top = self.base_y - self.pole_h + 12 + self.flag_offset * travel
+        flag_top = yy - self.pole_h + 12 + self.flag_offset * travel
         pygame.draw.polygon(surface, FLAG_COLOR, [
             (x + 14, flag_top),
             (x + 44, flag_top + 11),

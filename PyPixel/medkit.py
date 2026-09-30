@@ -47,10 +47,10 @@ class Medkit:
         self.rect = pygame.Rect(x, y, 8 * SCALE, 8 * SCALE)
         self.alive = True
 
-    def draw(self, surface, offset_x=0):
+    def draw(self, surface, offset_x=0, offset_y=0):
         if not self.alive:
             return
         sprite = self._get_sprite()
         r = sprite.get_rect()
-        r.topleft = (self.rect.x - offset_x, self.rect.y)
+        r.topleft = (self.rect.x - offset_x, self.rect.y - offset_y)
         surface.blit(sprite, r)
