@@ -1,170 +1,87 @@
-"""PyPixel — 2D-платформер на PyGame."""
+"""PyPixel — бесконечный процедурный платформер."""
 import sys
 import random
 import pygame
 
 from settings import (
-    WIDTH, HEIGHT, FPS, TITLE,
-    WORLD_WIDTH, WORLD_HEIGHT, SURFACE_Y, SKY_COLOR, STAR_COLOR, TEXT_COLOR,
-    SPAWN_X, SPAWN_Y,
-    HEART_COLOR, HEART_EMPTY_COLOR, VICTORY_TEXT_COLOR,
-    INVULN_TIME,
+    WIDTH, HEIGHT, FPS, TITLE, TEXT_COLOR,
+    LIVES, HEART_COLOR, HEART_EMPTY_COLOR,
+    INVULN_TIME, DIFFICULTIES, DEFAULT_DIFFICULTY,
     HP_BAR_BG, HP_BAR_BORDER, HP_COLOR_HIGH, HP_COLOR_MID, HP_COLOR_LOW,
-    DIFFICULTIES, DEFAULT_DIFFICULTY,
 )
 from player import Player
 from camera import Camera
-from flag import Flag
-from fireworks import Firework
-from boss import Boss
-from biomes import get_biome, BIOMES, BIOME_BOUNDS
 from menu import Menu
-import levels
-import sounds
+from world import World, surface_y, DEATH_Y, SURFACE_Y
 from records import save_record
+import sounds
 
 
-def create_clouds(count=30):
-    """Облака для параллакс-фона. (x, y, размер, слой)."""
-    clouds = []
-    for _ in range(count):
-        x = random.randint(0, WORLD_WIDTH)
-        # облака только в верхней половине (небесные биомы)
-        y = random.randint(0, SURFACE_Y - 100)
-        size = random.choice([30, 45, 60, 80])
-        layer = random.choice([0.15, 0.3, 0.5])
-        clouds.append((x, y, size, layer))
-    return clouds
-
-
+# ---------- ФОН ----------
 def draw_cloud(surface, cx, cy, size, color=(255, 255, 255)):
-    """Пушистое облако из нескольких эллипсов."""
-    w = size
-    h = size // 3
-    # три кружка + основание
+    w, h = size, size // 3
     pygame.draw.ellipse(surface, color, (cx - w // 2, cy - h // 4, w, h))
     pygame.draw.ellipse(surface, color, (cx - w // 3, cy - h // 2, w // 2, h))
     pygame.draw.ellipse(surface, color, (cx, cy - h // 2, w // 2, h))
     pygame.draw.ellipse(surface, color, (cx - w // 4, cy - h + h // 2, w // 3, h))
 
 
-def load_level(index, difficulty, apples=0):
-    platforms, enemies, pixels, trees, medkits, flag_pos, boss_pos = levels.LEVELS[index]()
-    boss = Boss(boss_pos[0], boss_pos[1], patrol_range=500) if boss_pos else None
-    speed = difficulty["enemy_speed"]
-    for e in enemies:
-        e.vel_x = speed if e.vel_x > 0 else -speed
-
-    return {
-        "platforms": platforms,
-        "enemies": enemies,
-        "pixels": pixels,
-        "trees": trees,
-        "medkits": medkits,
-        "boss": boss,
-        "apples": apples,
-        "flag": Flag(*flag_pos),
-        "player": Player(x=SPAWN_X, y=SPAWN_Y),
-        "camera": Camera(WIDTH, WORLD_WIDTH),
-        "score": 0,
-        "pixels_collected": 0,
-        "kills": 0,
-        "total_pixels": len(pixels),
-        "invuln": 0,
-        "max_hp": difficulty["max_hp"],
-        "hp": difficulty["max_hp"],
-        "hit_damage": difficulty["hit_damage"],
-        "state": "playing",   # playing / paused / victory / all_clear / game_over
-        "fireworks": [],
-        "victory_timer": 0,
-    }
-
-
-def draw_distant_mountains(screen, camera):
-    """Силуэты гор на фоне для глубины."""
-    oy = camera.offset_y
-    ground_screen_y = SURFACE_Y - oy
-    if ground_screen_y < -400 or ground_screen_y > HEIGHT + 400:
-        return
-
-    ox = camera.offset_x
-    # (параллакс, цвет, высота, период) — дальние светлее и ниже
-    layers = [
-        (0.15, (165, 190, 220), 130, 420),
-        (0.30, (135, 165, 205), 190, 360),
-        (0.45, (105, 140, 185), 250, 300),
-    ]
-
-    for parallax, color, height, spacing in layers:
-        shift = int(ox * parallax) % spacing
-        start_x = -shift - spacing
-        cx = start_x
-        while cx <= WIDTH + spacing:
-            pygame.draw.polygon(screen, color, [
-                (cx, ground_screen_y),
-                (cx + spacing // 2, ground_screen_y - height),
-                (cx + spacing, ground_screen_y),
-            ])
-            cx += spacing
-
-
-def draw_background(screen, clouds, camera):
-    """Чистый фон: синее небо над землёй, тёмные пещеры под землёй."""
+def draw_background(screen, camera):
     oy = camera.offset_y
     ox = camera.offset_x
+    ground_y = SURFACE_Y - oy
 
-    sky_top = (90, 155, 220)      # тёмнее вверху
-    sky_bot = (185, 220, 245)     # светлее у земли
-    cave_top = (45, 28, 25)       # коричнево-тёмный у земли
-    cave_bot = (8, 5, 10)         # почти чёрный в глубине
-
-    ground_screen_y = SURFACE_Y - oy
+    sky_top = (90, 155, 220)
+    sky_bot = (185, 220, 245)
+    cave_top = (45, 28, 25)
+    cave_bot = (8, 5, 10)
 
     for y_screen in range(HEIGHT):
-        if y_screen < ground_screen_y:
-            # --- НЕБО ---
-            depth = max(0, ground_screen_y - y_screen)
-            t = min(1.0, depth / 500.0)
-            col = (
-                int(sky_bot[0] * (1 - t) + sky_top[0] * t),
-                int(sky_bot[1] * (1 - t) + sky_top[1] * t),
-                int(sky_bot[2] * (1 - t) + sky_top[2] * t),
-            )
+        if y_screen < ground_y:
+            t = min(1.0, max(0.0, (ground_y - y_screen) / 500.0))
+            col = (int(sky_bot[0] * (1 - t) + sky_top[0] * t),
+                   int(sky_bot[1] * (1 - t) + sky_top[1] * t),
+                   int(sky_bot[2] * (1 - t) + sky_top[2] * t))
         else:
-            # --- ПЕЩЕРЫ ---
-            depth = y_screen - ground_screen_y
-            t = min(1.0, depth / 600.0)
-            col = (
-                int(cave_top[0] * (1 - t) + cave_bot[0] * t),
-                int(cave_top[1] * (1 - t) + cave_bot[1] * t),
-                int(cave_top[2] * (1 - t) + cave_bot[2] * t),
-            )
+            t = min(1.0, (y_screen - ground_y) / 700.0)
+            col = (int(cave_top[0] * (1 - t) + cave_bot[0] * t),
+                   int(cave_top[1] * (1 - t) + cave_bot[1] * t),
+                   int(cave_top[2] * (1 - t) + cave_bot[2] * t))
         pygame.draw.line(screen, col, (0, y_screen), (WIDTH, y_screen))
 
-    # --- Силуэты гор на фоне (только над землёй) ---
-    if ground_screen_y > -50:
-        draw_distant_mountains(screen, camera)
+    # Силуэты гор
+    if -100 < ground_y < HEIGHT + 100:
+        for parallax, color, h, spacing in [
+            (0.15, (165, 190, 220), 130, 420),
+            (0.30, (135, 165, 205), 190, 360),
+            (0.45, (105, 140, 185), 250, 300),
+        ]:
+            shift = int(ox * parallax) % spacing
+            cx = -shift - spacing
+            while cx <= WIDTH + spacing:
+                pygame.draw.polygon(screen, color, [
+                    (cx, ground_y),
+                    (cx + spacing // 2, ground_y - h),
+                    (cx + spacing, ground_y),
+                ])
+                cx += spacing
 
-    # --- Облака ---
-    for x, y, size, layer in clouds:
-        if y >= SURFACE_Y - 40:
-            continue
-        sx = int(x - ox * layer)
-        sy = int(y - oy)
+    # Облака (привязаны к мировым X, только выше земли)
+    for i in range(40):
+        cx_world = i * 350 + random.Random(i).randint(-100, 100)
+        cy_world = 200 + (i * 137) % (SURFACE_Y - 400)
+        size = 50 + (i * 31) % 50
+        layer = 0.2 + (i % 3) * 0.2
+        sx = int(cx_world - ox * layer)
+        sy = int(cy_world - oy)
         if -size < sx < WIDTH + size and -size < sy < HEIGHT + size:
             draw_cloud(screen, sx + 3, sy + 3, size, (200, 210, 225))
             draw_cloud(screen, sx, sy, size, (255, 255, 255))
 
 
+# ---------- HUD ----------
 def draw_pixel_heart(surface, x, y, scale, color):
-    pattern = [
-        " xx xx ",
-        "xxxxxxx",
-        "xxxxxxx",
-        " xxxxx ",
-        "  xxx  ",
-        "   x   ",
-    ]
+    pattern = [" xx xx ", "xxxxxxx", "xxxxxxx", " xxxxx ", "  xxx  ", "   x   "]
     for row, line in enumerate(pattern):
         for col, ch in enumerate(line):
             if ch == "x":
@@ -175,12 +92,10 @@ def draw_pixel_heart(surface, x, y, scale, color):
 def draw_hearts(screen, lives, max_lives):
     scale = 3
     gap = 8
-    heart_w = 7 * scale
+    hw = 7 * scale
     for i in range(max_lives):
-        hx = 14 + i * (heart_w + gap)
-        hy = 12
         color = HEART_COLOR if i < lives else HEART_EMPTY_COLOR
-        draw_pixel_heart(screen, hx, hy, scale, color)
+        draw_pixel_heart(screen, 14 + i * (hw + gap), 12, scale, color)
 
 
 def draw_health_bar(screen, font_small, hp, max_hp):
@@ -189,178 +104,104 @@ def draw_health_bar(screen, font_small, hp, max_hp):
     pygame.draw.rect(screen, HP_BAR_BORDER, (x - 2, y - 2, w + 4, h + 4))
     pygame.draw.rect(screen, HP_BAR_BG, (x, y, w, h))
     ratio = max(0.0, hp / max_hp)
-    fill_w = int(w * ratio)
+    fill = int(w * ratio)
     if ratio > 0.6:
-        color = HP_COLOR_HIGH
+        c = HP_COLOR_HIGH
     elif ratio > 0.3:
-        color = HP_COLOR_MID
+        c = HP_COLOR_MID
     else:
-        color = HP_COLOR_LOW
-    if fill_w > 0:
-        pygame.draw.rect(screen, color, (x, y, fill_w, h))
+        c = HP_COLOR_LOW
+    if fill > 0:
+        pygame.draw.rect(screen, c, (x, y, fill, h))
     label = font_small.render(f"HP {max(0, hp)}/{max_hp}", True, (255, 255, 255))
     screen.blit(label, (x + 8, y + 1))
 
 
-def draw_boss_hp_bar(screen, font_small, boss):
-    """Полоска HP босса — вверху по центру."""
-    bar_w = 420
-    bar_h = 22
-    x = (WIDTH - bar_w) // 2
-    y = 20
+def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
+    distance = max(0, L["max_x"]) // 10
+    depth = max(0, L["max_y"] - SURFACE_Y) // 10
 
-    # фон и рамка
-    pygame.draw.rect(screen, (40, 15, 15), (x - 3, y - 3, bar_w + 6, bar_h + 6))
-    pygame.draw.rect(screen, (230, 80, 80), (x - 3, y - 3, bar_w + 6, bar_h + 6), 2)
-    pygame.draw.rect(screen, (60, 20, 20), (x, y, bar_w, bar_h))
-
-    # заполнение
-    ratio = max(0.0, boss.hp / boss.max_hp)
-    fill = int(bar_w * ratio)
-    if fill > 0:
-        pygame.draw.rect(screen, (220, 40, 40), (x, y, fill, bar_h))
-        pygame.draw.rect(screen, (255, 120, 120), (x, y, fill, 4))
-
-    # текст
-    text = font_small.render(f"БОСС   {boss.hp} / {boss.max_hp}", True, (255, 255, 255))
-    screen.blit(text, (WIDTH // 2 - text.get_width() // 2, y + 2))
-
-
-def draw_apples_counter(screen, font_big, apples):
-    """Счётчик собранных яблок — яркая плашка в правом верхнем углу."""
-    text = font_big.render(str(apples), True, (255, 240, 240))
-
-    pad_x, pad_y = 14, 6
-    icon_w = 18
-    inner_gap = 8
-    box_w = pad_x * 2 + icon_w + inner_gap + text.get_width()
-    box_h = max(text.get_height() + pad_y * 2, 36)
-    box_x = WIDTH - box_w - 20
-    box_y = 108
-
-    # фон-плашка
-    pygame.draw.rect(screen, (45, 30, 45), (box_x, box_y, box_w, box_h))
-    pygame.draw.rect(screen, (180, 80, 90), (box_x, box_y, box_w, box_h), 2)
-
-    # иконка яблока
-    ix = box_x + pad_x + icon_w // 2
-    iy = box_y + box_h // 2
-    pygame.draw.circle(screen, (140, 30, 40), (ix, iy), 8)
-    pygame.draw.circle(screen, (220, 50, 60), (ix, iy), 7)
-    pygame.draw.rect(screen, (255, 180, 180), (ix - 3, iy - 3, 2, 2))
-    pygame.draw.rect(screen, (100, 200, 100), (ix + 1, iy - 11, 4, 4))
-
-    # число
-    tx = box_x + pad_x + icon_w + inner_gap
-    ty = box_y + (box_h - text.get_height()) // 2
-    screen.blit(text, (tx, ty))
-
-
-def draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key):
-    score = L["score"]
-    score_txt = font_big.render(f"Очки: {score}", True, TEXT_COLOR)
+    score_txt = font_big.render(f"Очки: {L['score']}", True, TEXT_COLOR)
     screen.blit(score_txt, (WIDTH - score_txt.get_width() - 20, 15))
 
-    stats = (
-        f"Пиксели: {L['pixels_collected']}/{L['total_pixels']}   "
-        f"Враги: {L['kills']}"
-    )
-    stats_surf = font_small.render(stats, True, TEXT_COLOR)
-    screen.blit(stats_surf, (WIDTH - stats_surf.get_width() - 20, 55))
-
-    lvl_txt = font_small.render(
-        f"Уровень {level_index + 1} / {len(levels.LEVELS)}    {DIFFICULTIES[difficulty_key]['label']}",
-        True, TEXT_COLOR
-    )
-    screen.blit(lvl_txt, (WIDTH - lvl_txt.get_width() - 20, 78))
+    stats = (f"Дистанция: {distance} м   Глубина: {depth} м   "
+             f"Враги: {L['kills']}   Яблоки: {L['apples']}")
+    s = font_small.render(stats, True, TEXT_COLOR)
+    screen.blit(s, (WIDTH - s.get_width() - 20, 55))
 
     draw_hearts(screen, lives, DIFFICULTIES[difficulty_key]["lives"])
     draw_health_bar(screen, font_small, L["hp"], L["max_hp"])
-    draw_apples_counter(screen, font_big, L["apples"])
 
-    if L.get("boss") is not None and L["boss"].alive:
-        draw_boss_hp_bar(screen, font_small, L["boss"])
+    if L["state"] == "game_over":
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 160))
+        screen.blit(overlay, (0, 0))
+        txt = font_big.render("GAME OVER", True, (240, 90, 90))
+        screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 60))
+        info = font_small.render(
+            f"Дистанция: {distance} м   Глубина: {depth} м",
+            True, TEXT_COLOR)
+        screen.blit(info, (WIDTH // 2 - info.get_width() // 2, HEIGHT // 2 - 10))
+        info2 = font_small.render("R — заново    M — меню    Esc — выход", True, TEXT_COLOR)
+        screen.blit(info2, (WIDTH // 2 - info2.get_width() // 2, HEIGHT // 2 + 30))
 
-    state = L["state"]
-    if state in ("victory", "all_clear", "game_over", "paused"):
+    elif L["state"] == "paused":
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         screen.blit(overlay, (0, 0))
-
-    if state == "paused":
         txt = font_big.render("ПАУЗА", True, (255, 240, 120))
         screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 60))
         info = font_small.render("Esc — продолжить    M — в меню", True, TEXT_COLOR)
         screen.blit(info, (WIDTH // 2 - info.get_width() // 2, HEIGHT // 2 + 10))
 
-    elif state == "victory":
-        txt = font_big.render("УРОВЕНЬ ПРОЙДЕН!", True, VICTORY_TEXT_COLOR)
-        screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, 40))
 
-    elif state == "all_clear":
-        txt = font_big.render("ВСЕ УРОВНИ ПРОЙДЕНЫ!", True, VICTORY_TEXT_COLOR)
-        screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, 40))
-        info = font_small.render("R — заново    M — меню    Esc — выход", True, TEXT_COLOR)
-        screen.blit(info, (WIDTH // 2 - info.get_width() // 2, 90))
-
-    elif state == "game_over":
-        txt = font_big.render("GAME OVER", True, (240, 90, 90))
-        screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 40))
-        info = font_small.render("R — заново    M — меню    Esc — выход", True, TEXT_COLOR)
-        screen.blit(info, (WIDTH // 2 - info.get_width() // 2, HEIGHT // 2 + 20))
-
-
-def spawn_firework(L):
-    fx = random.randint(80, WIDTH - 80)
-    fy = random.randint(80, HEIGHT // 2)
-    L["fireworks"].append(Firework(fx, fy))
+# ---------- ЗАПУСК УРОВНЯ-СЕССИИ ----------
+def new_session(difficulty):
+    player = Player(x=0, y=surface_y(0) - 100)
+    camera = Camera(WIDTH)
+    camera.update(player.rect)
+    return {
+        "player": player,
+        "camera": camera,
+        "world": World(difficulty),
+        "hp": difficulty["max_hp"],
+        "max_hp": difficulty["max_hp"],
+        "hit_damage": difficulty["hit_damage"],
+        "score": 0,
+        "kills": 0,
+        "apples": 0,
+        "invuln": 0,
+        "max_x": 0,
+        "max_y": surface_y(0),
+        "state": "playing",
+    }
 
 
 def main():
     pygame.init()
     sounds.init()
-    fullscreen = True
-
-    def create_screen(fs):
-        flags = (pygame.SCALED | pygame.FULLSCREEN) if fs else 0
-        try:
-            return pygame.display.set_mode((WIDTH, HEIGHT), flags, vsync=1)
-        except pygame.error:
-            return pygame.display.set_mode((WIDTH, HEIGHT), flags)
-
-    screen = create_screen(fullscreen)
-    pygame.mouse.set_visible(False)
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption(TITLE)
     clock = pygame.time.Clock()
     font_big = pygame.font.SysFont("monospace", 28, bold=True)
     font_small = pygame.font.SysFont("monospace", 18)
 
-    clouds = create_clouds()
     menu = Menu(font_big, font_small)
-
-    app_state = "menu"     # menu / playing
+    app_state = "menu"
     difficulty_key = DEFAULT_DIFFICULTY
     difficulty = DIFFICULTIES[difficulty_key]
     lives = difficulty["lives"]
-    level_index = 0
     L = None
 
     running = True
     while running:
-        dt = clock.tick(FPS) / 1000.0
+        clock.tick(FPS)
 
-        # ================= EVENTS =================
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
                 continue
 
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                fullscreen = not fullscreen
-                screen = create_screen(fullscreen)
-                continue
-
-            # ----- МЕНЮ -----
             if app_state == "menu":
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     running = False
@@ -370,80 +211,78 @@ def main():
                     difficulty_key = menu.difficulty_key
                     difficulty = DIFFICULTIES[difficulty_key]
                     lives = difficulty["lives"]
-                    level_index = 0
-                    L = load_level(level_index, difficulty)
+                    L = new_session(difficulty)
                     app_state = "playing"
                 elif action == "quit":
                     running = False
                 continue
 
-            # ----- ИГРА -----
             if event.type != pygame.KEYDOWN:
                 continue
 
-            state = L["state"]
-
             if event.key == pygame.K_ESCAPE:
-                if state == "playing":
+                if L["state"] == "playing":
                     L["state"] = "paused"
-                elif state == "paused":
+                elif L["state"] == "paused":
                     L["state"] = "playing"
                 else:
                     running = False
-
-            elif event.key == pygame.K_m and state in ("paused", "game_over", "all_clear"):
+            elif event.key == pygame.K_m and L["state"] in ("paused", "game_over"):
                 app_state = "menu"
-
-            elif event.key == pygame.K_r and state in ("game_over", "all_clear"):
+            elif event.key == pygame.K_r and L["state"] == "game_over":
+                L = new_session(difficulty)
                 lives = difficulty["lives"]
-                level_index = 0
-                L = load_level(level_index, difficulty)
 
-        # ================= UPDATE =================
+        # ============ МЕНЮ ============
         if app_state == "menu":
             menu.update()
             menu.draw(screen)
             pygame.display.flip()
             continue
 
-        state = L["state"]
-
-        if state == "playing":
+        # ============ ИГРА ============
+        if L["state"] == "playing":
             keys = pygame.key.get_pressed()
             L["player"].handle_input(keys)
-            L["player"].update(L["platforms"])
-            for e in L["enemies"]:
-                e.update(L["platforms"])
+
+            L["world"].update(L["camera"])
+            platforms, enemies, pixels, trees, medkits = L["world"].collect()
+
+            L["player"].update(platforms)
+            for e in enemies:
+                e.update(platforms)
             L["camera"].update(L["player"].rect)
+
+            # обновляем рекордные координаты
+            L["max_x"] = max(L["max_x"], L["player"].rect.x)
+            L["max_y"] = max(L["max_y"], L["player"].rect.y)
 
             if L["invuln"] > 0:
                 L["invuln"] -= 1
 
-            # падение за пределы мира — смерть
-            if L["player"].rect.top > WORLD_HEIGHT:
+            # падение в бездну
+            if L["player"].rect.top > DEATH_Y:
                 lives -= 1
                 if lives <= 0:
                     L["state"] = "game_over"
                     sounds.play("game_over")
-                    save_record(
-                        L["score"], L["pixels_collected"], L["total_pixels"],
-                        L["kills"], L["apples"], level_index + 1, difficulty_key
-                    )
+                    save_record(L["score"], 0, 0, L["kills"], L["apples"],
+                                L["max_x"] // 10, difficulty_key)
                 else:
-                    L["player"] = Player(x=SPAWN_X, y=SPAWN_Y)
-                    L["camera"] = Camera(WIDTH, WORLD_WIDTH)
+                    L["player"] = Player(x=0, y=surface_y(0) - 100)
+                    L["camera"] = Camera(WIDTH)
                     L["hp"] = L["max_hp"]
+                    sounds.play("hit")
 
-            # сбор пикселей
-            for px in L["pixels"]:
+            # пиксели
+            for px in pixels:
                 if px.alive and L["player"].rect.colliderect(px.rect):
                     px.alive = False
-                    L["pixels_collected"] += 1
                     L["score"] += 1
                     sounds.play("collect")
 
-            # сбор яблок с деревьев
-            for tree in L["trees"]:
+            # яблоки
+            for tree in trees:
                 for idx, arect in tree.apple_world_rects():
                     if L["player"].rect.colliderect(arect):
                         tree.collect(idx)
@@ -451,88 +290,21 @@ def main():
                         L["score"] += 2
                         sounds.play("collect")
 
-            # сбор аптечек — восстанавливают HP
-            for mk in L["medkits"]:
+            # аптечки
+            for mk in medkits:
                 if mk.alive and L["player"].rect.colliderect(mk.rect):
                     mk.alive = False
                     L["hp"] = min(L["hp"] + 30, L["max_hp"])
                     sounds.play("collect")
 
-            # ---------- БОСС ----------
-            if L.get("boss") is not None and L["boss"].alive:
-                L["boss"].update(L["player"], L["platforms"])
-
-                # столкновение снарядов с игроком
-                for pr in L["boss"].projectiles:
-                    if pr.alive and L["player"].rect.colliderect(pr.rect):
-                        pr.alive = False
-                        if L["invuln"] == 0:
-                            L["hp"] -= L["hit_damage"]
-                            L["invuln"] = INVULN_TIME
-                            sounds.play("hit")
-                            if L["hp"] <= 0:
-                                lives -= 1
-                                if lives <= 0:
-                                    L["state"] = "game_over"
-                                    sounds.play("game_over")
-                                    save_record(
-                                        L["score"], L["pixels_collected"], L["total_pixels"],
-                                        L["kills"], L["apples"], level_index + 1, difficulty_key
-                                    )
-                                else:
-                                    L["player"] = Player(x=SPAWN_X, y=SPAWN_Y)
-                                    L["camera"] = Camera(WIDTH, WORLD_WIDTH)
-                                    L["hp"] = L["max_hp"]
-
-                # столкновение игрока с боссом
-                if L["player"].rect.colliderect(L["boss"].rect):
-                    stomp = (
-                        L["player"].vel_y > 0
-                        and L["player"].rect.bottom - L["player"].vel_y <= L["boss"].rect.top + 12
-                    )
-                    if stomp:
-                        if L["boss"].take_damage():
-                            # БОСС УБИТ — победа
-                            L["kills"] += 1
-                            L["score"] += 100
-                            L["state"] = "victory"
-                            L["victory_timer"] = 0
-                            sounds.play("victory")
-                            save_record(
-                                L["score"], L["pixels_collected"], L["total_pixels"],
-                                L["kills"], L["apples"], level_index + 1, difficulty_key
-                            )
-                        else:
-                            L["player"].vel_y = -13
-                            L["score"] += 5
-                            sounds.play("stomp")
-                    elif L["invuln"] == 0:
-                        L["hp"] -= L["hit_damage"]
-                        L["invuln"] = INVULN_TIME
-                        sounds.play("hit")
-                        if L["hp"] <= 0:
-                            lives -= 1
-                            if lives <= 0:
-                                L["state"] = "game_over"
-                                sounds.play("game_over")
-                                save_record(
-                                    L["score"], L["pixels_collected"], L["total_pixels"],
-                                    L["kills"], L["apples"], level_index + 1, difficulty_key
-                                )
-                            else:
-                                L["player"] = Player(x=SPAWN_X, y=SPAWN_Y)
-                                L["camera"] = Camera(WIDTH, WORLD_WIDTH)
-                                L["hp"] = L["max_hp"]
-
             # враги
-            for e in L["enemies"]:
+            for e in enemies:
                 if not e.alive:
                     continue
                 if L["player"].rect.colliderect(e.rect):
-                    stomp = (
-                        L["player"].vel_y > 0
-                        and L["player"].rect.bottom - L["player"].vel_y <= e.rect.top + 8
-                    )
+                    stomp = (L["player"].vel_y > 0
+                             and L["player"].rect.bottom - L["player"].vel_y
+                             <= e.rect.top + 8)
                     if stomp:
                         e.alive = False
                         L["player"].vel_y = -12
@@ -548,84 +320,35 @@ def main():
                             if lives <= 0:
                                 L["state"] = "game_over"
                                 sounds.play("game_over")
-                                save_record(
-                                    L["score"], L["pixels_collected"], L["total_pixels"],
-                                    L["kills"], L["apples"], level_index + 1, difficulty_key
-                                )
+                                save_record(L["score"], 0, 0, L["kills"], L["apples"],
+                                            L["max_x"] // 10, difficulty_key)
                             else:
-                                L["player"] = Player(x=SPAWN_X, y=SPAWN_Y)
-                                L["camera"] = Camera(WIDTH, WORLD_WIDTH)
+                                L["player"] = Player(x=0, y=surface_y(0) - 100)
+                                L["camera"] = Camera(WIDTH)
                                 L["hp"] = L["max_hp"]
 
-            # флаг
-            if L["player"].rect.colliderect(L["flag"].rect):
-                boss_alive = L.get("boss") is not None and L["boss"].alive
-                if not boss_alive and L["pixels_collected"] >= L["total_pixels"]:
-                    L["flag"].lower()
-                    L["state"] = "victory"
-                    L["victory_timer"] = 0
-                    sounds.play("victory")
-                    save_record(
-                        L["score"], L["pixels_collected"], L["total_pixels"],
-                        L["kills"], L["apples"], level_index + 1, difficulty_key
-                    )
+        # ---- отрисовка ----
+        draw_background(screen, L["camera"])
+        ox, oy = L["camera"].ox, L["camera"].oy
 
-        elif state == "victory":
-            L["victory_timer"] += 1
-            L["camera"].update(L["player"].rect)
-            if L["victory_timer"] % 18 == 0:
-                spawn_firework(L)
-            if L["victory_timer"] > 180:
-                level_index += 1
-                if level_index >= len(levels.LEVELS):
-                    final_score = L["score"]
-                    final_apples = L["apples"]
-                    L = load_level(0, difficulty, final_apples)
-                    L["score"] = final_score
-                    L["state"] = "all_clear"
-                    level_index = len(levels.LEVELS)
-                    sounds.play("victory")
-                    save_record(
-                        L["score"], L["pixels_collected"], L["total_pixels"],
-                        L["kills"], L["apples"], len(levels.LEVELS), difficulty_key
-                    )
-                else:
-                    L = load_level(level_index, difficulty, L["apples"])
+        platforms, enemies, pixels, trees, medkits = L["world"].collect()
 
-        elif state == "all_clear":
-            L["victory_timer"] += 1
-            if L["victory_timer"] % 18 == 0:
-                spawn_firework(L)
-
-        L["flag"].animate(dt)
-        for fw in L["fireworks"]:
-            fw.update(dt)
-        L["fireworks"] = [fw for fw in L["fireworks"] if not fw.dead]
-
-        # ================= DRAW =================
-        draw_background(screen, clouds, L["camera"])
-        for p in L["platforms"]:
-            p.draw(screen, L["camera"].ox, L["camera"].oy)
-        for t in L["trees"]:
-            t.draw(screen, L["camera"].ox, L["camera"].oy)
-        for mk in L["medkits"]:
-            mk.draw(screen, L["camera"].ox, L["camera"].oy)
-        if L.get("boss") is not None:
-            L["boss"].draw(screen, L["camera"].ox, L["camera"].oy)
-        L["flag"].draw(screen, L["camera"].ox, L["camera"].oy)
-        for px in L["pixels"]:
-            px.draw(screen, L["camera"].ox, L["camera"].oy)
-        for e in L["enemies"]:
-            e.draw(screen, L["camera"].ox, L["camera"].oy)
+        for p in platforms:
+            p.draw(screen, ox, oy)
+        for t in trees:
+            t.draw(screen, ox, oy)
+        for mk in medkits:
+            mk.draw(screen, ox, oy)
+        for px in pixels:
+            px.draw(screen, ox, oy)
+        for e in enemies:
+            e.draw(screen, ox, oy)
 
         blink = L["invuln"] > 0 and (L["invuln"] // 4) % 2 == 0
         if not blink:
-            L["player"].draw(screen, L["camera"].ox, L["camera"].oy)
+            L["player"].draw(screen, ox, oy)
 
-        for fw in L["fireworks"]:
-            fw.draw(screen)
-
-        draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key)
+        draw_hud(screen, font_big, font_small, L, lives, difficulty_key)
         pygame.display.flip()
 
     pygame.quit()

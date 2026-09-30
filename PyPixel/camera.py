@@ -1,17 +1,13 @@
-"""Камера, следующая за игроком по X и Y."""
-import pygame
-from settings import HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, SURFACE_Y
+"""Бесконечная камера — без ограничений мира."""
+from settings import HEIGHT
 
 
 class Camera:
-    def __init__(self, view_width, world_width):
+    def __init__(self, view_width):
         self.view_width = view_width
         self.view_height = HEIGHT
-        self.world_width = world_width
-        self.world_height = WORLD_HEIGHT
-        # Стартуем камеру так, чтобы центр смотрел на уровень земли
         self.offset_x = 0.0
-        self.offset_y = float(SURFACE_Y - self.view_height // 2)
+        self.offset_y = 0.0
         self.dead_zone_x = 120
         self.dead_zone_y = 80
 
@@ -25,7 +21,6 @@ class Camera:
             else:
                 target_x = self.offset_x + diff_x + self.dead_zone_x
         self.offset_x += (target_x - self.offset_x) * 0.15
-        self.offset_x = max(0, min(self.offset_x, self.world_width - self.view_width))
 
         # --- Y ---
         target_y = target_rect.centery - self.view_height / 2
@@ -36,7 +31,6 @@ class Camera:
             else:
                 target_y = self.offset_y + diff_y + self.dead_zone_y
         self.offset_y += (target_y - self.offset_y) * 0.12
-        self.offset_y = max(0, min(self.offset_y, self.world_height - self.view_height))
 
     @property
     def ox(self):

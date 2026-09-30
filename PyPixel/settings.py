@@ -74,3 +74,15 @@ BIOME_BOUNDS = [
     (SURFACE_Y, SURFACE_Y + 400, "caves"),
     (SURFACE_Y + 400, WORLD_HEIGHT + 1000, "deep_caves"),
 ]
+
+
+# Обновлённые сложности для рогалика
+DIFFICULTIES = {
+    "easy":   {"lives": 5, "max_hp": 100, "hit_damage": 15, "enemy_speed": 1.5,
+               "enemy_density": 0.30, "label": "Лёгкий"},
+    "normal": {"lives": 5, "max_hp": 100, "hit_damage": 25, "enemy_speed": 2.0,
+               "enemy_density": 0.45, "label": "Обычный"},
+    "hard":   {"lives": 3, "max_hp": 75,  "hit_damage": 40, "enemy_speed": 3.0,
+               "enemy_density": 0.65, "label": "Сложный"},
+}
+DEFAULT_DIFFICULTY = "normal"
