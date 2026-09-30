@@ -110,3 +110,18 @@ def draw_tool_icon(surface, rect, tool_id):
     if sprite:
         r = sprite.get_rect(center=rect.center)
         surface.blit(sprite, r)
+
+
+_rot_cache = {}
+
+def get_tool_sprite_rotated(tool_id, size=32, angle=0):
+    """Повёрнутая иконка инструмента (для анимации взмаха)."""
+    key = (tool_id, size, angle)
+    if key in _rot_cache:
+        return _rot_cache[key]
+    base = get_tool_sprite(tool_id, size)
+    if not base:
+        return None
+    rotated = pygame.transform.rotate(base, angle)
+    _rot_cache[key] = rotated
+    return rotated

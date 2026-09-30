@@ -21,7 +21,8 @@ from background import draw_sky_gradient, draw_mountains, draw_fog_between_layer
 from terrain import draw_terrain_polygon, draw_surface_details
 from records import save_record
 from inventory import Inventory, SLOTS
-from tools import TOOLS, PICKAXE, AXE, SWORD, draw_tool_icon, get_tool_sprite
+from tools import TOOLS, PICKAXE, AXE, SWORD, draw_tool_icon, get_tool_sprite, get_tool_sprite_rotated
+from particles import ParticleSystem
 from blocks import BLOCKS, TILE_SIZE, draw_block, draw_dig_progress, AIR, WOOD
 from blocks import DIRT as B_DIRT
 import sounds
@@ -322,6 +323,9 @@ def main():
                             L["inventory"].take_selected(1)
                 elif event.button == 1:  # ЛКМ
                     sel_tool = L["inventory"].selected_tool()
+                    # триггерим анимацию взмаха
+                    if sel_tool:
+                        L["swing_timer"] = 12   # 12 кадров анимации
                     if sel_tool == SWORD:
                         sword_range = TOOLS[SWORD]["attack_range_px"]
                         _, enemies, _, _, _ = L["world"].collect()
@@ -336,12 +340,21 @@ def main():
                                 L["kills"] += 1
                                 L["score"] += 5
                                 hit_any = True
+                                # КРОВЬ
+                                L["particles"].spawn_blood(
+                                    e.rect.centerx, e.rect.centery,
+                                    direction=(1 if e.rect.centerx > L["player"].rect.centerx else -1) * 0,
+                                    count=16,
+                                )
                         sounds.play("stomp" if hit_any else "hit")
                     elif sel_tool == AXE:
                         pos = L["world"].chop_tree(wx, wy, radius_px=140)
                         if pos:
                             L["inventory"].add(WOOD, 4)
                             L["score"] += 3
+                            # ЛИСТЬЯ + щепки
+                            L["particles"].spawn_leaves(pos[0], pos[1], count=20)
+                            L["particles"].spawn_dirt(pos[0], pos[1], count=10, color=(110, 70, 40))
                             sounds.play("stomp")
 
         # ============ МЕНЮ ============
@@ -400,6 +413,19 @@ def main():
             # --- ПОГОДА ---
             L["weather"].update(L["camera"].offset_y)
 
+            # --- ВЗМАХ + ЧАСТИЦЫ ---
+            if L["swing_timer"] > 0:
+                L["swing_timer"] -= 1
+                # кривая: быстро вперёд, медленно назад
+                t = 1.0 - (L["swing_timer"] / 12.0)
+                if t < 0.5:
+                    L["swing_angle"] = -60 * (t / 0.5)   # вперёд
+                else:
+                    L["swing_angle"] = -60 * (1 - (t - 0.5) / 0.5)
+            else:
+                L["swing_angle"] = 0
+            L["particles"].update()
+
             # --- КОПАНИЕ (ЛКМ удержание) ---
             mouse_pressed = pygame.mouse.get_pressed()
             mx, my = pygame.mouse.get_pos()
@@ -428,6 +454,13 @@ def main():
                             if dug is not None:
                                 L["inventory"].add(dug, 1)
                                 L["score"] += 1
+                                # частицы по типу блока
+                                cx_px = tx * TILE_SIZE + TILE_SIZE // 2
+                                cy_px = ty * TILE_SIZE + TILE_SIZE // 2
+                                if dug in (3, 4, 5, 6):   # STONE/COPPER/IRON/GOLD
+                                    L["particles"].spawn_sparks(cx_px, cy_px, count=10)
+                                else:
+                                    L["particles"].spawn_dirt(cx_px, cy_px, count=10)
                                 sounds.play("collect")
                             L["mining"] = None
                     else:
@@ -532,18 +565,25 @@ def main():
         if not blink:
             L["player"].draw(screen, ox, oy)
 
-        # Инструмент в руке
+        # Инструмент в руке (с анимацией взмаха)
         tool_id = L["inventory"].selected_tool()
         if tool_id:
-            sprite = get_tool_sprite(tool_id, 20)
+            angle = L["swing_angle"]
+            sprite = get_tool_sprite_rotated(tool_id, 22, int(angle)) if angle else get_tool_sprite(tool_id, 22)
             if sprite:
                 pr = L["player"].rect
                 if L["player"].facing_right:
-                    tx = pr.right - ox - 4
+                    tx = pr.right - ox - 6
+                    ty = pr.centery - oy - sprite.get_height() // 2
                 else:
-                    tx = pr.left - ox - 16
-                ty = pr.centery - oy - 10
+                    # отражение для левого направления
+                    sprite = pygame.transform.flip(sprite, True, False)
+                    tx = pr.left - ox - sprite.get_width() + 6
+                    ty = pr.centery - oy - sprite.get_height() // 2
                 screen.blit(sprite, (tx, ty))
+
+        # Частицы — поверх мира
+        L["particles"].draw(screen, ox, oy)
 
         # Прогресс копания на блоке
         if L["mining"]:
