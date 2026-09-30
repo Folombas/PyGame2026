@@ -153,8 +153,7 @@ def draw_hud(screen, font_big, font_small, L, lives, level_index, difficulty_key
 
     stats = (
         f"Пиксели: {L['pixels_collected']}/{L['total_pixels']}   "
-        f"Враги: {L['kills']}   "
-        f"Яблоки: {L['apples']}"
+        f"Враги: {L['kills']}"
     )
     stats_surf = font_small.render(stats, True, TEXT_COLOR)
     screen.blit(stats_surf, (WIDTH - stats_surf.get_width() - 20, 55))
