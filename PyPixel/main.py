@@ -20,6 +20,9 @@ from weather import Weather
 from background import draw_sky_gradient, draw_mountains, draw_fog_between_layers
 from terrain import draw_terrain_polygon, draw_surface_details
 from records import save_record
+from inventory import Inventory, SLOTS
+from blocks import BLOCKS, TILE_SIZE, draw_block, draw_dig_progress, AIR
+from blocks import DIRT as B_DIRT
 import sounds
 import sound_settings
 
@@ -92,6 +95,35 @@ def draw_health_bar(screen, font_small, hp, max_hp):
     screen.blit(label, (x + 8, y + 1))
 
 
+def draw_hotbar(screen, font_small, inventory):
+    """Хотбар внизу экрана."""
+    box = 48
+    gap = 4
+    total = SLOTS * box + (SLOTS - 1) * gap
+    x0 = (WIDTH - total) // 2
+    y0 = HEIGHT - box - 16
+
+    for i in range(SLOTS):
+        x = x0 + i * (box + gap)
+        selected = (i == inventory.selected)
+        bg = (60, 50, 70) if selected else (35, 30, 45)
+        border = (255, 240, 120) if selected else (110, 100, 130)
+        pygame.draw.rect(screen, bg, (x, y0, box, box))
+        pygame.draw.rect(screen, border, (x, y0, box, box), 2 if selected else 1)
+
+        slot = inventory.slots[i]
+        if slot:
+            rect = pygame.Rect(x + 6, y0 + 6, box - 12, box - 12)
+            draw_block(screen, rect, slot["type"])
+            # счётчик
+            cnt = font_small.render(str(slot["count"]), True, (255, 255, 255))
+            screen.blit(cnt, (x + box - cnt.get_width() - 4, y0 + box - 20))
+
+        # номер слота
+        num = font_small.render(str((i + 1) % 10), True, (180, 180, 200))
+        screen.blit(num, (x + 4, y0 + 2))
+
+
 def draw_temperature_bar(screen, font_small, body_temp):
     x, y = 14, 68
     w, h = 200, 14
@@ -140,6 +172,8 @@ def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
     draw_health_bar(screen, font_small, L["hp"], L["max_hp"])
     draw_temperature_bar(screen, font_small, L["body_temp"])
 
+    draw_hotbar(screen, font_small, L["inventory"])
+
     if L["state"] == "game_over":
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 160))
@@ -182,9 +216,11 @@ def new_session(difficulty):
         "max_x": 0,
         "max_y": surface_y(0),
         "state": "playing",
-        "body_temp": 100.0,          # 0..100
+        "body_temp": 100.0,
         "freeze_tick": 0,
         "weather": Weather(),
+        "inventory": Inventory(),
+        "mining": None,            # {"tx", "ty", "progress"}
     }
 
 
@@ -260,6 +296,23 @@ def main():
                 sound_settings.save(cfg)
                 sounds.reload_settings()
                 sounds.play("collect")
+            elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5,
+                               pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0):
+                n = event.key - pygame.K_1
+                if n < 0:
+                    n = 9
+                L["inventory"].select(n)
+
+            # Мышь — копание / установка
+            if L["state"] == "playing" and event.type == pygame.MOUSEBUTTONDOWN:
+                mx, my = pygame.mouse.get_pos()
+                wx = mx + L["camera"].ox
+                wy = my + L["camera"].oy
+                if event.button == 3:   # ПКМ — поставить
+                    bt = L["inventory"].selected_type()
+                    if bt is not None:
+                        if L["world"].place(wx, wy, bt):
+                            L["inventory"].take_selected(1)
 
         # ============ МЕНЮ ============
         if app_state == "menu":
@@ -316,6 +369,34 @@ def main():
 
             # --- ПОГОДА ---
             L["weather"].update(L["camera"].offset_y)
+
+            # --- КОПАНИЕ (ЛКМ удержание) ---
+            mouse_pressed = pygame.mouse.get_pressed()
+            mx, my = pygame.mouse.get_pos()
+            wx = mx + L["camera"].ox
+            wy = my + L["camera"].oy
+            tx = wx // TILE_SIZE
+            ty = wy // TILE_SIZE
+            px_tx = L["player"].rect.centerx // TILE_SIZE
+            py_ty = L["player"].rect.centery // TILE_SIZE
+            dist = max(abs(tx - px_tx), abs(ty - py_ty))
+
+            if mouse_pressed[0] and dist <= 5:
+                bt = L["world"].get_block_type(wx, wy)
+                if bt is not None and bt != AIR and bt in BLOCKS:
+                    if L["mining"] and L["mining"]["tx"] == tx and L["mining"]["ty"] == ty:
+                        L["mining"]["progress"] += 1.0 / BLOCKS[bt]["hardness"]
+                        if L["mining"]["progress"] >= 1.0:
+                            dug = L["world"].dig(wx, wy)
+                            if dug is not None:
+                                L["inventory"].add(dug, 1)
+                                L["score"] += 1
+                                sounds.play("collect")
+                            L["mining"] = None
+                    else:
+                        L["mining"] = {"tx": tx, "ty": ty, "progress": 0.0}
+            else:
+                L["mining"] = None
 
             if L["invuln"] > 0:
                 L["invuln"] -= 1
@@ -413,6 +494,24 @@ def main():
         blink = L["invuln"] > 0 and (L["invuln"] // 4) % 2 == 0
         if not blink:
             L["player"].draw(screen, ox, oy)
+
+        # Прогресс копания на блоке
+        if L["mining"]:
+            mtx = L["mining"]["tx"] * TILE_SIZE
+            mty = L["mining"]["ty"] * TILE_SIZE
+            mrect = pygame.Rect(mtx, mty, TILE_SIZE, TILE_SIZE)
+            draw_dig_progress(screen, mrect, L["mining"]["progress"], (ox, oy))
+
+        # Подсветка блока под курсором
+        if L["state"] == "playing":
+            mx, my = pygame.mouse.get_pos()
+            wx = mx + L["camera"].ox
+            wy = my + L["camera"].oy
+            htx = (wx // TILE_SIZE) * TILE_SIZE
+            hty = (wy // TILE_SIZE) * TILE_SIZE
+            hr = pygame.Rect(htx - ox, hty - oy, TILE_SIZE, TILE_SIZE)
+            if -TILE_SIZE < hr.x < WIDTH and -TILE_SIZE < hr.y < HEIGHT:
+                pygame.draw.rect(screen, (255, 255, 255), hr, 2)
 
         # Погода — поверх мира, но под HUD
         L["weather"].draw(screen, L["camera"].offset_y)

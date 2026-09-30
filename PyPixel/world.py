@@ -1,5 +1,6 @@
 """Бесконечный процедурный мир: горы, пещеры с входами, погодные зоны."""
 import pygame
+from blocks import TILE_SIZE, AIR, DIRT, GRASS, STONE, COPPER, IRON, GOLD, SAND
 from platform import Platform
 from enemy import Enemy
 from collectible import Pixel
@@ -101,11 +102,38 @@ def is_cave(x, y):
     return v > 0.60 - depth_factor
 
 
+
+
+def block_at(x, y):
+    """Тип блока в мировой точке (x, y)."""
+    sy = surface_y(x)
+    if y < sy:
+        return AIR
+    # верхний слой — трава
+    if y < sy + TILE_SIZE:
+        return GRASS if sy > 700 else SAND
+    # следующие 4 тайла — земля
+    if y < sy + TILE_SIZE * 5:
+        return DIRT
+    # дальше — камень с рудой
+    depth = (y - sy) // TILE_SIZE
+    h = _hash(x // TILE_SIZE, y // TILE_SIZE, 42)
+    if depth > 6:
+        if h > 0.985:
+            return GOLD
+        if h > 0.955:
+            return IRON
+        if h > 0.90:
+            return COPPER
+    return STONE
+
+
 class Chunk:
-    def __init__(self, cx, cy, difficulty):
+    def __init__(self, cx, cy, difficulty, modifications=None):
         self.cx = cx
         self.cy = cy
         self.difficulty = difficulty
+        self.modifications = modifications or {}
         self.platforms = []
         self.enemies = []
         self.pixels = []
@@ -123,15 +151,26 @@ class Chunk:
         for col_x in range(col_start, x1 + COLUMN_W, COLUMN_W):
             sy = surface_y(col_x)
             ground_end = sy + GROUND_DEPTH
-            gy = sy + 40   # пропускаем верхние 40px — их рисует terrain.py
+            gy = sy
             while gy < ground_end:
                 if gy + COLUMN_W < y0:
                     gy += COLUMN_W
                     continue
                 if gy > y1:
                     break
-                if not is_cave(col_x, gy + COLUMN_W // 2):
-                    self.platforms.append(Platform(col_x, gy, COLUMN_W + 1, COLUMN_W))
+                tx = col_x // TILE_SIZE
+                ty = gy // TILE_SIZE
+                # игрок изменял этот тайл?
+                if (tx, ty) in self.modifications:
+                    mod = self.modifications[(tx, ty)]
+                    if mod is not None:
+                        p = Platform(col_x, gy, COLUMN_W + 1, COLUMN_W, block_type=mod)
+                        self.platforms.append(p)
+                elif not is_cave(col_x, gy + COLUMN_W // 2):
+                    bt = block_at(col_x, gy + COLUMN_W // 2)
+                    if bt != AIR:
+                        p = Platform(col_x, gy, COLUMN_W + 1, COLUMN_W, block_type=bt)
+                        self.platforms.append(p)
                 gy += COLUMN_W
 
         # Висячие платформы в воздухе (только над землёй)
@@ -183,12 +222,60 @@ class World:
     def __init__(self, difficulty):
         self.difficulty = difficulty
         self.chunks = {}
+        self.modifications = {}   # (tx, ty) -> block_type или None
 
     def _get_chunk(self, cx, cy):
         key = (cx, cy)
         if key not in self.chunks:
-            self.chunks[key] = Chunk(cx, cy, self.difficulty)
+            self.chunks[key] = Chunk(cx, cy, self.difficulty, self.modifications)
         return self.chunks[key]
+
+
+    def world_to_tile(self, wx, wy):
+        return (wx // TILE_SIZE, wy // TILE_SIZE)
+
+    def get_block_type(self, wx, wy):
+        """Тип блока в мировой точке. None — если пустота."""
+        tx, ty = self.world_to_tile(wx, wy)
+        if (tx, ty) in self.modifications:
+            return self.modifications[(tx, ty)]
+        # если не модифицирован — смотрим сгенерированный чанк
+        cx = tx * TILE_SIZE // CHUNK_SIZE
+        cy = ty * TILE_SIZE // CHUNK_SIZE
+        ch = self._get_chunk(cx, cy)
+        for p in ch.platforms:
+            if p.rect.x <= wx < p.rect.right and p.rect.y <= wy < p.rect.bottom:
+                return getattr(p, "block_type", STONE)
+        return None
+
+    def dig(self, wx, wy):
+        """Убирает блок. Возвращает его тип или None."""
+        tx, ty = self.world_to_tile(wx, wy)
+        bt = self.get_block_type(wx, wy)
+        if bt is None or bt == AIR:
+            return None
+        # удаляем из чанка
+        cx = tx * TILE_SIZE // CHUNK_SIZE
+        cy = ty * TILE_SIZE // CHUNK_SIZE
+        ch = self._get_chunk(cx, cy)
+        r = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        ch.platforms = [p for p in ch.platforms if not (p.rect.x == r.x and p.rect.y == r.y)]
+        # запоминаем изменение
+        self.modifications[(tx, ty)] = None
+        return bt
+
+    def place(self, wx, wy, block_type):
+        """Ставит блок. Возвращает True при успехе."""
+        tx, ty = self.world_to_tile(wx, wy)
+        if self.get_block_type(wx, wy) is not None:
+            return False
+        cx = tx * TILE_SIZE // CHUNK_SIZE
+        cy = ty * TILE_SIZE // CHUNK_SIZE
+        ch = self._get_chunk(cx, cy)
+        p = Platform(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE + 1, TILE_SIZE, block_type=block_type)
+        ch.platforms.append(p)
+        self.modifications[(tx, ty)] = block_type
+        return True
 
     def update(self, camera):
         cx0 = int((camera.offset_x - CHUNK_SIZE) // CHUNK_SIZE)
