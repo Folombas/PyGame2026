@@ -17,6 +17,8 @@ from world import (
     get_ambient_temp, weather_zone,
 )
 from weather import Weather
+from background import draw_sky_gradient, draw_mountains, draw_fog_between_layers
+from terrain import draw_terrain_polygon, draw_surface_details
 from records import save_record
 import sounds
 
@@ -31,53 +33,21 @@ def draw_cloud(surface, cx, cy, size, color=(255, 255, 255)):
 
 
 def draw_background(screen, camera):
-    oy = camera.offset_y
+    """Многослойный фон: небо → дальние горы → туман."""
+    draw_sky_gradient(screen, camera)
+    draw_mountains(screen, camera)
+    draw_fog_between_layers(screen, camera, strength=0.10)
+
+    # Облака
     ox = camera.offset_x
-    ground_y = SURFACE_Y - oy
-
-    sky_top = (90, 155, 220)
-    sky_bot = (185, 220, 245)
-    cave_top = (45, 28, 25)
-    cave_bot = (8, 5, 10)
-
-    for y_screen in range(HEIGHT):
-        if y_screen < ground_y:
-            t = min(1.0, max(0.0, (ground_y - y_screen) / 500.0))
-            col = (int(sky_bot[0] * (1 - t) + sky_top[0] * t),
-                   int(sky_bot[1] * (1 - t) + sky_top[1] * t),
-                   int(sky_bot[2] * (1 - t) + sky_top[2] * t))
-        else:
-            t = min(1.0, (y_screen - ground_y) / 700.0)
-            col = (int(cave_top[0] * (1 - t) + cave_bot[0] * t),
-                   int(cave_top[1] * (1 - t) + cave_bot[1] * t),
-                   int(cave_top[2] * (1 - t) + cave_bot[2] * t))
-        pygame.draw.line(screen, col, (0, y_screen), (WIDTH, y_screen))
-
-    # Силуэты гор
-    if -100 < ground_y < HEIGHT + 100:
-        for parallax, color, h, spacing in [
-            (0.15, (165, 190, 220), 130, 420),
-            (0.30, (135, 165, 205), 190, 360),
-            (0.45, (105, 140, 185), 250, 300),
-        ]:
-            shift = int(ox * parallax) % spacing
-            cx = -shift - spacing
-            while cx <= WIDTH + spacing:
-                pygame.draw.polygon(screen, color, [
-                    (cx, ground_y),
-                    (cx + spacing // 2, ground_y - h),
-                    (cx + spacing, ground_y),
-                ])
-                cx += spacing
-
-    # Облака (привязаны к мировым X, только выше земли)
+    oy = camera.offset_y
     for i in range(40):
-        cx_world = i * 350 + random.Random(i).randint(-100, 100)
-        cy_world = 200 + (i * 137) % (SURFACE_Y - 400)
+        cx_world = i * 350 + (i * 137) % 200 - 100
+        cy_world = 200 + (i * 211) % 800
         size = 50 + (i * 31) % 50
         layer = 0.2 + (i % 3) * 0.2
         sx = int(cx_world - ox * layer)
-        sy = int(cy_world - oy)
+        sy = int(cy_world - oy * 0.6)
         if -size < sx < WIDTH + size and -size < sy < HEIGHT + size:
             draw_cloud(screen, sx + 3, sy + 3, size, (200, 210, 225))
             draw_cloud(screen, sx, sy, size, (255, 255, 255))
@@ -405,8 +375,14 @@ def main():
 
         platforms, enemies, pixels, trees, medkits = L["world"].collect()
 
+        # --- РЕЛЬЕФ (новый сглаженный) ---
+        draw_terrain_polygon(screen, L["camera"])
+        draw_surface_details(screen, L["camera"])
+
+        # подземные блоки (пещеры, руды) — только те, что ниже поверхности
         for p in platforms:
-            p.draw(screen, ox, oy)
+            if p.rect.y > surface_y(p.rect.x) + 40:
+                p.draw(screen, ox, oy)
         for t in trees:
             t.draw(screen, ox, oy)
         for mk in medkits:

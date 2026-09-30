@@ -123,7 +123,7 @@ class Chunk:
         for col_x in range(col_start, x1 + COLUMN_W, COLUMN_W):
             sy = surface_y(col_x)
             ground_end = sy + GROUND_DEPTH
-            gy = sy
+            gy = sy + 40   # пропускаем верхние 40px — их рисует terrain.py
             while gy < ground_end:
                 if gy + COLUMN_W < y0:
                     gy += COLUMN_W
