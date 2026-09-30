@@ -23,6 +23,9 @@ from records import save_record
 from inventory import Inventory, SLOTS
 from tools import TOOLS, PICKAXE, AXE, SWORD, draw_tool_icon, get_tool_sprite, get_tool_sprite_rotated
 from particles import ParticleSystem
+from tools import BOW
+from arrows import Arrow
+import math
 from blocks import BLOCKS, TILE_SIZE, draw_block, draw_dig_progress, AIR, WOOD
 from blocks import DIRT as B_DIRT
 import sounds
@@ -210,6 +213,7 @@ def new_session(difficulty):
     inv.add_tool(PICKAXE)
     inv.add_tool(AXE)
     inv.add_tool(SWORD)
+    inv.add_tool(BOW)
     return {
         "player": player,
         "camera": camera,
@@ -232,7 +236,60 @@ def new_session(difficulty):
         "particles": ParticleSystem(),
         "swing_timer": 0,
         "swing_angle": 0,
+        "arrows": [],
+        "bow_cooldown": 0,
     }
+
+
+
+
+def use_tool_at(L, wx, wy, mx, my):
+    """Действие инструментом в точке. Вызывается из ЛКМ и клавиши E/F."""
+    sel_tool = L["inventory"].selected_tool()
+    if not sel_tool:
+        return
+    L["swing_timer"] = 12
+
+    if sel_tool == SWORD:
+        sword_range = TOOLS[SWORD]["attack_range_px"]
+        _, enemies, _, _, _ = L["world"].collect()
+        hit_any = False
+        for e in enemies:
+            if not e.alive:
+                continue
+            dx = e.rect.centerx - L["player"].rect.centerx
+            dy = e.rect.centery - L["player"].rect.centery
+            if abs(dx) < sword_range and abs(dy) < sword_range:
+                e.alive = False
+                L["kills"] += 1
+                L["score"] += 5
+                hit_any = True
+                L["particles"].spawn_blood(e.rect.centerx, e.rect.centery, count=16)
+        sounds.play("stomp" if hit_any else "hit")
+
+    elif sel_tool == AXE:
+        pos = L["world"].chop_tree(wx, wy, radius_px=140)
+        if pos:
+            L["inventory"].add(WOOD, 4)
+            L["score"] += 3
+            L["particles"].spawn_leaves(pos[0], pos[1], count=20)
+            L["particles"].spawn_dirt(pos[0], pos[1], count=10, color=(110, 70, 40))
+            sounds.play("stomp")
+
+    elif sel_tool == BOW:
+        if L.get("bow_cooldown", 0) > 0:
+            return
+        px = L["player"].rect.centerx
+        py = L["player"].rect.centery
+        dx = mx - px
+        dy = my - py
+        dist = math.hypot(dx, dy) or 1
+        speed = 13
+        vx = dx / dist * speed
+        vy = dy / dist * speed
+        L.setdefault("arrows", []).append(Arrow(px, py, vx, vy))
+        L["bow_cooldown"] = TOOLS[BOW]["cooldown"]
+        sounds.play("jump")
 
 
 def main():
@@ -287,34 +344,7 @@ def main():
                             if L["world"].place(wx, wy, bt):
                                 L["inventory"].take_selected(1)
                     elif event.button == 1:
-                        sel_tool = L["inventory"].selected_tool()
-                        if sel_tool:
-                            L["swing_timer"] = 12
-                        if sel_tool == SWORD:
-                            sword_range = TOOLS[SWORD]["attack_range_px"]
-                            _, enemies, _, _, _ = L["world"].collect()
-                            hit_any = False
-                            for e in enemies:
-                                if not e.alive:
-                                    continue
-                                dx = e.rect.centerx - L["player"].rect.centerx
-                                dy = e.rect.centery - L["player"].rect.centery
-                                if abs(dx) < sword_range and abs(dy) < sword_range:
-                                    e.alive = False
-                                    L["kills"] += 1
-                                    L["score"] += 5
-                                    hit_any = True
-                                    L["particles"].spawn_blood(
-                                        e.rect.centerx, e.rect.centery, count=16)
-                            sounds.play("stomp" if hit_any else "hit")
-                        elif sel_tool == AXE:
-                            pos = L["world"].chop_tree(wx, wy, radius_px=140)
-                            if pos:
-                                L["inventory"].add(WOOD, 4)
-                                L["score"] += 3
-                                L["particles"].spawn_leaves(pos[0], pos[1], count=20)
-                                L["particles"].spawn_dirt(pos[0], pos[1], count=10, color=(110, 70, 40))
-                                sounds.play("stomp")
+                        use_tool_at(L, wx, wy, mx, my)
                 continue
 
             if event.type != pygame.KEYDOWN:
@@ -349,6 +379,11 @@ def main():
                 sound_settings.save(cfg)
                 sounds.reload_settings()
                 sounds.play("collect")
+            elif event.key in (pygame.K_e, pygame.K_f) and L["state"] == "playing":
+                mx, my = pygame.mouse.get_pos()
+                wx = mx + L["camera"].ox
+                wy = my + L["camera"].oy
+                use_tool_at(L, wx, wy, mx, my)
             elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5,
                                pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0):
                 n = event.key - pygame.K_1
@@ -412,6 +447,20 @@ def main():
 
             # --- ПОГОДА ---
             L["weather"].update(L["camera"].offset_y)
+
+            # --- СТРЕЛЫ ---
+            if L.get("bow_cooldown", 0) > 0:
+                L["bow_cooldown"] -= 1
+            for arr in L.get("arrows", [])[:]:
+                hit = arr.update(platforms, enemies)
+                if hit is not None:
+                    hit.alive = False
+                    L["kills"] += 1
+                    L["score"] += 5
+                    L["particles"].spawn_blood(hit.rect.centerx, hit.rect.centery, count=14)
+                    sounds.play("stomp")
+                if not arr.alive:
+                    L["arrows"].remove(arr)
 
             # --- ВЗМАХ + ЧАСТИЦЫ ---
             if L["swing_timer"] > 0:
@@ -584,6 +633,10 @@ def main():
                     tx = pr.left - ox - sprite.get_width() + 6
                     ty = pr.centery - oy - sprite.get_height() // 2
                 screen.blit(sprite, (tx, ty))
+
+        # Стрелы
+        for arr in L.get("arrows", []):
+            arr.draw(screen, ox, oy)
 
         # Частицы — поверх мира
         L["particles"].draw(screen, ox, oy)
