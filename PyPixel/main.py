@@ -22,6 +22,8 @@ from terrain import draw_terrain_polygon, draw_surface_details
 from records import save_record
 from inventory import Inventory, SLOTS
 from crafting import CraftingUI
+from card_book import CardBook
+from cards import roll_card, CARD_DEFS
 from tools import TOOLS, PICKAXE, AXE, SWORD, draw_tool_icon, get_tool_sprite, get_tool_sprite_rotated
 from particles import ParticleSystem
 from tools import BOW
@@ -239,6 +241,9 @@ def new_session(difficulty):
         "swing_angle": 0,
         "arrows": [],
         "bow_cooldown": 0,
+        "cards": set(),
+        "card_toast": None,
+        "card_toast_timer": 0,
     }
 
 
@@ -267,6 +272,12 @@ def use_tool_at(L, wx, wy, mx, my):
                 hit_any = True
                 L["particles"].spawn_blood(e.rect.centerx, e.rect.centery, count=16)
         sounds.play("stomp" if hit_any else "hit")
+        if hit_any:
+            cid = roll_card("enemy", L["cards"])
+            if cid:
+                L["cards"].add(cid)
+                L["card_toast"] = cid
+                L["card_toast_timer"] = 180
 
     elif sel_tool == AXE:
         pos = L["world"].chop_tree(wx, wy, radius_px=140)
@@ -293,6 +304,46 @@ def use_tool_at(L, wx, wy, mx, my):
         sounds.play("jump")
 
 
+def draw_card_toast(screen, font_big, font_small, L):
+    """Всплывашка о новой карточке в углу."""
+    if L["card_toast_timer"] <= 0 or not L["card_toast"]:
+        return
+    from cards import CARD_DEFS, RARITY, draw_card_icon
+    cid = L["card_toast"]
+    info = CARD_DEFS[cid]
+    rar = RARITY[info["rarity"]]
+
+    # анимация выезда
+    t = L["card_toast_timer"]
+    slide = min(1.0, (180 - t) / 20.0)   # выезжает
+    fade = min(1.0, t / 40.0)            # исчезает
+
+    box_w = 300
+    box_h = 90
+    x = WIDTH - box_w - 20
+    y = int(20 + (1 - slide) * -120)
+    if fade < 1:
+        y += int((1 - fade) * -20)
+
+    box = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+    box.fill((18, 14, 32, int(240 * fade)))
+    pygame.draw.rect(box, (*rar["color"], int(255 * fade)), (0, 0, box_w, box_h), 2)
+
+    # иконка
+    icon_rect = pygame.Rect(8, 8, 74, 74)
+    draw_card_icon(box, info["icon"], icon_rect)
+
+    # тексты
+    t1 = font_small.render("НОВАЯ КАРТОЧКА", True,
+                            (255, 240, 120, int(255 * fade)))
+    t2 = font_big.render(info["name"], True, (*rar["color"], int(255 * fade)))
+    t3 = font_small.render(rar["name"], True, (200, 200, 220, int(255 * fade)))
+    box.blit(t1, (92, 10))
+    box.blit(t2, (92, 32))
+    box.blit(t3, (92, 62))
+    screen.blit(box, (x, y))
+
+
 def main():
     pygame.init()
     sounds.init()
@@ -304,6 +355,7 @@ def main():
 
     menu = Menu(font_big, font_small)
     craft_ui = CraftingUI(font_big, font_small)
+    card_book = CardBook(font_big, font_small)
     app_state = "menu"
     difficulty_key = DEFAULT_DIFFICULTY
     difficulty = DIFFICULTIES[difficulty_key]
@@ -318,6 +370,10 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
                 continue
+
+            if app_state == "playing" and card_book.open:
+                if card_book.handle_event(event, L["cards"]):
+                    continue
 
             if app_state == "menu":
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -466,6 +522,11 @@ def main():
                     L["score"] += 5
                     L["particles"].spawn_blood(hit.rect.centerx, hit.rect.centery, count=14)
                     sounds.play("stomp")
+                    cid = roll_card("enemy", L["cards"])
+                    if cid:
+                        L["cards"].add(cid)
+                        L["card_toast"] = cid
+                        L["card_toast_timer"] = 180
                 if not arr.alive:
                     L["arrows"].remove(arr)
 
@@ -513,6 +574,17 @@ def main():
                             if dug is not None:
                                 L["inventory"].add(dug, 1)
                                 L["score"] += 1
+                                # дроп карточки с руды
+                                if dug == 4:      # COPPER
+                                    cid = roll_card("ore", L["cards"])
+                                elif dug in (5, 6):  # IRON/GOLD
+                                    cid = roll_card("gold", L["cards"])
+                                else:
+                                    cid = None
+                                if cid:
+                                    L["cards"].add(cid)
+                                    L["card_toast"] = cid
+                                    L["card_toast_timer"] = 180
                                 # частицы по типу блока
                                 cx_px = tx * TILE_SIZE + TILE_SIZE // 2
                                 cy_px = ty * TILE_SIZE + TILE_SIZE // 2
@@ -559,6 +631,11 @@ def main():
                         L["apples"] += 1
                         L["score"] += 2
                         sounds.play("collect")
+                        cid = roll_card("apple", L["cards"])
+                        if cid:
+                            L["cards"].add(cid)
+                            L["card_toast"] = cid
+                            L["card_toast_timer"] = 180
 
             # аптечки
             for mk in medkits:
@@ -673,6 +750,8 @@ def main():
 
         draw_hud(screen, font_big, font_small, L, lives, difficulty_key)
         craft_ui.draw(screen, L["inventory"])
+        draw_card_toast(screen, font_big, font_small, L)
+        card_book.draw(screen, L["cards"])
         pygame.display.flip()
 
     pygame.quit()
