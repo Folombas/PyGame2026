@@ -18,7 +18,7 @@ from world import (
 )
 from weather import Weather
 from background import draw_sky_gradient, draw_mountains, draw_fog_between_layers
-from terrain import draw_terrain_polygon, draw_surface_details
+from terrain import draw_surface_details
 from records import save_record
 from inventory import Inventory, SLOTS
 from crafting import CraftingUI
@@ -456,7 +456,8 @@ def main():
                     if event.button == 3:
                         bt = L["inventory"].selected_type()
                         if bt is not None:
-                            if L["world"].place(wx, wy, bt):
+                            wtx, wty = wx // TILE_SIZE, wy // TILE_SIZE
+                            if L["world"].place(wtx, wty, bt):
                                 L["inventory"].take_selected(1)
                     elif event.button == 1:
                         use_tool_at(L, wx, wy, mx, my)
@@ -621,19 +622,18 @@ def main():
                 # поддерживаем анимацию взмаха, пока копаем
                 if L["swing_timer"] <= 0 and L["inventory"].selected_tool():
                     L["swing_timer"] = 8
-                bt = L["world"].get_block_type(wx, wy)
-                if bt is not None and bt != AIR and bt in BLOCKS:
+                bt = L["world"].get_block(tx, ty)
+                if bt != AIR and bt in BLOCKS:
                     if L["mining"] and L["mining"]["tx"] == tx and L["mining"]["ty"] == ty:
-                        # скорость зависит от инструмента
                         speed_mult = 1.0
                         sel_tool = L["inventory"].selected_tool()
                         if sel_tool and BLOCKS[bt].get("tool") == sel_tool:
                             speed_mult = TOOLS[sel_tool]["speed"]
                         elif not sel_tool:
-                            speed_mult = 0.6   # руками медленнее
+                            speed_mult = 0.6
                         L["mining"]["progress"] += speed_mult / BLOCKS[bt]["hardness"]
                         if L["mining"]["progress"] >= 1.0:
-                            dug = L["world"].dig(wx, wy)
+                            dug = L["world"].dig(tx, ty)
                             if dug is not None:
                                 L["inventory"].add(dug, 1)
                                 L["score"] += 1
@@ -775,13 +775,9 @@ def main():
 
         platforms, enemies, pixels, trees, medkits = L["world"].collect()
 
-        # --- РЕЛЬЕФ (новый сглаженный) ---
-        draw_terrain_polygon(screen, L["camera"])
+        # --- ТАЙЛОВЫЙ МИР ---
+        L["world"].draw_tiles(screen, L["camera"])
         draw_surface_details(screen, L["camera"])
-
-        # Все блоки мира
-        for p in platforms:
-            p.draw(screen, ox, oy)
         for t in trees:
             t.draw(screen, ox, oy)
         for mk in medkits:
