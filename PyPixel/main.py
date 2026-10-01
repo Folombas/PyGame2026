@@ -740,6 +740,34 @@ def main():
 
         craft_ui.update()
         card_book.update()
+        achievements.update()
+
+        # --- проверка разблокировки достижений ---
+        if L["state"] == "playing":
+            stats = {
+                "blocks_dug": L.get("blocks_dug", 0),
+                "trees_chopped": L.get("trees_chopped", 0),
+                "kills": L.get("kills", 0),
+                "arrows_hit": L.get("arrows_hit", 0),
+                "apples": L.get("apples", 0),
+                "max_x": L.get("max_x", 0) // 10,
+                "max_depth": L.get("max_depth", 0),
+                "cards_count": len(L.get("cards", set())),
+                "boss_killed": L.get("boss_killed", 0),
+            }
+            new_ach = achievements.check_unlocks(stats, L["unlocked"])
+            if new_ach:
+                from achievements import ACHIEVEMENTS
+                for a in new_ach:
+                    L["score"] += ACHIEVEMENTS[a]["reward"]
+                L["achievement_toast"] = new_ach[0]
+                L["achievement_toast_timer"] = 240
+                # короткий звук
+                import sounds as _s
+                _s.play("victory")
+
+            if L.get("achievement_toast_timer", 0) > 0:
+                L["achievement_toast_timer"] -= 1
 
         # ---- отрисовка ----
         draw_background(screen, L["camera"])
