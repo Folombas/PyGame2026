@@ -13,6 +13,9 @@ GOLD = 6
 WOOD = 7
 LEAVES = 8
 SAND = 9
+PLANKS = 10
+BRICK = 11
+DOOR = 12
 
 BLOCKS = {
     DIRT:   {"name": "Земля",  "color": (120, 80, 50),  "top": (140, 100, 65), "hardness": 14, "drop": DIRT, "tool": None},
@@ -24,6 +27,9 @@ BLOCKS = {
     WOOD:   {"name": "Дерево", "color": (110, 70, 40),  "top": (130, 90, 55),  "hardness": 40, "drop": WOOD, "tool": "axe"},
     LEAVES: {"name": "Листья", "color": (60, 140, 60),  "top": (80, 170, 80),  "hardness": 10, "drop": LEAVES, "tool": "axe"},
     SAND:   {"name": "Песок",  "color": (210, 190, 130),"top": (225, 205, 145),"hardness": 12, "drop": SAND, "tool": None},
+    PLANKS: {"name": "Доски",  "color": (150, 100, 60), "top": (170, 120, 75), "hardness": 20, "drop": PLANKS, "tool": "axe"},
+    BRICK:  {"name": "Кирпич", "color": (150, 60, 60),  "top": (180, 80, 80),  "hardness": 40, "drop": BRICK,  "tool": "pickaxe"},
+    DOOR:   {"name": "Дверь",  "color": (110, 70, 40),  "top": (150, 100, 60), "hardness": 15, "drop": DOOR,   "tool": "axe"},
 }
 
 

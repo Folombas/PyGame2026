@@ -21,6 +21,7 @@ from background import draw_sky_gradient, draw_mountains, draw_fog_between_layer
 from terrain import draw_terrain_polygon, draw_surface_details
 from records import save_record
 from inventory import Inventory, SLOTS
+from crafting import CraftingUI
 from tools import TOOLS, PICKAXE, AXE, SWORD, draw_tool_icon, get_tool_sprite, get_tool_sprite_rotated
 from particles import ParticleSystem
 from tools import BOW
@@ -302,6 +303,7 @@ def main():
     font_small = pygame.font.SysFont("monospace", 18)
 
     menu = Menu(font_big, font_small)
+    craft_ui = CraftingUI(font_big, font_small)
     app_state = "menu"
     difficulty_key = DEFAULT_DIFFICULTY
     difficulty = DIFFICULTIES[difficulty_key]
@@ -333,6 +335,10 @@ def main():
                 continue
 
             if event.type == pygame.MOUSEBUTTONDOWN:
+                # если крафт открыт — обрабатываем только его
+                if craft_ui.open and L and L["state"] == "playing":
+                    craft_ui.handle_mouse(pygame.mouse.get_pos(), True, L["inventory"])
+                    continue
                 # обрабатываем мышь отдельно (не через key-chain)
                 if L and L["state"] == "playing":
                     mx, my = pygame.mouse.get_pos()
@@ -591,6 +597,8 @@ def main():
                                 L["camera"] = Camera(WIDTH)
                                 L["hp"] = L["max_hp"]
 
+        craft_ui.update()
+
         # ---- отрисовка ----
         draw_background(screen, L["camera"])
         ox, oy = L["camera"].ox, L["camera"].oy
@@ -664,6 +672,7 @@ def main():
         L["weather"].draw(screen, L["camera"].offset_y)
 
         draw_hud(screen, font_big, font_small, L, lives, difficulty_key)
+        craft_ui.draw(screen, L["inventory"])
         pygame.display.flip()
 
     pygame.quit()
