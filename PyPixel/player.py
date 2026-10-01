@@ -54,6 +54,11 @@ class Player:
         self.rect.x += int(self.vel_x)
         for p in platforms:
             if self.rect.colliderect(p.rect):
+                # Игрок стоит на этой платформе (касание сверху) —
+                # это НЕ стена, не блокируем по X
+                overlap_y = min(self.rect.bottom, p.rect.bottom) - max(self.rect.top, p.rect.top)
+                if overlap_y <= 3:
+                    continue
                 if self.vel_x > 0:
                     self.rect.right = p.rect.left
                 elif self.vel_x < 0:

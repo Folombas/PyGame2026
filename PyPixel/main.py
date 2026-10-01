@@ -23,6 +23,7 @@ from records import save_record
 from inventory import Inventory, SLOTS
 from crafting import CraftingUI
 from card_book import CardBook
+from achievements import AchievementsUI
 from cards import roll_card, CARD_DEFS
 from tools import TOOLS, PICKAXE, AXE, SWORD, draw_tool_icon, get_tool_sprite, get_tool_sprite_rotated
 from particles import ParticleSystem
@@ -244,6 +245,14 @@ def new_session(difficulty):
         "cards": set(),
         "card_toast": None,
         "card_toast_timer": 0,
+        "blocks_dug": 0,
+        "trees_chopped": 0,
+        "arrows_hit": 0,
+        "max_depth": 0,
+        "boss_killed": 0,
+        "unlocked": set(),
+        "achievement_toast": None,
+        "achievement_toast_timer": 0,
     }
 
 
@@ -284,6 +293,7 @@ def use_tool_at(L, wx, wy, mx, my):
         if pos:
             L["inventory"].add(WOOD, 4)
             L["score"] += 3
+            L["trees_chopped"] += 1
             L["particles"].spawn_leaves(pos[0], pos[1], count=20)
             L["particles"].spawn_dirt(pos[0], pos[1], count=10, color=(110, 70, 40))
             sounds.play("stomp")
@@ -344,6 +354,45 @@ def draw_card_toast(screen, font_big, font_small, L):
     screen.blit(box, (x, y))
 
 
+def draw_achievement_toast(screen, font_big, font_small, L):
+    """Тост о новом достижении в центре сверху."""
+    if L["achievement_toast_timer"] <= 0 or not L.get("achievement_toast"):
+        return
+    from achievements import ACHIEVEMENTS
+    aid = L["achievement_toast"]
+    ach = ACHIEVEMENTS[aid]
+
+    t = L["achievement_toast_timer"]
+    fade = min(1.0, t / 60.0)
+    slide = min(1.0, (240 - t) / 20.0)
+
+    box_w, box_h = 460, 90
+    x = (WIDTH - box_w) // 2
+    y = int(-100 + slide * 120)  # выезжает сверху
+
+    box = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+    box.fill((20, 15, 40, int(240 * fade)))
+    pygame.draw.rect(box, (255, 220, 80, int(255 * fade)), (0, 0, box_w, box_h), 3)
+    pygame.draw.rect(box, (255, 180, 40, int(255 * fade)), (0, 0, box_w, box_h), 1)
+
+    # медаль
+    pygame.draw.circle(box, (255, 220, 80, int(255 * fade)), (45, 45), 32)
+    pygame.draw.circle(box, (255, 255, 255, int(255 * fade)), (45, 45), 32, 2)
+    star = font_big.render("★", True, (60, 40, 20, int(255 * fade)))
+    box.blit(star, (45 - star.get_width() // 2, 45 - star.get_height() // 2))
+
+    t1 = font_small.render("🏆 ДОСТИЖЕНИЕ ПОЛУЧЕНО!", True, (255, 240, 150, int(255 * fade)))
+    t2 = font_big.render(ach["name"], True, (255, 255, 255, int(255 * fade)))
+    box.blit(t1, (90, 12))
+    box.blit(t2, (90, 38))
+
+    if ach["reward"] > 0:
+        t3 = font_small.render(f"+{ach['reward']} очков", True, (100, 240, 130, int(255 * fade)))
+        box.blit(t3, (box_w - 120, 55))
+
+    screen.blit(box, (x, y))
+
+
 def main():
     pygame.init()
     sounds.init()
@@ -356,6 +405,7 @@ def main():
     menu = Menu(font_big, font_small)
     craft_ui = CraftingUI(font_big, font_small)
     card_book = CardBook(font_big, font_small)
+    achievements = AchievementsUI(font_big, font_small)
     app_state = "menu"
     difficulty_key = DEFAULT_DIFFICULTY
     difficulty = DIFFICULTIES[difficulty_key]
@@ -373,6 +423,9 @@ def main():
 
             if app_state == "playing" and card_book.open:
                 if card_book.handle_event(event, L["cards"]):
+                    continue
+            if app_state == "playing" and achievements.open:
+                if achievements.handle_event(event):
                     continue
 
             if app_state == "menu":
@@ -441,6 +494,12 @@ def main():
                 sound_settings.save(cfg)
                 sounds.reload_settings()
                 sounds.play("collect")
+            elif event.key == pygame.K_c and L["state"] == "playing":
+                craft_ui.toggle()
+            elif event.key == pygame.K_b and L["state"] == "playing":
+                card_book.toggle()
+            elif event.key == pygame.K_j and L["state"] == "playing":
+                achievements.toggle()
             elif (event.key in (pygame.K_e, pygame.K_f)
                   or event.scancode in (8, 9)) and L["state"] == "playing":
                 mx, my = pygame.mouse.get_pos()
@@ -478,6 +537,9 @@ def main():
             # обновляем рекордные координаты
             L["max_x"] = max(L["max_x"], L["player"].rect.x)
             L["max_y"] = max(L["max_y"], L["player"].rect.y)
+            from world import SURFACE_Y as _SY
+            depth = max(0, (L["player"].rect.y - _SY) // 10)
+            L["max_depth"] = max(L["max_depth"], depth)
 
             # --- ТЕМПЕРАТУРА ТЕЛА ---
             ambient = get_ambient_temp(L["player"].rect.centery)
@@ -522,6 +584,7 @@ def main():
                     L["score"] += 5
                     L["particles"].spawn_blood(hit.rect.centerx, hit.rect.centery, count=14)
                     sounds.play("stomp")
+                    L["arrows_hit"] += 1
                     cid = roll_card("enemy", L["cards"])
                     if cid:
                         L["cards"].add(cid)
@@ -574,6 +637,7 @@ def main():
                             if dug is not None:
                                 L["inventory"].add(dug, 1)
                                 L["score"] += 1
+                                L["blocks_dug"] += 1
                                 # дроп карточки с руды
                                 if dug == 4:      # COPPER
                                     cid = roll_card("ore", L["cards"])
@@ -753,6 +817,19 @@ def main():
         craft_ui.draw(screen, L["inventory"])
         draw_card_toast(screen, font_big, font_small, L)
         card_book.draw(screen, L["cards"])
+        stats = {
+            "blocks_dug": L["blocks_dug"],
+            "trees_chopped": L["trees_chopped"],
+            "kills": L["kills"],
+            "arrows_hit": L["arrows_hit"],
+            "apples": L["apples"],
+            "max_x": L["max_x"] // 10,
+            "max_depth": L["max_depth"],
+            "cards_count": len(L["cards"]),
+            "boss_killed": L["boss_killed"],
+        }
+        achievements.draw(screen, stats, L["unlocked"])
+        draw_achievement_toast(screen, font_big, font_small, L)
         pygame.display.flip()
 
     pygame.quit()
