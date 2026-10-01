@@ -1,100 +1,128 @@
-"""Мир: чистая тайловая система с ленивой генерацией."""
+"""World — тайловый мир 32×32 с процедурной генерацией.
+
+Единая система координат:
+  • Всё в ТАЙЛАХ (tx, ty). Пиксели = tx * TILE.
+  • surface_ty(tx) — Y ВЕРХНЕГО твёрдого тайла в колонке.
+  • Пещеры генерируются ТОЛЬКО глубоко (depth >= 8), чтобы поверхность была плотной.
+"""
 import pygame
-from blocks import (TILE_SIZE, AIR, DIRT, GRASS, STONE, COPPER, IRON, GOLD, SAND,
-                    draw_block)
+from blocks import (
+    TILE_SIZE, AIR, DIRT, GRASS, STONE, COPPER, IRON, GOLD, SAND,
+    draw_block,
+)
 from enemy import Enemy
 from collectible import Pixel
 from tree import AppleTree
 from medkit import Medkit
 
-SURFACE_Y = 1200
-DEATH_Y = SURFACE_Y + 1800
+TILE = TILE_SIZE
+SURFACE_TY = 40                # базовый уровень поверхности (в тайлах) = 1280px
+DEATH_TY = SURFACE_TY + 55     # ниже — смерть (в тайлах)
 
 
-def _hash(x, y, seed=0):
-    n = (x * 374761393 + y * 668265263 + seed * 1274126177) & 0xFFFFFFFF
+# ============ ШУМЫ ============
+def _h(x, y, seed=0):
+    n = (int(x) * 374761393 + int(y) * 668265263 + int(seed) * 1274126177) & 0xFFFFFFFF
     n = (n ^ (n >> 13)) * 1274126177 & 0xFFFFFFFF
     n = n ^ (n >> 16)
     return (n & 0xFFFFFFFF) / 0xFFFFFFFF
 
 
-def _smooth1d(x, scale, seed=0):
+def _s1d(x, scale, seed=0):
     xf = x / scale
     x0 = int(xf)
     if xf < 0:
         x0 -= 1
     t = xf - x0
     t = t * t * (3 - 2 * t)
-    a = _hash(x0, 0, seed)
-    b = _hash(x0 + 1, 0, seed)
+    a = _h(x0, 0, seed)
+    b = _h(x0 + 1, 0, seed)
     return a * (1 - t) + b * t
 
 
-def surface_y(x):
-    base = SURFACE_Y
-    base += int((_smooth1d(x, 350, 1) - 0.5) * 60)
-    base += int((_smooth1d(x, 140, 2) - 0.5) * 25)
-    m = _smooth1d(x, 800, 10)
-    if m > 0.65:
-        peak_t = (m - 0.65) / 0.35
-        base -= int(peak_t * peak_t * 750)
+def _s2d(x, y, scale, seed=0):
+    xf = x / scale
+    yf = y / scale
+    x0 = int(xf); y0 = int(yf)
+    if xf < 0: x0 -= 1
+    if yf < 0: y0 -= 1
+    tx = xf - x0; ty = yf - y0
+    tx = tx * tx * (3 - 2 * tx)
+    ty = ty * ty * (3 - 2 * ty)
+    a = _h(x0,     y0,     seed)
+    b = _h(x0 + 1, y0,     seed)
+    c = _h(x0,     y0 + 1, seed)
+    d = _h(x0 + 1, y0 + 1, seed)
+    ab = a + (b - a) * tx
+    cd = c + (d - c) * tx
+    return ab + (cd - ab) * ty
+
+
+# ============ ГЕНЕРАЦИЯ ============
+def surface_ty(tx):
+    """Y ВЕРХНЕГО твёрдого тайла в колонке tx (в тайлах)."""
+    base = SURFACE_TY
+    base += int((_s1d(tx, 12, 1) - 0.5) * 3)   # холмы ±3 тайла
+    base += int((_s1d(tx, 5, 2) - 0.5) * 1.5)  # мелкие кочки
+    # горы — редкие высокие пики
+    m = _s1d(tx, 25, 10)
+    if m > 0.68:
+        t = (m - 0.68) / 0.32
+        base -= int(t * t * 22)     # до 22 тайлов вверх (704 px)
     return base
 
 
-def _gen_tile(tx, ty):
-    wx = tx * TILE_SIZE + TILE_SIZE // 2
-    wy = ty * TILE_SIZE + TILE_SIZE // 2
-    sy = surface_y(wx)
-
-    if wy < sy:
+def gen_tile(tx, ty):
+    st = surface_ty(tx)
+    if ty < st:
         return AIR
+    depth = ty - st
 
-    depth = wy - sy
-
-    # Пещеры ниже поверхности
-    if depth > TILE_SIZE * 4:
-        cv = _hash(tx // 2, ty // 2, 5) * 0.6 + _hash(tx, ty, 6) * 0.4
-        df = min(0.25, depth / 3000.0)
-        if cv > 0.62 - df:
-            return AIR
-
-    if depth < TILE_SIZE:
-        return SAND if sy < 700 else GRASS
-    if depth < TILE_SIZE * 4:
+    if depth == 0:
+        return SAND if st < 20 else GRASS
+    if depth < 4:
         return DIRT
 
-    if depth > TILE_SIZE * 8:
-        r = _hash(tx, ty, 42)
-        if r > 0.985: return GOLD
-        if r > 0.955: return IRON
-        if r > 0.91: return COPPER
+    # пещеры — только с depth >= 8
+    if depth >= 8:
+        cave = (_s2d(tx, ty, 8, 5) * 0.55
+                + _s2d(tx, ty, 4, 6) * 0.45)
+        # чем глубже, тем больше пустот
+        bias = min(0.22, (depth - 8) / 60.0)
+        if cave > 0.62 - bias:
+            return AIR
+
+    # руды на глубине
+    if depth >= 10:
+        r = _h(tx, ty, 42)
+        if r > 0.988: return GOLD
+        if r > 0.965: return IRON
+        if r > 0.925: return COPPER
 
     return STONE
 
 
-class Tile:
-    """Обёртка тайла для коллизий."""
-    __slots__ = ("rect", "block_type")
-    def __init__(self, tx, ty, bt):
-        self.rect = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-        self.block_type = bt
-
-
+# ============ МИР ============
 class World:
     def __init__(self, difficulty):
         self.difficulty = difficulty
-        self.mods = {}
+        self.mods = {}          # (tx,ty) -> block_type (изменения игрока)
+        self.trees = []
         self.enemies = []
         self.pixels = []
-        self.trees = []
         self.medkits = []
-        self.spawned = set()
+        self.arrows = []
+        self._spawned = set()
         self._last_chunk = None
 
+    # --- доступ к блокам ---
     def get_block(self, tx, ty):
         if (tx, ty) in self.mods:
             return self.mods[(tx, ty)]
-        return _gen_tile(tx, ty)
+        return gen_tile(tx, ty)
+
+    def is_solid(self, tx, ty):
+        return self.get_block(tx, ty) != AIR
 
     def dig(self, tx, ty):
         bt = self.get_block(tx, ty)
@@ -110,133 +138,145 @@ class World:
         return True
 
     def solid_rect_check(self, px, py, w, h):
-        tx0 = px // TILE_SIZE
-        ty0 = py // TILE_SIZE
-        tx1 = (px + w - 1) // TILE_SIZE
-        ty1 = (py + h - 1) // TILE_SIZE
+        tx0 = int(px) // TILE
+        ty0 = int(py) // TILE
+        tx1 = int(px + w - 1) // TILE
+        ty1 = int(py + h - 1) // TILE
         for ty in range(ty0, ty1 + 1):
             for tx in range(tx0, tx1 + 1):
-                if self.get_block(tx, ty) != AIR:
+                if self.is_solid(tx, ty):
                     return True
         return False
 
-    def visible_tiles(self, camera):
-        ox, oy = camera.ox, camera.oy
-        tx0 = max(-500, ox // TILE_SIZE - 1)
-        ty0 = max(-500, oy // TILE_SIZE - 1)
-        tx1 = (ox + camera.view_width) // TILE_SIZE + 1
-        ty1 = (oy + camera.view_height) // TILE_SIZE + 1
-        out = []
-        for ty in range(ty0, ty1 + 1):
-            for tx in range(tx0, tx1 + 1):
-                bt = self.get_block(tx, ty)
-                if bt != AIR:
-                    out.append(Tile(tx, ty, bt))
-        return out
-
+    # --- чанки (спавн сущностей) ---
     def update(self, camera):
         cx = int(camera.offset_x + camera.view_width // 2) // 512
         cy = int(camera.offset_y + camera.view_height // 2) // 512
-        if (cx, cy) != self._last_chunk:
-            self._last_chunk = (cx, cy)
-            for dx in range(-3, 4):
-                for dy in range(-2, 3):
-                    self._spawn(cx + dx, cy + dy)
-            # деспавн
-            px = camera.offset_x + camera.view_width // 2
-            py = camera.offset_y + camera.view_height // 2
-            d = 2500
-            self.enemies = [e for e in self.enemies if abs(e.rect.centerx - px) < d]
-            self.trees = [t for t in self.trees if abs(t.base_x - px) < d]
-            self.medkits = [m for m in self.medkits if m.alive and abs(m.rect.centerx - px) < d]
+        if (cx, cy) == self._last_chunk:
+            return
+        self._last_chunk = (cx, cy)
 
-        # враги обновляются в main loop
+        for dx in range(-2, 3):
+            for dy in range(-2, 3):
+                self._spawn(cx + dx, cy + dy)
+
+        # деспавн
+        px = camera.offset_x + camera.view_width // 2
+        py = camera.offset_y + camera.view_height // 2
+        d = 2200
+        self.enemies = [e for e in self.enemies
+                        if abs(e.rect.centerx - px) < d and abs(e.rect.centery - py) < d]
+        self.trees = [t for t in self.trees if abs(t.base_x - px) < d]
+        self.medkits = [m for m in self.medkits
+                        if m.alive and abs(m.rect.centerx - px) < d]
+        self.pixels = [p for p in self.pixels
+                       if p.alive and abs(p.rect.centerx - px) < d]
 
     def _spawn(self, cx, cy):
         key = (cx, cy)
-        if key in self.spawned:
+        if key in self._spawned:
             return
-        self.spawned.add(key)
-        x0 = cx * 512
-        y0 = cy * 512
-        x1 = x0 + 512
-        y1 = y0 + 512
+        self._spawned.add(key)
+        x0 = cx * 512; x1 = x0 + 512
+        y0 = cy * 512; y1 = y0 + 512
 
-        # Деревья
-        step = 250
+        # --- деревья на поверхности ---
+        step = 180
         sx = (x0 // step) * step
-        for tx in range(sx, x1 + step, step):
-            if _hash(tx // step, 0, 20) > 0.55:
-                sy = surface_y(tx)
-                if y0 - 200 <= sy <= y1 + 200:
-                    self.trees.append(AppleTree(tx, sy))
+        for wx in range(sx, x1 + step, step):
+            if _h(wx // step, 0, 20) > 0.55:
+                tx = wx // TILE
+                sty = surface_ty(tx)
+                py = sty * TILE
+                if y0 - 250 < py < y1 + 250:
+                    self.trees.append(AppleTree(wx, py))
 
-        # Враги
+        # --- враги на поверхности ---
         dens = self.difficulty.get("enemy_density", 0.4)
-        step = 260
+        step = 280
         sx = (x0 // step) * step
-        for ex in range(sx, x1 + step, step):
-            if _hash(ex // step, 0, 30) < dens:
-                sy = surface_y(ex)
-                if y0 - 28 <= sy - 28 <= y1:
-                    self.enemies.append(Enemy(ex, sy - 28))
+        for wx in range(sx, x1 + step, step):
+            if _h(wx // step, 0, 30) < dens:
+                tx = wx // TILE
+                sty = surface_ty(tx)
+                py = (sty - 1) * TILE
+                if y0 - 40 < py < y1 + 40:
+                    self.enemies.append(Enemy(wx, py))
 
-        # Яблоки в воздухе
+        # --- пиксели-очки ---
         step = 200
         sx = (x0 // step) * step
-        for px_ in range(sx, x1 + step, step):
-            if _hash(px_ // step, cy, 50) > 0.7:
-                sy = surface_y(px_)
-                py_ = sy - 100 - int(_hash(px_ // step, 1, 50) * 150)
-                if y0 - 20 <= py_ <= y1:
-                    self.pixels.append(Pixel(px_, py_))
+        for wx in range(sx, x1 + step, step):
+            if _h(wx // step, cy, 50) > 0.72:
+                tx = wx // TILE
+                sty = surface_ty(tx)
+                py = sty * TILE - 100 - int(_h(wx // step, 1, 50) * 140)
+                if y0 - 20 < py < y1:
+                    self.pixels.append(Pixel(wx, py))
 
-        # Аптечки
-        step = 600
+        # --- аптечки ---
+        step = 500
         sx = (x0 // step) * step
-        for mx in range(sx, x1 + step, step):
-            if _hash(mx // step, 0, 40) > 0.6:
-                sy = surface_y(mx)
-                if y0 - 40 <= sy - 40 <= y1:
-                    self.medkits.append(Medkit(mx, sy - 40))
+        for wx in range(sx, x1 + step, step):
+            if _h(wx // step, 0, 40) > 0.65:
+                tx = wx // TILE
+                sty = surface_ty(tx)
+                py = (sty - 1) * TILE - 6
+                if y0 - 40 < py < y1:
+                    self.medkits.append(Medkit(wx, py))
 
-    def draw_tiles(self, surface, camera):
-        for t in self.visible_tiles(camera):
-            r = pygame.Rect(t.rect.x - camera.ox, t.rect.y - camera.oy,
-                            TILE_SIZE, TILE_SIZE)
-            draw_block(surface, r, t.block_type)
+    # --- отрисовка ---
+    def draw_tiles(self, screen, camera):
+        ox, oy = camera.ox, camera.oy
+        tx0 = ox // TILE - 1
+        ty0 = oy // TILE - 1
+        tx1 = (ox + camera.view_width) // TILE + 1
+        ty1 = (oy + camera.view_height) // TILE + 1
+        for ty in range(ty0, ty1 + 1):
+            for tx in range(tx0, tx1 + 1):
+                bt = self.get_block(tx, ty)
+                if bt == AIR:
+                    continue
+                r = pygame.Rect(tx * TILE - ox, ty * TILE - oy, TILE, TILE)
+                draw_block(screen, r, bt)
 
-    def draw_trees(self, surface, cam):
+    def draw_entities(self, screen, camera):
         for t in self.trees:
-            t.draw(surface, cam.ox, cam.oy)
-
-    def draw_entities(self, surface, cam):
+            t.draw(screen, camera.ox, camera.oy)
         for m in self.medkits:
-            m.draw(surface, cam.ox, cam.oy)
+            m.draw(screen, camera.ox, camera.oy)
         for p in self.pixels:
-            p.draw(surface, cam.ox, cam.oy)
+            p.draw(screen, camera.ox, camera.oy)
         for e in self.enemies:
-            e.draw(surface, cam.ox, cam.oy)
+            e.draw(screen, camera.ox, camera.oy)
+        for a in self.arrows:
+            a.draw(screen, camera.ox, camera.oy)
 
     def collect(self):
-        """Совместимость со старым API."""
         return [], self.enemies, self.pixels, self.trees, self.medkits
 
 
-# --- оставляем вспомогательные функции для совместимости ---
+# ============ УТИЛИТЫ ДЛЯ MAIN ============
 def get_ambient_temp(world_y):
-    if world_y < SURFACE_Y:
-        alt = SURFACE_Y - world_y
+    sy = SURFACE_TY * TILE
+    if world_y < sy:
+        alt = sy - world_y
         return max(0.0, 100.0 - alt * 0.1)
-    depth = world_y - SURFACE_Y
+    depth = world_y - sy
     t = min(1.0, depth / 1500.0)
     return 70.0 + t * 25.0
 
 
 def weather_zone(world_y):
-    if world_y < 200: return "freezing"
-    if world_y < 500: return "snow"
-    if world_y < 800: return "cold"
-    if world_y < SURFACE_Y: return "mild"
-    if world_y < SURFACE_Y + 400: return "cave_warm"
+    sy = SURFACE_TY * TILE
+    if world_y < sy - 900: return "freezing"
+    if world_y < sy - 600: return "snow"
+    if world_y < sy - 300: return "cold"
+    if world_y < sy:       return "mild"
+    if world_y < sy + 400: return "cave_warm"
     return "cave_hot"
+
+
+# Совместимость
+SURFACE_Y = SURFACE_TY * TILE
+DEATH_Y = DEATH_TY * TILE
