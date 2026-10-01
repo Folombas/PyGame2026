@@ -675,6 +675,7 @@ def main():
                                 L["hp"] = L["max_hp"]
 
         craft_ui.update()
+        card_book.update()
 
         # ---- отрисовка ----
         draw_background(screen, L["camera"])
