@@ -1,23 +1,14 @@
-"""Сглаженный рельеф: рисуем поверхность как многоугольник, а не колонны."""
+"""Декоративная поверхность: травинки, без заливки (блоки теперь главные)."""
 import pygame
-from world import surface_y, is_cave, COLUMN_W
-
-
-GROUND_COLOR = (120, 80, 50)
-GROUND_DARK = (75, 50, 30)
-GRASS_COLOR = (85, 175, 75)
-GRASS_DARK = (55, 140, 55)
-STONE_COLOR = (90, 80, 75)
-CAVE_BG = (28, 16, 12)
+from world import surface_y
 
 
 def draw_terrain_polygon(screen, camera):
-    """Рисует поверхность земли как сглаженный многоугольник."""
+    """Тонкая зелёная кромка поверх блоков — визуальный акцент."""
     ox = camera.offset_x
     oy = camera.offset_y
-    step = 16   # меньший шаг — глаже
+    step = 8
 
-    # Сэмплируем точки поверхности слева и справа от экрана
     x_start = int(ox) - step
     x_end = int(ox) + camera.view_width + step
 
@@ -25,36 +16,25 @@ def draw_terrain_polygon(screen, camera):
     x = x_start
     while x <= x_end:
         sy = surface_y(x)
-        sx = x - ox
-        sy_screen = sy - oy
-        points.append((sx, sy_screen))
+        points.append((x - ox, sy - oy))
         x += step
 
-    if not points:
+    if len(points) < 2:
         return
 
-    # Замкнутый многоугольник: сверху по поверхности, снизу — до конца экрана
-    poly = points + [(x_end - ox, camera.view_height + 50),
-                     (x_start - ox, camera.view_height + 50)]
-
-    # Тело земли
-    pygame.draw.polygon(screen, GROUND_COLOR, poly)
-
-    # Трава — тонкая полоска поверх поверхности
-    grass_thickness = 8
-    grass_poly = points + [(x, y + grass_thickness) for x, y in reversed(points)]
-    pygame.draw.polygon(screen, GRASS_COLOR, grass_poly)
-
-    # Тёмная линия между травой и землёй
-    pygame.draw.lines(screen, GROUND_DARK, False,
-                      [(x, y + grass_thickness) for x, y in points], 2)
+    # Только тонкая травяная полоска (5px) — блоки под ней всё равно видны
+    grass_poly = points + [(px, py + 5) for px, py in reversed(points)]
+    pygame.draw.polygon(screen, (85, 175, 75), grass_poly)
+    # тёмная линия снизу полоски
+    pygame.draw.lines(screen, (55, 140, 55), False,
+                      [(px, py + 5) for px, py in points], 1)
 
 
 def draw_surface_details(screen, camera):
-    """Травинки и мелкие камни на поверхности."""
+    """Травинки, торчащие над поверхностью."""
+    from world import _hash
     ox = camera.offset_x
     oy = camera.offset_y
-    from world import _hash
     step = 8
     x_start = int(ox) - step
     x_end = int(ox) + camera.view_width + step
@@ -64,8 +44,7 @@ def draw_surface_details(screen, camera):
             sy = surface_y(x)
             sx = x - ox
             sy_screen = sy - oy
-            # травинка
             h = 4 + int(_hash(x // step, 1, 100) * 4)
-            pygame.draw.line(screen, GRASS_DARK,
+            pygame.draw.line(screen, (55, 140, 55),
                              (sx, sy_screen), (sx, sy_screen - h), 1)
         x += step

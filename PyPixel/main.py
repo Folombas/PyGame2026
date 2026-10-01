@@ -779,10 +779,9 @@ def main():
         draw_terrain_polygon(screen, L["camera"])
         draw_surface_details(screen, L["camera"])
 
-        # подземные блоки (пещеры, руды) — только те, что ниже поверхности
+        # Все блоки мира
         for p in platforms:
-            if p.rect.y > surface_y(p.rect.x) + 40:
-                p.draw(screen, ox, oy)
+            p.draw(screen, ox, oy)
         for t in trees:
             t.draw(screen, ox, oy)
         for mk in medkits:
