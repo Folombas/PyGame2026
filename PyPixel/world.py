@@ -150,8 +150,7 @@ class World:
             self.trees = [t for t in self.trees if abs(t.base_x - px) < d]
             self.medkits = [m for m in self.medkits if m.alive and abs(m.rect.centerx - px) < d]
 
-        for e in self.enemies:
-            e.update(self)
+        # враги обновляются в main loop
 
     def _spawn(self, cx, cy):
         key = (cx, cy)

@@ -3,6 +3,7 @@ import pygame
 from settings import GRAVITY, PLAYER_SPEED, JUMP_POWER
 from pixel_art import build_sprite, PLAYER_SPRITES, PLAYER_PALETTE
 from sounds import play as play_sound
+from blocks import TILE_SIZE, AIR
 
 
 class Player:
@@ -14,7 +15,6 @@ class Player:
         self.facing_right = True
         self.jump_held = False
 
-        # Собираем все спрайты по одному разу
         self.sprites = {}
         for name, pattern in PLAYER_SPRITES.items():
             self.sprites[name] = {
@@ -42,41 +42,62 @@ class Player:
             play_sound("jump")
         self.jump_held = jump_pressed
 
-    def update(self, platforms) -> None:
-        # --- физика с variable jump ---
-        # Если летим вверх И игрок держит прыжок → ослабляем гравитацию
+    def _resolve_x(self, world):
+        self.rect.x += int(self.vel_x)
+        tx0 = self.rect.left // TILE_SIZE
+        ty0 = self.rect.top // TILE_SIZE
+        tx1 = (self.rect.right - 1) // TILE_SIZE
+        ty1 = (self.rect.bottom - 1) // TILE_SIZE
+        for ty in range(ty0, ty1 + 1):
+            for tx in range(tx0, tx1 + 1):
+                if world.get_block(tx, ty) == AIR:
+                    continue
+                br = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                if not self.rect.colliderect(br):
+                    continue
+                # пропускаем «стояние на блоке» — если игрок почти сверху
+                overlap_y = min(self.rect.bottom, br.bottom) - max(self.rect.top, br.top)
+                if overlap_y <= 4:
+                    continue
+                if self.vel_x > 0:
+                    self.rect.right = br.left
+                elif self.vel_x < 0:
+                    self.rect.left = br.right
+
+    def _resolve_y(self, world):
+        self.on_ground = False
+        self.rect.y += int(self.vel_y)
+        tx0 = self.rect.left // TILE_SIZE
+        ty0 = self.rect.top // TILE_SIZE
+        tx1 = (self.rect.right - 1) // TILE_SIZE
+        ty1 = (self.rect.bottom - 1) // TILE_SIZE
+        for ty in range(ty0, ty1 + 1):
+            for tx in range(tx0, tx1 + 1):
+                if world.get_block(tx, ty) == AIR:
+                    continue
+                br = pygame.Rect(tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+                if not self.rect.colliderect(br):
+                    continue
+                if self.vel_y > 0:
+                    self.rect.bottom = br.top
+                    self.vel_y = 0
+                    self.on_ground = True
+                elif self.vel_y < 0:
+                    self.rect.top = br.bottom
+                    self.vel_y = 0
+
+    def update(self, world) -> None:
+        # гравитация с variable jump
         if self.jump_held and self.vel_y < 0:
             self.vel_y += GRAVITY * 0.45
         else:
             self.vel_y += GRAVITY
         self.vel_y = min(self.vel_y, 20)
 
-        self.rect.x += int(self.vel_x)
-        for p in platforms:
-            if self.rect.colliderect(p.rect):
-                # Игрок стоит на этой платформе (касание сверху) —
-                # это НЕ стена, не блокируем по X
-                overlap_y = min(self.rect.bottom, p.rect.bottom) - max(self.rect.top, p.rect.top)
-                if overlap_y <= 3:
-                    continue
-                if self.vel_x > 0:
-                    self.rect.right = p.rect.left
-                elif self.vel_x < 0:
-                    self.rect.left = p.rect.right
+        self._resolve_x(world)
+        self._resolve_y(world)
 
-        self.on_ground = False
-        self.rect.y += int(self.vel_y)
-        for p in platforms:
-            if self.rect.colliderect(p.rect):
-                if self.vel_y > 0:
-                    self.rect.bottom = p.rect.top
-                    self.vel_y = 0
-                    self.on_ground = True
-                elif self.vel_y < 0:
-                    self.rect.top = p.rect.bottom
-                    self.vel_y = 0
-
-        # --- анимация ---
+        # анимация
         if not self.on_ground:
             self.state = "jump"
         elif self.vel_x != 0:
@@ -86,7 +107,7 @@ class Player:
 
         if self.state == "walk":
             self.anim_timer += 1
-            if self.anim_timer >= 8:      # кадр каждые 8 тиков (~7.5 FPS при 60)
+            if self.anim_timer >= 8:
                 self.anim_timer = 0
                 self.anim_frame = (self.anim_frame + 1) % 2
         else:
@@ -98,10 +119,9 @@ class Player:
             name = "walk_1" if self.anim_frame == 0 else "walk_2"
         else:
             name = self.state
-
         direction = "right" if self.facing_right else "left"
         img = self.sprites[name][direction]
-
         r = img.get_rect()
-        r.midbottom = (self.rect.midbottom[0] - offset_x, self.rect.midbottom[1] - offset_y)
+        r.midbottom = (self.rect.midbottom[0] - offset_x,
+                       self.rect.midbottom[1] - offset_y)
         surface.blit(img, r)

@@ -530,9 +530,9 @@ def main():
             L["world"].update(L["camera"])
             platforms, enemies, pixels, trees, medkits = L["world"].collect()
 
-            L["player"].update(platforms)
+            L["player"].update(L["world"])
             for e in enemies:
-                e.update(platforms)
+                e.update(L["world"])
             L["camera"].update(L["player"].rect)
 
             # обновляем рекордные координаты
