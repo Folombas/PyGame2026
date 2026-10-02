@@ -41,9 +41,14 @@ class Fish:
         if world.get_block(tx, ty) != WATER:
             self.vel_x = -self.vel_x
 
-    def draw(self, surface, offset_x=0, offset_y=0):
+    def draw(self, surface, offset_x=0, offset_y=0, world=None):
         if not self.alive:
             return
+        if world is not None:
+            tx = self.rect.centerx // TILE_SIZE
+            ty = self.rect.centery // TILE_SIZE
+            if world.get_block(tx, ty) != WATER:
+                return
         info = FISH_TYPES[self.kind]
         body_col = info["body"]
         fin_col = info["fin"]
@@ -108,9 +113,14 @@ class Turtle:
         if world.get_block(tx, ty) != WATER:
             self.vel_x = -self.vel_x
 
-    def draw(self, surface, offset_x=0, offset_y=0):
+    def draw(self, surface, offset_x=0, offset_y=0, world=None):
         if not self.alive:
             return
+        if world is not None:
+            tx = self.rect.centerx // TILE_SIZE
+            ty = self.rect.centery // TILE_SIZE
+            if world.get_block(tx, ty) != WATER:
+                return
         x = self.rect.x - offset_x
         y = self.rect.y - offset_y
         w, h = self.rect.w, self.rect.h
@@ -157,9 +167,14 @@ class Seahorse:
         # морской конёк стоит вертикально и качается
         self.rect.y = self.spawn_y + int(math.sin(self.timer) * 10)
 
-    def draw(self, surface, offset_x=0, offset_y=0):
+    def draw(self, surface, offset_x=0, offset_y=0, world=None):
         if not self.alive:
             return
+        if world is not None:
+            tx = self.rect.centerx // TILE_SIZE
+            ty = self.rect.centery // TILE_SIZE
+            if world.get_block(tx, ty) != WATER:
+                return
         x = self.rect.x - offset_x + self.rect.w // 2
         y = self.rect.y - offset_y
         # хвост
@@ -240,13 +255,18 @@ class Shark:
 
         # столкновение с игроком
         if self.damage_cooldown == 0 and self.rect.colliderect(player.rect):
-            self.damage_cooldown = 60
+            self.damage_cooldown = 120
             if hasattr(player, "on_shark_bite"):
                 player.on_shark_bite()
 
-    def draw(self, surface, offset_x=0, offset_y=0):
+    def draw(self, surface, offset_x=0, offset_y=0, world=None):
         if not self.alive:
             return
+        if world is not None:
+            tx = self.rect.centerx // TILE_SIZE
+            ty = self.rect.centery // TILE_SIZE
+            if world.get_block(tx, ty) != WATER:
+                return
         x = self.rect.x - offset_x
         y = self.rect.y - offset_y
         w, h = self.rect.w, self.rect.h
@@ -310,7 +330,12 @@ class Seaweed:
     def update(self):
         self.timer += 0.04
 
-    def draw(self, surface, offset_x=0, offset_y=0):
+    def draw(self, surface, offset_x=0, offset_y=0, world=None):
+        if world is not None:
+            tx = self.x // TILE_SIZE
+            ty = (self.y - 4) // TILE_SIZE
+            if world.get_block(tx, ty) != WATER:
+                return
         sx = self.x - offset_x
         sy = self.y - offset_y
         col = (40, 160, 90)
@@ -348,7 +373,12 @@ class Coral:
     def update(self):
         self.timer += 0.03
 
-    def draw(self, surface, offset_x=0, offset_y=0):
+    def draw(self, surface, offset_x=0, offset_y=0, world=None):
+        if world is not None:
+            tx = self.x // TILE_SIZE
+            ty = (self.y - 4) // TILE_SIZE
+            if world.get_block(tx, ty) != WATER:
+                return
         sx = self.x - offset_x
         sy = self.y - offset_y
         pygame.draw.rect(surface, self.col, (sx - 2, sy - 10, 4, 12))

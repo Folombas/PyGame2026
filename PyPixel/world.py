@@ -381,8 +381,9 @@ class World:
                         self.seahorses.append(Seahorse(wx, floor_py - 40))
 
                     # акулы — редкие, в глубокой воде
-                    if depth_water >= 6 and _h(tx // 8, ty, 62) > 0.92 and len(self.sharks) < 6:
-                        self.sharks.append(Shark(wx - 20, py - 8))
+                    if depth_water >= 7 and _h(tx // 12, ty, 62) > 0.97 and len(self.sharks) < 2:
+                        # акулы уменьшены
+                        pass
 
                     # водоросли на дне
                     if _h(tx // 2, ty_below, 56) > 0.35 and len(self.seaweeds) < 150:
@@ -433,19 +434,19 @@ class World:
 
     def draw_underwater(self, screen, camera):
         for s in self.seaweeds:
-            s.draw(screen, camera.ox, camera.oy)
+            s.draw(screen, camera.ox, camera.oy, self)
         for c in self.corals:
-            c.draw(screen, camera.ox, camera.oy)
+            c.draw(screen, camera.ox, camera.oy, self)
         for t in self.turtles:
-            t.draw(screen, camera.ox, camera.oy)
+            t.draw(screen, camera.ox, camera.oy, self)
         for s in self.seahorses:
-            s.draw(screen, camera.ox, camera.oy)
+            s.draw(screen, camera.ox, camera.oy, self)
 
     def draw_entities(self, screen, camera):
         for f in self.fishes:
-            f.draw(screen, camera.ox, camera.oy)
+            f.draw(screen, camera.ox, camera.oy, self)
         for sh in self.sharks:
-            sh.draw(screen, camera.ox, camera.oy)
+            sh.draw(screen, camera.ox, camera.oy, self)
         for c in self.chests:
             c.draw(screen, camera.ox, camera.oy)
         for t in self.trees:

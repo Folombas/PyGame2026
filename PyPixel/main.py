@@ -581,7 +581,7 @@ def main():
 
             def _shark_bite():
                 if L["invuln"] == 0:
-                    L["hp"] -= 20
+                    L["hp"] -= 15
                     L["invuln"] = INVULN_TIME
                     sounds.play("hit")
                     if L["hp"] <= 0:

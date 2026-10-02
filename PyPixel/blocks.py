@@ -75,13 +75,12 @@ def draw_block(surface, rect, block_type, offset=(0, 0)):
         pulse = 0.7 + 0.3 * _m.sin(t * 3 + seed)
         glow_size = int(14 * pulse)
 
-        # Крапины — основная часть
-        for i in range(4):
-            dx = (seed * (i + 1) * 37) % (r.w - 10) + 4
-            dy = (seed * (i + 1) * 53) % (r.h - 10) + 4
-            pygame.draw.rect(surface, ore, (r.x + dx, r.y + dy, 5, 5))
-            # мини-блик
-            pygame.draw.rect(surface, (255, 255, 255), (r.x + dx, r.y + dy, 2, 2))
+        # Крапины — 3 штуки, аккуратные
+        for i in range(3):
+            dx = (seed * (i + 1) * 37) % (r.w - 8) + 4
+            dy = (seed * (i + 1) * 53) % (r.h - 8) + 4
+            pygame.draw.rect(surface, ore, (r.x + dx, r.y + dy, 4, 4))
+            pygame.draw.rect(surface, (255, 255, 240), (r.x + dx, r.y + dy, 1, 1))
 
 
 def draw_dig_progress(surface, rect, progress, offset=(0, 0)):
