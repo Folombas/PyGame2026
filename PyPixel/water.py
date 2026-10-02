@@ -88,14 +88,19 @@ def draw_water_block(surface, rect, is_surface, t=0.0):
 
     # поверхностная рябь — если над водой воздух
     if is_surface:
-        # волнистая линия
-        wave_col = (100, 200, 255)
-        points = []
-        for i in range(0, w + 1, 4):
-            wy = y + 2 + int(math.sin((x + i) * 0.15 + t) * 2)
-            points.append((x + i, wy))
-        if len(points) >= 2:
-            pygame.draw.lines(pygame_surf, wave_col, False, points, 2)
+        # двойная волна
+        for offset, col, thick in [(0, (60, 140, 200), 2), (3, (150, 230, 255), 2)]:
+            points = []
+            for i in range(0, w + 1, 3):
+                wy = y + 2 + offset + int(math.sin((x + i) * 0.20 + t * 1.5) * 2.5)
+                points.append((x + i, wy))
+            if len(points) >= 2:
+                pygame.draw.lines(pygame_surf, col, False, points, thick)
+        # блики
+        for i in range(0, w, 8):
+            bx = x + i + int((t * 30) % 8)
+            by = y + 4 + int(math.sin((x + i) * 0.2 + t) * 2)
+            pygame.draw.rect(pygame_surf, (200, 240, 255), (bx, by, 3, 1))
 
     # лёгкий светлый блик в середине
     pygame.draw.rect(pygame_surf, (50, 130, 190), (x, y + h // 2, w, 2))

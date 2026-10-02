@@ -527,6 +527,9 @@ def main():
                 card_book.toggle()
             elif event.key == pygame.K_j and L["state"] == "playing":
                 achievements.toggle()
+            elif event.key == pygame.K_g and L["state"] == "playing":
+                L["player"].has_scuba = not L["player"].has_scuba
+                print(f"[SCUBA] {'включён' if L['player'].has_scuba else 'выключен'}")
             elif event.key in (pygame.K_e, pygame.K_f) and L["state"] == "playing":
                 mx, my = pygame.mouse.get_pos()
                 wx = mx + L["camera"].ox
@@ -557,6 +560,18 @@ def main():
                 if L["hp"] <= 0:
                     L["hp"] = 0
             L["player"].on_drown = _drown
+
+            def _shark_bite():
+                if L["invuln"] == 0:
+                    L["hp"] -= 20
+                    L["invuln"] = INVULN_TIME
+                    sounds.play("hit")
+                    if L["hp"] <= 0:
+                        L["hp"] = 0
+            L["player"].on_shark_bite = _shark_bite
+
+            # акулам — ссылка на игрока
+            L["world"]._player_ref = L["player"]
             L["world"].tick_time(dt)
             L["world"].update(L["camera"])
             L["player"].update(L["world"])
@@ -656,6 +671,21 @@ def main():
             else:
                 L["swing_angle"] = 0
             L["particles"].update()
+
+            # пузырьки под водой
+            if L["player"].head_in_water:
+                if not hasattr(L, "_bubble_tick"): L["_bubble_tick"] = 0
+                L["_bubble_tick"] += 1
+                if L["_bubble_tick"] % 20 == 0:
+                    L["particles"].particles.append(
+                        type(L["particles"]).__dict__.get("__init__") or None
+                    ) if False else None
+                    # добавляем искры как имитацию пузырьков
+                    L["particles"].spawn_sparks(
+                        L["player"].rect.centerx,
+                        L["player"].rect.top,
+                        count=1,
+                    )
 
             # стрелы
             if L["bow_cooldown"] > 0:

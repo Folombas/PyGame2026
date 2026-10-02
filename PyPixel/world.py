@@ -11,7 +11,7 @@ from collectible import Pixel
 from tree import AppleTree
 from medkit import Medkit
 from chest import Chest
-from underwater import Fish, Seaweed, Coral
+from underwater import Fish, Seaweed, Coral, Turtle, Seahorse, Shark
 
 TILE = TILE_SIZE
 SURFACE_TY = 40                # базовый уровень поверхности (в тайлах)
@@ -151,6 +151,9 @@ class World:
         self.fishes = []
         self.seaweeds = []
         self.corals = []
+        self.turtles = []
+        self.seahorses = []
+        self.sharks = []
         self._spawned = set()
         self._last_chunk = None
         self.time_of_day = 0.30
@@ -228,6 +231,12 @@ class World:
         self.water_sim.update(self, camera)
         for f in self.fishes:
             f.update(self)
+        for t in self.turtles:
+            t.update(self)
+        for s in self.seahorses:
+            s.update(self)
+        for sh in self.sharks:
+            sh.update(self, self._player_ref) if hasattr(self, "_player_ref") else None
         for s in self.seaweeds:
             s.update()
         for c in self.corals:
@@ -259,6 +268,12 @@ class World:
                          if abs(s.x - px) < d and abs(s.y - py) < d]
         self.corals = [c for c in self.corals
                        if abs(c.x - px) < d and abs(c.y - py) < d]
+        self.turtles = [t for t in self.turtles
+                        if abs(t.rect.centerx - px) < d and abs(t.rect.centery - py) < d]
+        self.seahorses = [s for s in self.seahorses
+                          if abs(s.rect.centerx - px) < d and abs(s.rect.centery - py) < d]
+        self.sharks = [sh for sh in self.sharks
+                       if abs(sh.rect.centerx - px) < d]
 
     def _spawn(self, cx, cy):
         key = (cx, cy)
@@ -275,9 +290,11 @@ class World:
             if _h(wx // step, 0, 20) > 0.55:
                 tx = wx // TILE
                 st = surface_ty(tx)
-                if st <= SNOW_LINE_TY:    # на горах деревья не растут
+                # НЕ ставим если поверхность под водой
+                if st >= SEA_TY:
                     continue
-                if gen_tile(tx, st) == WATER:
+                # на горах со снегом — тоже не ставим
+                if st <= SNOW_LINE_TY:
                     continue
                 py = st * TILE
                 if y0 - 250 < py < y1 + 250:
@@ -332,20 +349,47 @@ class World:
                 if py < y0 - 100 or py > y1 + 100:
                     continue
                 if gen_tile(tx, ty) == WATER:
-                    # рыба — в середине воды
-                    if _h(tx // 3, ty, 55) > 0.75 and len(self.fishes) < 60:
-                        self.fishes.append(Fish(wx, py))
-                    # водоросли на дне
+                    # ОПРЕДЕЛЯЕМ ДНО
                     ty_below = ty
                     for k in range(1, 8):
                         if gen_tile(tx, ty + k) != WATER:
                             ty_below = ty + k - 1
                             break
                     floor_py = (ty_below + 1) * TILE
-                    if _h(tx // 2, ty_below, 56) > 0.4 and len(self.seaweeds) < 100:
+                    depth_water = ty_below - ty   # глубина воды в тайлах
+
+                    # рыбы — 4 вида, в середине воды
+                    h = _h(tx // 3, ty, 55)
+                    if h > 0.45 and len(self.fishes) < 80:
+                        # разные виды по глубине
+                        if depth_water >= 4 and h > 0.75:
+                            kind = "blue"      # глубоководные
+                        elif h > 0.70:
+                            kind = "yellow"
+                        elif h > 0.55:
+                            kind = "red"
+                        else:
+                            kind = "glow"
+                        self.fishes.append(Fish(wx, py, kind))
+
+                    # черепахи — большие, на среднем уровне
+                    if depth_water >= 5 and _h(tx // 5, ty, 60) > 0.85 and len(self.turtles) < 15:
+                        self.turtles.append(Turtle(wx, py - 4))
+
+                    # морские коньки — у дна, в водорослях
+                    if depth_water >= 3 and _h(tx // 4, ty, 61) > 0.80 and len(self.seahorses) < 20:
+                        self.seahorses.append(Seahorse(wx, floor_py - 40))
+
+                    # акулы — редкие, в глубокой воде
+                    if depth_water >= 6 and _h(tx // 8, ty, 62) > 0.92 and len(self.sharks) < 6:
+                        self.sharks.append(Shark(wx - 20, py - 8))
+
+                    # водоросли на дне
+                    if _h(tx // 2, ty_below, 56) > 0.35 and len(self.seaweeds) < 150:
                         self.seaweeds.append(Seaweed(wx, floor_py - 2))
-                    # коралл
-                    if _h(tx // 3, ty_below, 57) > 0.72 and len(self.corals) < 40:
+
+                    # кораллы
+                    if _h(tx // 3, ty_below, 57) > 0.65 and len(self.corals) < 60:
                         self.corals.append(Coral(wx, floor_py - 2))
                     break
 
@@ -392,10 +436,16 @@ class World:
             s.draw(screen, camera.ox, camera.oy)
         for c in self.corals:
             c.draw(screen, camera.ox, camera.oy)
+        for t in self.turtles:
+            t.draw(screen, camera.ox, camera.oy)
+        for s in self.seahorses:
+            s.draw(screen, camera.ox, camera.oy)
 
     def draw_entities(self, screen, camera):
         for f in self.fishes:
             f.draw(screen, camera.ox, camera.oy)
+        for sh in self.sharks:
+            sh.draw(screen, camera.ox, camera.oy)
         for c in self.chests:
             c.draw(screen, camera.ox, camera.oy)
         for t in self.trees:
