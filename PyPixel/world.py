@@ -7,16 +7,18 @@
 """
 import pygame
 from blocks import (
-    TILE_SIZE, AIR, DIRT, GRASS, STONE, COPPER, IRON, GOLD, SAND,
+    TILE_SIZE, AIR, DIRT, GRASS, STONE, COPPER, IRON, GOLD, SAND, WATER,
     draw_block,
 )
+from water import WaterSim, draw_water_block
 from enemy import Enemy
 from collectible import Pixel
 from tree import AppleTree
 from medkit import Medkit
 
 TILE = TILE_SIZE
-SURFACE_TY = 40                # базовый уровень поверхности (в тайлах) = 1280px
+SURFACE_TY = 40                # базовый уровень поверхности (в тайлах)
+SEA_TY = 43                    # уровень моря — ниже этой линии низины заполняются водой
 DEATH_TY = SURFACE_TY + 55     # ниже — смерть (в тайлах)
 
 
@@ -75,6 +77,9 @@ def surface_ty(tx):
 def gen_tile(tx, ty):
     st = surface_ty(tx)
     if ty < st:
+        # Низина ниже уровня моря → вода
+        if ty >= SEA_TY:
+            return WATER
         return AIR
     depth = ty - st
 
@@ -104,7 +109,7 @@ def gen_tile(tx, ty):
 
 # ============ МИР ============
 class World:
-    DAY_LENGTH = 60.0        # секунд на полный цикл
+    DAY_LENGTH = 30.0        # секунд на полный цикл
 
     def __init__(self, difficulty):
         self.difficulty = difficulty
@@ -116,7 +121,7 @@ class World:
         self.arrows = []
         self._spawned = set()
         self._last_chunk = None
-        self.time_of_day = 0.30   # старт — утро
+        self.time_of_day = 0.78   # старт — утро
         self.torches = []         # [(wx, wy), ...] — для света
 
     def tick_time(self, dt):
@@ -143,7 +148,8 @@ class World:
         return gen_tile(tx, ty)
 
     def is_solid(self, tx, ty):
-        return self.get_block(tx, ty) != AIR
+        bt = self.get_block(tx, ty)
+        return bt != AIR and bt != WATER
 
     def dig(self, tx, ty):
         bt = self.get_block(tx, ty)
@@ -171,6 +177,8 @@ class World:
 
     # --- чанки (спавн сущностей) ---
     def update(self, camera):
+        # вода — до всего
+        self.water_sim.update(self, camera)
         cx = int(camera.offset_x + camera.view_width // 2) // 512
         cy = int(camera.offset_y + camera.view_height // 2) // 512
         if (cx, cy) == self._last_chunk:
@@ -253,13 +261,18 @@ class World:
         ty0 = oy // TILE - 1
         tx1 = (ox + camera.view_width) // TILE + 1
         ty1 = (oy + camera.view_height) // TILE + 1
+        t = pygame.time.get_ticks() / 1000.0
         for ty in range(ty0, ty1 + 1):
             for tx in range(tx0, tx1 + 1):
                 bt = self.get_block(tx, ty)
                 if bt == AIR:
                     continue
                 r = pygame.Rect(tx * TILE - ox, ty * TILE - oy, TILE, TILE)
-                draw_block(screen, r, bt)
+                if bt == WATER:
+                    is_surface = (self.get_block(tx, ty - 1) == AIR)
+                    draw_water_block(screen, r, is_surface, t)
+                else:
+                    draw_block(screen, r, bt)
 
     def draw_entities(self, screen, camera):
         for t in self.trees:

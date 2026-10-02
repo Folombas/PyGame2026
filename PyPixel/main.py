@@ -199,6 +199,10 @@ def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
     draw_temperature_bar(screen, font_small, L["body_temp"])
     draw_hotbar(screen, font_small, L["inventory"])
 
+    if L["player"].in_water:
+        wat = font_big.render("~ В ВОДЕ ~", True, (100, 200, 255))
+        screen.blit(wat, (WIDTH // 2 - wat.get_width() // 2, HEIGHT - 110))
+
     if L["state"] == "game_over":
         veil = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         veil.fill((0, 0, 0, 160))

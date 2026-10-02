@@ -17,6 +17,7 @@ PLANKS = 10
 BRICK = 11
 DOOR = 12
 TORCH = 13
+WATER = 14
 
 BLOCKS = {
     DIRT:   {"name": "Земля",  "color": (120, 80, 50),  "top": (140, 100, 65), "hardness": 14, "drop": DIRT, "tool": None},
@@ -32,6 +33,7 @@ BLOCKS = {
     BRICK:  {"name": "Кирпич", "color": (150, 60, 60),  "top": (180, 80, 80),  "hardness": 40, "drop": BRICK,  "tool": "pickaxe"},
     DOOR:   {"name": "Дверь",  "color": (110, 70, 40),  "top": (150, 100, 60), "hardness": 15, "drop": DOOR,   "tool": "axe"},
     TORCH:  {"name": "Факел",  "color": (255, 180, 80), "top": (255, 220, 120),"hardness": 6,  "drop": TORCH,  "tool": None, "light": 220},
+    WATER:  {"name": "Вода",   "color": (30, 80, 140),  "top": (60, 140, 200), "hardness": 999, "drop": None,  "tool": None, "liquid": True},
 }
 
 

@@ -3,7 +3,7 @@ import pygame
 from settings import GRAVITY, PLAYER_SPEED, JUMP_POWER
 from pixel_art import build_sprite, PLAYER_SPRITES, PLAYER_PALETTE
 from sounds import play as play_sound
-from blocks import TILE_SIZE, AIR
+from blocks import TILE_SIZE, AIR, WATER
 
 
 class Player:
@@ -25,6 +25,7 @@ class Player:
         self.state = "idle"
         self.anim_frame = 0
         self.anim_timer = 0
+        self.in_water = False
 
     def handle_input(self, keys) -> None:
         self.vel_x = 0
@@ -87,12 +88,27 @@ class Player:
                     self.vel_y = 0
 
     def update(self, world) -> None:
-        # гравитация с variable jump
-        if self.jump_held and self.vel_y < 0:
-            self.vel_y += GRAVITY * 0.45
+        # проверяем, в воде ли игрок (центр rect)
+        cx = self.rect.centerx // TILE_SIZE
+        cy = self.rect.centery // TILE_SIZE
+        self.in_water = (world.get_block(cx, cy) == WATER)
+
+        if self.in_water:
+            # плавание: медленная гравитация, ограниченное падение
+            self.vel_y += GRAVITY * 0.25
+            self.vel_y = min(self.vel_y, 4)
+            # горизонтальный "drag"
+            self.vel_x *= 0.85
+            # прыжок в воде = всплытие
+            if self.jump_held:
+                self.vel_y = min(self.vel_y - 0.7, -3.5)
         else:
-            self.vel_y += GRAVITY
-        self.vel_y = min(self.vel_y, 20)
+            # обычная физика с variable jump
+            if self.jump_held and self.vel_y < 0:
+                self.vel_y += GRAVITY * 0.45
+            else:
+                self.vel_y += GRAVITY
+            self.vel_y = min(self.vel_y, 20)
 
         self._resolve_x(world)
         self._resolve_y(world)
