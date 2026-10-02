@@ -20,6 +20,7 @@ from tools import (TOOLS, PICKAXE, AXE, SWORD, BOW,
                    draw_tool_icon, get_tool_sprite, get_tool_sprite_rotated)
 from particles import ParticleSystem
 from arrows import Arrow
+from boat import Boat
 from records import save_record
 from menu import Menu
 from card_book import CardBook
@@ -197,7 +198,10 @@ def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
             pygame.draw.rect(screen, col, (ox_x, ox_y, fill, ox_h))
         lbl = font_small.render(f"O2  {int(p.oxygen)}%", True, (255, 255, 255))
         screen.blit(lbl, (ox_x + 6, ox_y - 1))
-    if p.in_water:
+    if p.in_boat is not None:
+        wat = font_big.render("~ В ЛОДКЕ ~  (E — выйти)", True, (180, 220, 255))
+        screen.blit(wat, (WIDTH // 2 - wat.get_width() // 2, HEIGHT - 130))
+    elif p.in_water:
         wat = font_big.render("~ В ВОДЕ ~", True, (100, 200, 255))
         screen.blit(wat, (WIDTH // 2 - wat.get_width() // 2, HEIGHT - 110))
 
@@ -388,6 +392,7 @@ def new_session(difficulty):
         "achievement_toast_timer": 0,
         "light_mask": LightMask(),
         "fireflies": [],
+        "boats": [],
     }
 
 
@@ -530,11 +535,24 @@ def main():
             elif event.key == pygame.K_g and L["state"] == "playing":
                 L["player"].has_scuba = not L["player"].has_scuba
                 print(f"[SCUBA] {'включён' if L['player'].has_scuba else 'выключен'}")
+            elif event.key == pygame.K_k and L["state"] == "playing":
+                # поставить лодку перед игроком
+                px = L["player"].rect.centerx + (60 if L["player"].facing_right else -60)
+                py = L["player"].rect.bottom - 24
+                L["boats"].append(Boat(px, py))
+                print("[BOAT] поставлена")
             elif event.key in (pygame.K_e, pygame.K_f) and L["state"] == "playing":
-                mx, my = pygame.mouse.get_pos()
-                wx = mx + L["camera"].ox
-                wy = my + L["camera"].oy
-                use_tool_at(L, wx, wy, mx, my)
+                if L["player"].in_boat is not None:
+                    # выход из лодки
+                    boat = L["player"].in_boat
+                    L["player"].in_boat = None
+                    L["player"].rect.midbottom = (boat.rect.centerx, boat.rect.top - 4)
+                    sounds.play("jump")
+                else:
+                    mx, my = pygame.mouse.get_pos()
+                    wx = mx + L["camera"].ox
+                    wy = my + L["camera"].oy
+                    use_tool_at(L, wx, wy, mx, my)
             elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5,
                                pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0):
                 n = event.key - pygame.K_1
@@ -672,19 +690,27 @@ def main():
                 L["swing_angle"] = 0
             L["particles"].update()
 
+            # лодки — покачивание и посадка
+            for b in L["boats"]:
+                b.update(L["world"])
+                # посадка: игрок касается лодки и не в лодке и не в воде
+                if (L["player"].in_boat is None and
+                        not L["player"].in_water and
+                        L["player"].rect.colliderect(b.rect.inflate(0, 20))):
+                    if pygame.key.get_pressed()[pygame.K_e]:
+                        L["player"].in_boat = b
+                        sounds.play("collect")
+
             # пузырьки под водой
             if L["player"].head_in_water:
-                if not hasattr(L, "_bubble_tick"): L["_bubble_tick"] = 0
+                if not hasattr(L, "_bubble_tick"):
+                    L["_bubble_tick"] = 0
                 L["_bubble_tick"] += 1
-                if L["_bubble_tick"] % 20 == 0:
-                    L["particles"].particles.append(
-                        type(L["particles"]).__dict__.get("__init__") or None
-                    ) if False else None
-                    # добавляем искры как имитацию пузырьков
+                if L["_bubble_tick"] % 18 == 0:
                     L["particles"].spawn_sparks(
                         L["player"].rect.centerx,
                         L["player"].rect.top,
-                        count=1,
+                        count=2,
                     )
 
             # стрелы
@@ -858,6 +884,9 @@ def main():
 
         L["world"].draw_tiles(screen, L["camera"])
         L["world"].draw_underwater(screen, L["camera"])
+        # лодки — рисуем до игрока (игрок сверху)
+        for b in L["boats"]:
+            b.draw(screen, ox, oy)
         L["world"].draw_entities(screen, L["camera"])
 
         # подсветка блока под курсором
