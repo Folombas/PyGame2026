@@ -350,8 +350,10 @@ def use_tool_at(L, wx, wy, mx, my):
 
 # ================= СЕССИЯ =================
 def new_session(difficulty):
-    spawn_tx = 4
-    spawn_ty = SURFACE_TY - 2
+    # Спавн — на лугу, в безопасном месте (между лесом и озером)
+    spawn_tx = 85
+    from world import surface_ty as _st
+    spawn_ty = _st(spawn_tx) - 2
     player = Player(spawn_tx * TILE, spawn_ty * TILE)
     camera = Camera(WIDTH)
     camera.offset_x = player.rect.centerx - WIDTH // 2
@@ -549,34 +551,6 @@ def main():
                 if L["player"].has_scuba:
                     L["scuba_used"] = 1
                 print(f"[SCUBA] {'включён' if L['player'].has_scuba else 'выключен'}")
-            elif event.key == pygame.K_t and L["state"] == "playing":
-                # ищем ближайший ГЛУБОКИЙ океан (поверхность НИЖЕ базовой)
-                px = L["player"].rect.centerx // TILE
-                best_tx = None
-                best_depth = 0
-                for dist in range(0, 8000, 10):
-                    for sign in (-1, 1):
-                        tx = px + sign * dist
-                        d = surface_ty(tx) - SURFACE_TY   # ПОЛОЖИТЕЛЬНО = ниже = океан
-                        if d > best_depth:
-                            best_depth = d
-                        if d >= 20:
-                            best_tx = tx
-                            break
-                    if best_tx is not None:
-                        break
-                if best_tx is not None:
-                    target_px = best_tx * TILE
-                    L["player"].rect.centerx = target_px
-                    # Ставим НА 5 ТАЙЛОВ ВЫШЕ ДНА — то есть в воду
-                    st_ty = surface_ty(best_tx)
-                    L["player"].rect.y = (st_ty - 5) * TILE
-                    L["camera"].offset_x = target_px - WIDTH // 2
-                    L["camera"].offset_y = L["player"].rect.centery - HEIGHT // 2
-                    d = st_ty - SURFACE_TY
-                    print(f"[TP] Телепорт в океан: tx={best_tx}, глубина={d} тайлов")
-                else:
-                    print(f"[TP] Океан не найден. Максимальная глубина: {best_depth} тайлов")
             elif event.key == pygame.K_u and L["state"] == "playing":
                 px = L["player"].rect.centerx + (60 if L["player"].facing_right else -60)
                 py = L["player"].rect.bottom - 44
@@ -667,7 +641,7 @@ def main():
                     save_record(L["score"], 0, 0, L["kills"], L["apples"],
                                 L["max_x"] // 10, difficulty_key)
                 else:
-                    L["player"] = Player(4 * TILE, (SURFACE_TY - 2) * TILE)
+                    L["player"] = Player(85 * TILE, (surface_ty(85) - 2) * TILE)
                     L["camera"] = Camera(WIDTH)
                     L["hp"] = L["max_hp"]
                     sounds.play("hit")
@@ -694,7 +668,7 @@ def main():
                         save_record(L["score"], 0, 0, L["kills"], L["apples"],
                                     L["max_x"] // 10, difficulty_key)
                     else:
-                        L["player"] = Player(4 * TILE, (SURFACE_TY - 2) * TILE)
+                        L["player"] = Player(85 * TILE, (surface_ty(85) - 2) * TILE)
                         L["camera"] = Camera(WIDTH)
                         L["hp"] = L["max_hp"]
                         L["body_temp"] = 100.0
@@ -862,7 +836,7 @@ def main():
                                 save_record(L["score"], 0, 0, L["kills"], L["apples"],
                                             L["max_x"] // 10, difficulty_key)
                             else:
-                                L["player"] = Player(4 * TILE, (SURFACE_TY - 2) * TILE)
+                                L["player"] = Player(85 * TILE, (surface_ty(85) - 2) * TILE)
                                 L["camera"] = Camera(WIDTH)
                                 L["hp"] = L["max_hp"]
 

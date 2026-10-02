@@ -1,9 +1,12 @@
-"""World — тайловый мир с fractal-рельефом, снежными горами, озёрами."""
+"""World — фиксированный (скриптованный) мир. Без генерации.
+
+Карта 300x120 тайлов. Всё расставлено вручную по "сценарию".
+"""
 import math
 import pygame
 from blocks import (
     TILE_SIZE, AIR, DIRT, GRASS, STONE, COPPER, IRON, GOLD, SAND,
-    WATER, SNOW, draw_block,
+    WATER, SNOW, TORCH, draw_block,
 )
 from water import WaterSim, draw_water_block
 from enemy import Enemy
@@ -15,145 +18,120 @@ from underwater import Fish, Seaweed, Coral, Turtle, Seahorse, Shark
 from ocean import SunkenShip, TempleRuin, PoseidonStatue, Whale, BigShark, Column
 
 TILE = TILE_SIZE
-SURFACE_TY = 40                # базовый уровень поверхности (в тайлах)
-SEA_TY = 40                    # уровень моря: низины ниже заполняются водой
-SNOW_LINE_TY = 30              # выше этой линии — снег на горах
-DEATH_TY = SURFACE_TY + 55
+SURFACE_TY = 40                # базовый уровень поверхности
+SEA_TY = 38                    # уровень моря
+SNOW_LINE_TY = 25              # выше — снег
+WORLD_TX = 300                 # ширина мира в тайлах
+WORLD_TY = 120                 # высота мира в тайлах
+DEATH_TY = 118
+
+WORLD_Y_LAVA = 110
 
 
-# =============== ШУМЫ ===============
-def _h(x, y, seed=0):
-    n = (int(x) * 374761393 + int(y) * 668265263 + int(seed) * 1274126177) & 0xFFFFFFFF
-    n = (n ^ (n >> 13)) * 1274126177 & 0xFFFFFFFF
-    n = n ^ (n >> 16)
-    return (n & 0xFFFFFFFF) / 0xFFFFFFFF
+# ============= ГЛАВНАЯ КАРТА (фиксированный рельеф) =============
+# Список (start_tx, end_tx, surface_ty) — ступенчатый рельеф
+# Всё что между start и end — одна высота
+RELIEF = [
+    # горы — вверху, с пиками
+    (0, 15, 40),     # предгорье
+    (15, 25, 30),    # нижние склоны
+    (25, 32, 22),    # снежная вершина
+    (32, 40, 30),    # обратно вниз
+    (40, 50, 40),    # базовый уровень
 
+    # лес
+    (50, 70, 40),
+    (70, 80, 42),    # чуть ниже — низинка
 
-def _s1d(x, scale, seed=0):
-    xf = x / scale
-    x0 = int(xf)
-    if xf < 0:
-        x0 -= 1
-    t = xf - x0
-    t = t * t * (3 - 2 * t)
-    a = _h(x0, 0, seed)
-    b = _h(x0 + 1, 0, seed)
-    return a * (1 - t) + b * t
+    # луг (ровный)
+    (80, 110, 40),
 
+    # озеро — большая плоская низина
+    (110, 150, 55),  # уровень дна озера
 
-def _s2d(x, y, scale, seed=0):
-    xf = x / scale
-    yf = y / scale
-    x0 = int(xf); y0 = int(yf)
-    if xf < 0: x0 -= 1
-    if yf < 0: y0 -= 1
-    tx = xf - x0; ty = yf - y0
-    tx = tx * tx * (3 - 2 * tx)
-    ty = ty * ty * (3 - 2 * ty)
-    a = _h(x0, y0, seed)
-    b = _h(x0 + 1, y0, seed)
-    c = _h(x0, y0 + 1, seed)
-    d = _h(x0 + 1, y0 + 1, seed)
-    ab = a + (b - a) * tx
-    cd = c + (d - c) * tx
-    return ab + (cd - ab) * ty
+    # океан — ГЛУБОКАЯ впадина
+    (150, 230, 130), # дно океана (в 3 раза ниже базового!)
 
+    # пляж — поднимается
+    (230, 250, 50),
 
-def _ridge(x, scale, seed=0):
-    """Ridge-noise — острые пики."""
-    v = _s1d(x, scale, seed)
-    return 1.0 - abs(v - 0.5) * 2
-
-
-# =============== ГЕНЕРАЦИЯ РЕЛЬЕФА ===============
-def ocean_depth_at(tx):
-    """Насколько глубоко в океане находится колонка tx (в тайлах)."""
-    # Океаны — широкая зона
-    v = _s1d(tx, 180, 33)
-    if v < 0.50:
-        t = (0.50 - v) / 0.50   # 0..1
-        return int((t ** 1.1) * 90)   # до 90 тайлов вниз
-    return 0
+    # восточные холмы
+    (250, 270, 40),
+    (270, 285, 32),
+    (285, 300, 40),
+]
 
 
 def surface_ty(tx):
-    """Y верхнего твёрдого тайла в колонке tx (в тайлах)."""
-    # ОКЕАН — если тут океан, то только океан, без гор и холмов
-    ocean = ocean_depth_at(tx)
-    if ocean > 3:
-        return SURFACE_TY + ocean
+    """Фиксированная высота поверхности для колонки tx."""
+    if tx < 0:
+        return SURFACE_TY
+    if tx >= WORLD_TX:
+        return SURFACE_TY
+    for start, end, ty in RELIEF:
+        if start <= tx < end:
+            return ty
+    return SURFACE_TY
 
-    # === ОБЫЧНЫЙ РЕЛЬЕФ ===
-    base = SURFACE_TY
-    base += int((_s1d(tx, 45, 1) - 0.5) * 4)
-    base += int((_s1d(tx, 20, 2) - 0.5) * 3)
-    base += int((_s1d(tx, 9, 3) - 0.5) * 2)
-    base += int((_s1d(tx, 4, 4) - 0.5) * 1.5)
 
-    # ДОЛИНЫ — небольшие впадины (озёра)
-    v = _s1d(tx, 70, 20)
-    if v < 0.55:
-        t = (0.55 - v) / 0.55
-        base += int((t ** 1.0) * 12)
-
-    # Рвы — узкие
-    v2 = _s1d(tx, 25, 21)
-    if v2 > 0.85:
-        t = (v2 - 0.85) / 0.15
-        base += int((t ** 1.5) * 5)
-
-    # Горные хребты
-    r1 = _ridge(tx, 22, 10)
-    r2 = _ridge(tx, 11, 11)
-    peak = r1 * 0.7 + r2 * 0.3
-    if peak > 0.82:
-        t = (peak - 0.82) / 0.18
-        base -= int((t ** 1.4) * 26)
-
-    return base
+def _smooth_surface(tx):
+    """Сглаженная версия — интерполяция между колоннами рельефа."""
+    # берём surface_ty для tx и усредняем с соседями
+    a = surface_ty(tx - 1)
+    b = surface_ty(tx)
+    c = surface_ty(tx + 1)
+    return int((a + b * 2 + c) / 4)
 
 
 def gen_tile(tx, ty):
-    st = surface_ty(tx)
+    """Тип тайла в (tx, ty). Фиксированная логика."""
+    if tx < 0 or tx >= WORLD_TX or ty < 0 or ty >= WORLD_TY:
+        return AIR
+    st = _smooth_surface(tx)
+
     if ty < st:
-        # выше поверхности: вода, если ниже уровня моря И поверхность впадина
-        if ty >= SEA_TY and st >= SEA_TY:
+        # Над поверхностью — воздух или вода (в низинах)
+        if st > SEA_TY and ty >= SEA_TY:
             return WATER
         return AIR
 
     depth = ty - st
 
-    # снег на вершинах
-    if st <= SNOW_LINE_TY and depth < 3:
+    # снег на горных вершинах
+    if st <= SNOW_LINE_TY and depth < 4:
         return SNOW
-    if st <= SNOW_LINE_TY + 2 and depth == 0:
-        return SNOW
-
+    # песок на пляжах (у океана)
+    if 230 <= tx < 250 and depth < 3:
+        return SAND
+    # трава везде остальное
     if depth == 0:
-        return SAND if st < 22 else GRASS
+        return GRASS
     if depth < 4:
         return DIRT
 
-    # пещеры — только с глубины 8
-    if depth >= 8:
-        cave = _s2d(tx, ty, 8, 5) * 0.55 + _s2d(tx, ty, 4, 6) * 0.45
-        bias = min(0.22, (depth - 8) / 60.0)
-        if cave > 0.62 - bias:
+    # пещеры — фиксированная сетка
+    if depth >= 10:
+        # простое детерминированное "псевдо-random" от координат
+        n = ((tx * 73 + ty * 131) ^ (tx * ty)) & 0xFF
+        if n < 15:  # ~6% блоков — воздух
             return AIR
 
     # руды
-    if depth >= 10:
-        r = _h(tx, ty, 42)
-        if r > 0.988: return GOLD
+    if depth >= 12:
+        n = (tx * 374761393 + ty * 668265263) & 0xFFFFFFFF
+        n = (n ^ (n >> 13)) * 1274126177 & 0xFFFFFFFF
+        n = n ^ (n >> 16)
+        r = (n & 0xFFFFFFFF) / 0xFFFFFFFF
+        if r > 0.985: return GOLD
         if r > 0.965: return IRON
         if r > 0.925: return COPPER
 
     return STONE
 
 
-# =============== МИР ===============
+# ============= МИР =============
 class World:
-    DAY_LENGTH = 60.0
+    DAY_LENGTH = 120.0
 
     def __init__(self, difficulty):
         self.difficulty = difficulty
@@ -175,14 +153,166 @@ class World:
         self.poseidons = []
         self.big_sharks = []
         self.whales = []
-        self._spawned = set()
-        self._last_chunk = None
         self.time_of_day = 0.30
         self.water_sim = WaterSim()
+        self._populate()
 
     def tick_time(self, dt):
         self.time_of_day = (self.time_of_day + dt / self.DAY_LENGTH) % 1.0
 
+    # ============= РАССТАНОВКА ОБЪЕКТОВ (как декорации) =============
+    def _populate(self):
+        # --- ДЕРЕВЬЯ в лесу и на лугу ---
+        tree_positions = [
+            # лес
+            (52, 38), (58, 39), (64, 40), (70, 38), (76, 39),
+            # луг
+            (85, 40), (95, 40), (105, 40),
+            # восточные холмы
+            (255, 40), (262, 41), (275, 33), (288, 41),
+            # предгорье
+            (5, 40), (10, 40),
+        ]
+        for tx, ty in tree_positions:
+            st = _smooth_surface(tx)
+            if st < ty:  # дерево выше поверхности — ок
+                py = st * TILE if st == ty else _smooth_surface(tx) * TILE
+            py = _smooth_surface(tx) * TILE
+            self.trees.append(AppleTree(tx * TILE, py))
+
+        # --- ВРАГИ на поверхности ---
+        enemy_positions = [
+            (60, 39), (75, 39), (90, 40), (100, 40),
+            (255, 39), (265, 39), (280, 32),
+            (10, 40), (20, 40),
+        ]
+        for tx, ty in enemy_positions:
+            st = _smooth_surface(tx)
+            py = (st - 1) * TILE
+            self.enemies.append(Enemy(tx * TILE, py))
+
+        # --- ПИКСЕЛИ (сборные очки) ---
+        pixel_positions = [
+            (30, 20), (35, 25),  # у вершин
+            (55, 30), (65, 32), (80, 35),  # лес
+            (120, 45), (130, 48),  # озеро
+            (200, 60), (210, 70),  # под водой в океане
+            (240, 45), (250, 42),
+        ]
+        for tx, ty in pixel_positions:
+            self.pixels.append(Pixel(tx * TILE, ty * TILE))
+
+        # --- АПТЕЧКИ ---
+        medkit_positions = [
+            (45, 39), (95, 39), (240, 49),
+        ]
+        for tx, ty in medkit_positions:
+            self.medkits.append(Medkit(tx * TILE, ty * TILE))
+
+        # --- СУНДУКИ (в пещерах, ниже поверхности) ---
+        chest_positions = [
+            # в горах глубже
+            (20, 60), (28, 55), (35, 65),
+            # под лесом
+            (60, 70), (75, 75),
+            # под лугом
+            (90, 65), (100, 80),
+            # под океаном — клады на дне
+            (180, 128), (200, 130), (220, 125),
+        ]
+        for tx, ty in chest_positions:
+            self.chests.append(Chest(tx * TILE, ty * TILE))
+
+        # --- РЫБЫ в озере и океане ---
+        fish_positions = [
+            # озеро
+            (115, 50, "red"), (125, 48, "yellow"), (135, 52, "blue"),
+            (120, 45, "glow"), (130, 50, "red"), (140, 47, "yellow"),
+            # океан — много разных на разных глубинах
+            (160, 60, "blue"), (170, 70, "glow"), (180, 80, "red"),
+            (190, 90, "yellow"), (200, 100, "blue"), (210, 110, "glow"),
+            (175, 55, "red"), (195, 65, "yellow"), (215, 75, "blue"),
+            (165, 100, "glow"), (185, 105, "red"), (205, 95, "yellow"),
+            (220, 85, "blue"), (225, 115, "glow"),
+        ]
+        for tx, ty, kind in fish_positions:
+            self.fishes.append(Fish(tx * TILE, ty * TILE, kind))
+
+        # --- ВОДОРОСЛИ ---
+        seaweed_positions = [
+            (115, 54), (120, 54), (130, 54), (140, 54),  # озеро дно
+            (155, 129), (165, 129), (175, 129), (185, 129),  # океан дно
+            (195, 129), (205, 129), (215, 129), (225, 129),
+        ]
+        for tx, ty in seaweed_positions:
+            self.seaweeds.append(Seaweed(tx * TILE, ty * TILE - 4))
+
+        # --- КОРАЛЛЫ ---
+        coral_positions = [
+            (160, 129), (172, 129), (188, 129), (202, 129), (218, 129),
+            (155, 128), (200, 128), (225, 128),
+        ]
+        for tx, ty in coral_positions:
+            self.corals.append(Coral(tx * TILE, ty * TILE - 4))
+
+        # --- ЧЕРЕПАХИ ---
+        turtle_positions = [
+            (170, 80), (195, 95), (215, 70),
+        ]
+        for tx, ty in turtle_positions:
+            self.turtles.append(Turtle(tx * TILE, ty * TILE))
+
+        # --- МОРСКИЕ КОНЬКИ ---
+        seahorse_positions = [
+            (150, 120), (175, 122), (200, 125), (220, 122),
+        ]
+        for tx, ty in seahorse_positions:
+            self.seahorses.append(Seahorse(tx * TILE, ty * TILE))
+
+        # --- АКУЛЫ (маленькие, обычные) ---
+        shark_positions = [
+            (185, 90), (210, 105),
+        ]
+        for tx, ty in shark_positions:
+            self.sharks.append(Shark(tx * TILE - 10, ty * TILE))
+
+        # --- ЗАТОНУВШИЕ КОРАБЛИ (в океане на дне) ---
+        # Дно океана около y=129 тайлов
+        ship_positions = [
+            (165, 128, False),
+            (195, 127, True),
+            (220, 129, False),
+        ]
+        for tx, ty, flip in ship_positions:
+            self.ships.append(SunkenShip(tx * TILE - 70, ty * TILE - 60))
+
+        # --- РУИНЫ ХРАМОВ АТЛАНТИДЫ ---
+        temple_positions = [
+            (175, 130),   # большой храм
+            (205, 130),   # второй храм
+            (155, 130),   # маленький
+        ]
+        for tx, ty in temple_positions:
+            self.temples.append(TempleRuin(tx * TILE, ty * TILE))
+
+        # --- СТАТУЯ ПОСЕЙДОНА (главная достопримечательность) ---
+        self.poseidons.append(PoseidonStatue(190 * TILE, 130 * TILE))
+
+        # --- БОЛЬШИЕ АКУЛЫ (патрулируют глубокий океан) ---
+        big_shark_positions = [
+            (170, 100), (200, 85), (215, 110),
+        ]
+        for tx, ty in big_shark_positions:
+            self.big_sharks.append(BigShark(tx * TILE, ty * TILE))
+
+        # --- КИТЫ (в толще воды океана) ---
+        whale_positions = [
+            (170, 70), (200, 90), (225, 80),
+        ]
+        for tx, ty in whale_positions:
+            self.whales.append(Whale(tx * TILE, ty * TILE))
+
+    # ============= ДОСТУП К БЛОКАМ =============
     def get_block(self, tx, ty):
         if (tx, ty) in self.mods:
             return self.mods[(tx, ty)]
@@ -217,9 +347,8 @@ class World:
                     return True
         return False
 
-    # ============ chop_tree ============
-    def chop_tree(self, wx, wy, radius_px=140):
-        """Ищет дерево рядом. Удаляет и возвращает (x, y) или None."""
+    # ============= chop_tree =============
+    def chop_tree(self, wx, wy, radius_px=150):
         best_i = -1
         best_d = radius_px * radius_px
         for i, t in enumerate(self.trees):
@@ -234,20 +363,20 @@ class World:
             return (t.base_x, t.base_y - 50)
         return None
 
-    # ============ light sources ============
+    # ============= light =============
     def get_light_sources(self, camera):
         sources = []
         cx = camera.offset_x + camera.view_width // 2
         cy = camera.offset_y + camera.view_height // 2
         for (tx, ty), bt in self.mods.items():
-            if bt == 13:      # TORCH
+            if bt == TORCH:
                 wx = tx * TILE + TILE // 2
                 wy = ty * TILE + TILE // 2
                 if abs(wx - cx) < 900 and abs(wy - cy) < 700:
                     sources.append((wx, wy, 260))
         return sources
 
-    # ============ update ============
+    # ============= update =============
     def update(self, camera):
         self.water_sim.update(self, camera)
         for f in self.fishes:
@@ -256,10 +385,16 @@ class World:
             t.update(self)
         for s in self.seahorses:
             s.update(self)
+        for s in self.seaweeds:
+            s.update()
+        for c in self.corals:
+            c.update()
         for sh in self.sharks:
-            sh.update(self, self._player_ref) if hasattr(self, "_player_ref") else None
+            if hasattr(self, "_player_ref"):
+                sh.update(self, self._player_ref)
         for b in self.big_sharks:
-            b.update(self, self._player_ref) if hasattr(self, "_player_ref") else None
+            if hasattr(self, "_player_ref"):
+                b.update(self, self._player_ref)
         for w in self.whales:
             w.update(self)
         for s in self.ships:
@@ -268,272 +403,16 @@ class World:
             t.update(self)
         for p in self.poseidons:
             p.update(self)
-        for s in self.seaweeds:
-            s.update()
-        for c in self.corals:
-            c.update()
-        cx = int(camera.offset_x + camera.view_width // 2) // 512
-        cy = int(camera.offset_y + camera.view_height // 2) // 512
-        if (cx, cy) == self._last_chunk:
-            return
-        self._last_chunk = (cx, cy)
-        for dx in range(-2, 3):
-            for dy in range(-2, 3):
-                self._spawn(cx + dx, cy + dy)
+        for e in self.enemies:
+            e.update(self)
 
-        px = camera.offset_x + camera.view_width // 2
-        py = camera.offset_y + camera.view_height // 2
-        d = 2200
-        self.enemies = [e for e in self.enemies
-                        if abs(e.rect.centerx - px) < d and abs(e.rect.centery - py) < d]
-        self.trees = [t for t in self.trees if abs(t.base_x - px) < d]
-        self.medkits = [m for m in self.medkits
-                        if m.alive and abs(m.rect.centerx - px) < d]
-        self.pixels = [p for p in self.pixels
-                       if p.alive and abs(p.rect.centerx - px) < d]
-        self.chests = [c for c in self.chests
-                       if abs(c.rect.centerx - px) < d]
-        self.fishes = [f for f in self.fishes
-                       if abs(f.rect.centerx - px) < d and abs(f.rect.centery - py) < d]
-        self.seaweeds = [s for s in self.seaweeds
-                         if abs(s.x - px) < d and abs(s.y - py) < d]
-        self.corals = [c for c in self.corals
-                       if abs(c.x - px) < d and abs(c.y - py) < d]
-        self.turtles = [t for t in self.turtles
-                        if abs(t.rect.centerx - px) < d and abs(t.rect.centery - py) < d]
-        self.seahorses = [s for s in self.seahorses
-                          if abs(s.rect.centerx - px) < d and abs(s.rect.centery - py) < d]
-        self.sharks = [sh for sh in self.sharks
-                       if abs(sh.rect.centerx - px) < d]
-        self.ships = [s for s in self.ships
-                      if abs(s.rect.centerx - px) < d and abs(s.rect.centery - py) < d]
-        self.temples = [t for t in self.temples
-                        if abs(t.x - px) < d and abs(t.y - py) < d]
-        self.poseidons = [p for p in self.poseidons
-                          if abs(p.x - px) < d and abs(p.y - py) < d]
-        self.big_sharks = [b for b in self.big_sharks
-                           if abs(b.rect.centerx - px) < d and abs(b.rect.centery - py) < d]
-        self.whales = [w for w in self.whales
-                       if abs(w.rect.centerx - px) < d and abs(w.rect.centery - py) < d]
-
-    def _spawn(self, cx, cy):
-        key = (cx, cy)
-        if key in self._spawned:
-            return
-        self._spawned.add(key)
-        x0 = cx * 512; x1 = x0 + 512
-        y0 = cy * 512; y1 = y0 + 512
-
-        # деревья
-        step = 180
-        sx = (x0 // step) * step
-        for wx in range(sx, x1 + step, step):
-            if _h(wx // step, 0, 20) > 0.55:
-                tx = wx // TILE
-                st = surface_ty(tx)
-                # НЕ ставим если поверхность под водой
-                if st >= SEA_TY:
-                    continue
-                # на горах со снегом — тоже не ставим
-                if st <= SNOW_LINE_TY:
-                    continue
-                py = st * TILE
-                if y0 - 250 < py < y1 + 250:
-                    self.trees.append(AppleTree(wx, py))
-
-        # враги
-        dens = self.difficulty.get("enemy_density", 0.4)
-        step = 280
-        sx = (x0 // step) * step
-        for wx in range(sx, x1 + step, step):
-            if _h(wx // step, 0, 30) < dens:
-                tx = wx // TILE
-                st = surface_ty(tx)
-                if gen_tile(tx, st) == WATER:
-                    continue
-                py = (st - 1) * TILE
-                if y0 - 40 < py < y1 + 40:
-                    self.enemies.append(Enemy(wx, py))
-
-        # пиксели
-        step = 200
-        sx = (x0 // step) * step
-        for wx in range(sx, x1 + step, step):
-            if _h(wx // step, cy, 50) > 0.72:
-                tx = wx // TILE
-                st = surface_ty(tx)
-                py = st * TILE - 100 - int(_h(wx // step, 1, 50) * 140)
-                if y0 - 20 < py < y1:
-                    self.pixels.append(Pixel(wx, py))
-
-        # аптечки
-        step = 500
-        sx = (x0 // step) * step
-        for wx in range(sx, x1 + step, step):
-            if _h(wx // step, 0, 40) > 0.65:
-                tx = wx // TILE
-                st = surface_ty(tx)
-                py = (st - 1) * TILE - 6
-                if y0 - 40 < py < y1:
-                    self.medkits.append(Medkit(wx, py))
-
-        # --- ПОДВОДНЫЙ МИР ---
-        # Находим воду в чанке: сканируем тайлы
-        step = 80
-        sx = (x0 // step) * step
-        for wx in range(sx, x1 + step, step):
-            tx = wx // TILE
-            # ищем воду сверху вниз
-            for dy in range(0, 20):
-                ty = SEA_TY + dy
-                py = ty * TILE
-                if py < y0 - 100 or py > y1 + 100:
-                    continue
-                if gen_tile(tx, ty) == WATER:
-                    # ОПРЕДЕЛЯЕМ ДНО
-                    ty_below = ty
-                    for k in range(1, 8):
-                        if gen_tile(tx, ty + k) != WATER:
-                            ty_below = ty + k - 1
-                            break
-                    floor_py = (ty_below + 1) * TILE
-                    depth_water = ty_below - ty   # глубина воды в тайлах
-
-                    # рыбы — 4 вида, в середине воды
-                    h = _h(tx // 3, ty, 55)
-                    if h > 0.45 and len(self.fishes) < 80:
-                        # разные виды по глубине
-                        if depth_water >= 4 and h > 0.75:
-                            kind = "blue"      # глубоководные
-                        elif h > 0.70:
-                            kind = "yellow"
-                        elif h > 0.55:
-                            kind = "red"
-                        else:
-                            kind = "glow"
-                        self.fishes.append(Fish(wx, py, kind))
-
-                    # черепахи — большие, на среднем уровне
-                    if depth_water >= 5 and _h(tx // 5, ty, 60) > 0.85 and len(self.turtles) < 15:
-                        self.turtles.append(Turtle(wx, py - 4))
-
-                    # морские коньки — у дна, в водорослях
-                    if depth_water >= 3 and _h(tx // 4, ty, 61) > 0.80 and len(self.seahorses) < 20:
-                        self.seahorses.append(Seahorse(wx, floor_py - 40))
-
-                    # акулы — редкие, в глубокой воде
-                    if depth_water >= 7 and _h(tx // 12, ty, 62) > 0.97 and len(self.sharks) < 2:
-                        # акулы уменьшены
-                        pass
-
-                    # водоросли на дне
-                    if _h(tx // 2, ty_below, 56) > 0.35 and len(self.seaweeds) < 150:
-                        self.seaweeds.append(Seaweed(wx, floor_py - 2))
-
-                    # кораллы
-                    if _h(tx // 3, ty_below, 57) > 0.65 and len(self.corals) < 60:
-                        self.corals.append(Coral(wx, floor_py - 2))
-                    break
-
-        # === ГЛУБОКИЙ ОКЕАН: корабли, руины, киты, большие акулы ===
-        step = 400
-        sx = (x0 // step) * step
-        for wx in range(sx, x1 + step, step):
-            tx = wx // TILE
-            st = surface_ty(tx)
-            # насколько глубоко океан в этом столбце
-            ocean_d = SURFACE_TY - st  # положительное = глубже
-            if ocean_d < 15:
-                continue    # не океан, пропускаем
-
-            # ищем поверхность дна
-            floor_ty = st
-            # проверяем что в этом месте глубокая вода
-            water_top = (st - ocean_d if ocean_d > 0 else st)
-            if gen_tile(tx, st + 2) != STONE and gen_tile(tx, st + 2) != SAND:
-                pass
-
-            # ЗАТОНУВШИЙ КОРАБЛЬ — раз в 3000 px по X
-            if _h(tx // 12, 0, 70) > 0.75 and len(self.ships) < 8:
-                # ищем дно
-                for dy in range(0, 60):
-                    ty_ = st + dy
-                    py_ = ty_ * TILE
-                    if py_ < y0 - 100 or py_ > y1 + 100:
-                        continue
-                    if gen_tile(tx, ty_) != WATER:
-                        self.ships.append(SunkenShip(wx - 70, py_ - 60))
-                        break
-
-            # РУИНЫ ХРАМА — очень редко
-            if _h(tx // 25, 0, 71) > 0.85 and len(self.temples) < 4:
-                for dy in range(0, 60):
-                    ty_ = st + dy
-                    py_ = ty_ * TILE
-                    if py_ < y0 - 150 or py_ > y1 + 150:
-                        continue
-                    if gen_tile(tx, ty_) != WATER:
-                        self.temples.append(TempleRuin(wx, py_))
-                        break
-
-            # СТАТУЯ ПОСЕЙДОНА — легендарно редко
-            if _h(tx // 40, 0, 72) > 0.90 and len(self.poseidons) < 2:
-                for dy in range(0, 60):
-                    ty_ = st + dy
-                    py_ = ty_ * TILE
-                    if py_ < y0 - 200 or py_ > y1 + 200:
-                        continue
-                    if gen_tile(tx, ty_) != WATER:
-                        self.poseidons.append(PoseidonStatue(wx, py_))
-                        break
-
-        # КИТЫ — большие, мирные, плавают на глубине
-        step = 1500
-        sx = (x0 // step) * step
-        for wx in range(sx, x1 + step, step):
-            tx = wx // TILE
-            st = surface_ty(tx)
-            if (SURFACE_TY - st) >= 12 and _h(tx // 10, 0, 73) > 0.5 and len(self.whales) < 3:
-                py = (st + 15) * TILE
-                if y0 - 200 < py < y1 + 200:
-                    self.whales.append(Whale(wx, py))
-
-        # БОЛЬШИЕ АКУЛЫ — редкие, глубоко
-        step = 1200
-        sx = (x0 // step) * step
-        for wx in range(sx, x1 + step, step):
-            tx = wx // TILE
-            st = surface_ty(tx)
-            if (SURFACE_TY - st) >= 18 and _h(tx // 8, 0, 74) > 0.7 and len(self.big_sharks) < 3:
-                py = (st + 20) * TILE
-                if y0 - 100 < py < y1 + 100:
-                    self.big_sharks.append(BigShark(wx, py))
-
-        # СУНДУКИ — в пещерах, глубже поверхности
-        step = 350
-        sx = (x0 // step) * step
-        for wx in range(sx, x1 + step, step):
-            if _h(wx // step, cy, 77) > 0.72:
-                tx = wx // TILE
-                st = surface_ty(tx)
-                # ищем пустую пещеру ниже 10 тайлов от поверхности
-                for dy in range(10, 40):
-                    ty = st + dy
-                    py = ty * TILE
-                    if py < y0 or py > y1:
-                        continue
-                    if gen_tile(tx, ty) == AIR and gen_tile(tx, ty + 1) != AIR:
-                        # нашли пол пещеры — ставим сундук
-                        self.chests.append(Chest(wx, py - 24))
-                        break
-
-    # ============ DRAW ============
+    # ============= DRAW =============
     def draw_tiles(self, screen, camera):
         ox, oy = camera.ox, camera.oy
-        tx0 = ox // TILE - 1
-        ty0 = oy // TILE - 1
-        tx1 = (ox + camera.view_width) // TILE + 1
-        ty1 = (oy + camera.view_height) // TILE + 1
+        tx0 = max(0, ox // TILE - 1)
+        ty0 = max(0, oy // TILE - 1)
+        tx1 = min(WORLD_TX, (ox + camera.view_width) // TILE + 1)
+        ty1 = min(WORLD_TY, (oy + camera.view_height) // TILE + 1)
         t = pygame.time.get_ticks() / 1000.0
         for ty in range(ty0, ty1 + 1):
             for tx in range(tx0, tx1 + 1):
@@ -548,14 +427,12 @@ class World:
                     draw_block(screen, r, bt)
 
     def draw_underwater(self, screen, camera):
-        # руины и корабли — на дне
         for s in self.ships:
             s.draw(screen, camera.ox, camera.oy, self)
         for t in self.temples:
             t.draw(screen, camera.ox, camera.oy, self)
         for p in self.poseidons:
             p.draw(screen, camera.ox, camera.oy, self)
-        # флора
         for s in self.seaweeds:
             s.draw(screen, camera.ox, camera.oy, self)
         for c in self.corals:
@@ -576,6 +453,13 @@ class World:
             b.draw(screen, camera.ox, camera.oy, self)
         for c in self.chests:
             c.draw(screen, camera.ox, camera.oy)
+
+    def draw_trees(self, screen, camera):
+        for t in self.trees:
+            t.draw(screen, camera.ox, camera.oy)
+
+    def draw_all_entities(self, screen, camera):
+        """Деревья + враги + аптечки + пиксели — единый вызов."""
         for t in self.trees:
             t.draw(screen, camera.ox, camera.oy)
         for m in self.medkits:
@@ -584,14 +468,12 @@ class World:
             p.draw(screen, camera.ox, camera.oy)
         for e in self.enemies:
             e.draw(screen, camera.ox, camera.oy)
-        for a in self.arrows:
-            a.draw(screen, camera.ox, camera.oy)
 
     def collect(self):
         return [], self.enemies, self.pixels, self.trees, self.medkits
 
 
-# ============ утилиты для main ============
+# ============= УТИЛИТЫ =============
 def get_ambient_temp(world_y):
     sy = SURFACE_TY * TILE
     if world_y < sy:
