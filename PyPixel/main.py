@@ -568,10 +568,12 @@ def main():
                 if best_tx is not None:
                     target_px = best_tx * TILE
                     L["player"].rect.centerx = target_px
-                    L["player"].rect.y = (surface_ty(best_tx) + 3) * TILE
+                    # Ставим НА 5 ТАЙЛОВ ВЫШЕ ДНА — то есть в воду
+                    st_ty = surface_ty(best_tx)
+                    L["player"].rect.y = (st_ty - 5) * TILE
                     L["camera"].offset_x = target_px - WIDTH // 2
                     L["camera"].offset_y = L["player"].rect.centery - HEIGHT // 2
-                    d = surface_ty(best_tx) - SURFACE_TY
+                    d = st_ty - SURFACE_TY
                     print(f"[TP] Телепорт в океан: tx={best_tx}, глубина={d} тайлов")
                 else:
                     print(f"[TP] Океан не найден. Максимальная глубина: {best_depth} тайлов")
