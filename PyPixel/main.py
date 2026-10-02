@@ -66,17 +66,17 @@ def draw_background(screen, camera, time_of_day=0.5):
         pygame.draw.line(screen, col, (0, y_screen), (WIDTH, y_screen))
 
     # облака (только над землёй)
-    for i in range(40):
-        cx_world = i * 350 + (i * 137) % 200 - 100
-        cy_world = 200 + (i * 211) % 800
-        if cy_world >= SURFACE_TY * TILE - 60:
+    for i in range(30):
+        cx_world = i * 420 + (i * 137) % 200 - 100
+        cy_world = 150 + (i * 211) % 600
+        if cy_world >= SURFACE_TY * TILE - 100:
             continue
-        size = 50 + (i * 31) % 50
+        size = 30 + (i * 17) % 30    # 30..60 px — маленькие
         layer = 0.2 + (i % 3) * 0.2
         sx = int(cx_world - ox * layer)
         sy = int(cy_world - oy)
         if -size < sx < WIDTH + size and -size < sy < HEIGHT + size:
-            draw_cloud(screen, sx + 3, sy + 3, size, (200, 210, 225))
+            draw_cloud(screen, sx + 2, sy + 2, size, (200, 210, 225))
             draw_cloud(screen, sx, sy, size, (255, 255, 255))
 
 
@@ -182,7 +182,22 @@ def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
     draw_temperature_bar(screen, font_small, L["body_temp"])
     draw_hotbar(screen, font_small, L["inventory"])
 
-    if L["player"].in_water:
+    # Кислородный индикатор при погружении
+    p = L["player"]
+    if p.head_in_water and not p.has_scuba:
+        ox_x, ox_y = 14, 92
+        ox_w, ox_h = 200, 14
+        pygame.draw.rect(screen, (30, 30, 45), (ox_x - 2, ox_y - 2, ox_w + 4, ox_h + 4))
+        pygame.draw.rect(screen, (90, 160, 220), (ox_x - 2, ox_y - 2, ox_w + 4, ox_h + 4), 1)
+        pygame.draw.rect(screen, (20, 20, 30), (ox_x, ox_y, ox_w, ox_h))
+        ratio = max(0.0, min(1.0, p.oxygen / 100.0))
+        fill = int(ox_w * ratio)
+        col = (100, 200, 255) if ratio > 0.4 else (255, 120, 120)
+        if fill > 0:
+            pygame.draw.rect(screen, col, (ox_x, ox_y, fill, ox_h))
+        lbl = font_small.render(f"O2  {int(p.oxygen)}%", True, (255, 255, 255))
+        screen.blit(lbl, (ox_x + 6, ox_y - 1))
+    if p.in_water:
         wat = font_big.render("~ В ВОДЕ ~", True, (100, 200, 255))
         screen.blit(wat, (WIDTH // 2 - wat.get_width() // 2, HEIGHT - 110))
 
@@ -536,6 +551,12 @@ def main():
             L["player"].handle_input(keys)
 
             dt = clock.get_time() / 1000.0
+            def _drown():
+                L["hp"] -= 8
+                sounds.play("hit")
+                if L["hp"] <= 0:
+                    L["hp"] = 0
+            L["player"].on_drown = _drown
             L["world"].tick_time(dt)
             L["world"].update(L["camera"])
             L["player"].update(L["world"])
@@ -806,6 +827,7 @@ def main():
         ox, oy = L["camera"].ox, L["camera"].oy
 
         L["world"].draw_tiles(screen, L["camera"])
+        L["world"].draw_underwater(screen, L["camera"])
         L["world"].draw_entities(screen, L["camera"])
 
         # подсветка блока под курсором

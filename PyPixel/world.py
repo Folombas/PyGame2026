@@ -11,6 +11,7 @@ from collectible import Pixel
 from tree import AppleTree
 from medkit import Medkit
 from chest import Chest
+from underwater import Fish, Seaweed, Coral
 
 TILE = TILE_SIZE
 SURFACE_TY = 40                # базовый уровень поверхности (в тайлах)
@@ -147,6 +148,9 @@ class World:
         self.medkits = []
         self.arrows = []
         self.chests = []
+        self.fishes = []
+        self.seaweeds = []
+        self.corals = []
         self._spawned = set()
         self._last_chunk = None
         self.time_of_day = 0.30
@@ -222,6 +226,12 @@ class World:
     # ============ update ============
     def update(self, camera):
         self.water_sim.update(self, camera)
+        for f in self.fishes:
+            f.update(self)
+        for s in self.seaweeds:
+            s.update()
+        for c in self.corals:
+            c.update()
         cx = int(camera.offset_x + camera.view_width // 2) // 512
         cy = int(camera.offset_y + camera.view_height // 2) // 512
         if (cx, cy) == self._last_chunk:
@@ -243,6 +253,12 @@ class World:
                        if p.alive and abs(p.rect.centerx - px) < d]
         self.chests = [c for c in self.chests
                        if abs(c.rect.centerx - px) < d]
+        self.fishes = [f for f in self.fishes
+                       if abs(f.rect.centerx - px) < d and abs(f.rect.centery - py) < d]
+        self.seaweeds = [s for s in self.seaweeds
+                         if abs(s.x - px) < d and abs(s.y - py) < d]
+        self.corals = [c for c in self.corals
+                       if abs(c.x - px) < d and abs(c.y - py) < d]
 
     def _spawn(self, cx, cy):
         key = (cx, cy)
@@ -303,6 +319,36 @@ class World:
                 if y0 - 40 < py < y1:
                     self.medkits.append(Medkit(wx, py))
 
+        # --- ПОДВОДНЫЙ МИР ---
+        # Находим воду в чанке: сканируем тайлы
+        step = 80
+        sx = (x0 // step) * step
+        for wx in range(sx, x1 + step, step):
+            tx = wx // TILE
+            # ищем воду сверху вниз
+            for dy in range(0, 20):
+                ty = SEA_TY + dy
+                py = ty * TILE
+                if py < y0 - 100 or py > y1 + 100:
+                    continue
+                if gen_tile(tx, ty) == WATER:
+                    # рыба — в середине воды
+                    if _h(tx // 3, ty, 55) > 0.75 and len(self.fishes) < 60:
+                        self.fishes.append(Fish(wx, py))
+                    # водоросли на дне
+                    ty_below = ty
+                    for k in range(1, 8):
+                        if gen_tile(tx, ty + k) != WATER:
+                            ty_below = ty + k - 1
+                            break
+                    floor_py = (ty_below + 1) * TILE
+                    if _h(tx // 2, ty_below, 56) > 0.4 and len(self.seaweeds) < 100:
+                        self.seaweeds.append(Seaweed(wx, floor_py - 2))
+                    # коралл
+                    if _h(tx // 3, ty_below, 57) > 0.72 and len(self.corals) < 40:
+                        self.corals.append(Coral(wx, floor_py - 2))
+                    break
+
         # СУНДУКИ — в пещерах, глубже поверхности
         step = 350
         sx = (x0 // step) * step
@@ -341,7 +387,15 @@ class World:
                 else:
                     draw_block(screen, r, bt)
 
+    def draw_underwater(self, screen, camera):
+        for s in self.seaweeds:
+            s.draw(screen, camera.ox, camera.oy)
+        for c in self.corals:
+            c.draw(screen, camera.ox, camera.oy)
+
     def draw_entities(self, screen, camera):
+        for f in self.fishes:
+            f.draw(screen, camera.ox, camera.oy)
         for c in self.chests:
             c.draw(screen, camera.ox, camera.oy)
         for t in self.trees:
