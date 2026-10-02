@@ -216,7 +216,7 @@ class World:
                 wx = tx * TILE + TILE // 2
                 wy = ty * TILE + TILE // 2
                 if abs(wx - cx) < 900 and abs(wy - cy) < 700:
-                    sources.append((wx, wy, 180))
+                    sources.append((wx, wy, 260))
         return sources
 
     # ============ update ============

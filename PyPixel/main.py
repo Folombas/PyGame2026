@@ -47,10 +47,10 @@ def draw_background(screen, camera, time_of_day=0.5):
     ox = camera.offset_x
     ground_y = SURFACE_TY * TILE - oy
 
-    # Динамическое небо по времени суток
+    # Динамическое небо
     sky_top, sky_bot = sky_colors_from_time(time_of_day)
-    cave_top = (45, 28, 25)
-    cave_bot = (8, 5, 10)
+    cave_top = (55, 40, 35)
+    cave_bot = (18, 12, 15)
 
     for y_screen in range(HEIGHT):
         if y_screen < ground_y:
@@ -64,23 +64,6 @@ def draw_background(screen, camera, time_of_day=0.5):
                    int(cave_top[1] * (1 - t) + cave_bot[1] * t),
                    int(cave_top[2] * (1 - t) + cave_bot[2] * t))
         pygame.draw.line(screen, col, (0, y_screen), (WIDTH, y_screen))
-
-    # силуэты гор (только над землёй)
-    if -100 < ground_y < HEIGHT + 100:
-        for parallax, color, h, spacing in [
-            (0.15, (165, 190, 220), 130, 420),
-            (0.30, (135, 165, 205), 190, 360),
-            (0.45, (105, 140, 185), 250, 300),
-        ]:
-            shift = int(ox * parallax) % spacing
-            cx = -shift - spacing
-            while cx <= WIDTH + spacing:
-                pygame.draw.polygon(screen, color, [
-                    (cx, ground_y),
-                    (cx + spacing // 2, ground_y - h),
-                    (cx + spacing, ground_y),
-                ])
-                cx += spacing
 
     # облака (только над землёй)
     for i in range(40):
@@ -867,13 +850,13 @@ def main():
 
         # --- ОСВЕЩЕНИЕ ---
         ambient = ambient_from_time(L["world"].time_of_day)
-        # в пещерах темнее всегда
+        # в пещерах темнее, но не критично
         depth = L["player"].rect.centery - SURFACE_TY * TILE
-        if depth > 100:
-            ambient = min(240, ambient + int(min(150, depth / 20)))
+        if depth > 200:
+            ambient = min(170, ambient + int(min(80, depth / 40)))
         light_sources = L["world"].get_light_sources(L["camera"])
         # сам игрок немного светится
-        light_sources.append((L["player"].rect.centerx, L["player"].rect.centery, 130))
+        light_sources.append((L["player"].rect.centerx, L["player"].rect.centery, 240))
         # светлячки — маленькие источники света
         for ff in L["fireflies"]:
             light_sources.append((ff["x"], ff["y"], 90))
