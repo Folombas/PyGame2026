@@ -417,7 +417,6 @@ def _give_chest_loot(L, chest):
             L["inventory"].add(COPPER, count)
             L["score"] += count
         elif item == "glowberry_seed":
-            from items import GLOWBERRY_SEED as _gs if False else None
             # просто +1 карточка из пула
             cid = roll_card("ore", L["cards"])
             if cid:
