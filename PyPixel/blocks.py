@@ -38,6 +38,7 @@ BLOCKS = {
 def draw_block(surface, rect, block_type, offset=(0, 0)):
     if block_type == AIR or block_type not in BLOCKS:
         return
+    info = BLOCKS[block_type]
     r = pygame.Rect(rect.x - offset[0], rect.y - offset[1], rect.w, rect.h)
 
     # Кастомная отрисовка факела
