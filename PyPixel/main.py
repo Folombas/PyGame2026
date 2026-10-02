@@ -11,7 +11,7 @@ from settings import (
     HP_BAR_BG, HP_BAR_BORDER, HP_COLOR_HIGH, HP_COLOR_MID, HP_COLOR_LOW,
 )
 from blocks import BLOCKS, TILE_SIZE, AIR, draw_block, draw_dig_progress, WOOD
-from world import World, SURFACE_TY, TILE, DEATH_TY, get_ambient_temp, weather_zone
+from world import World, SURFACE_TY, TILE, DEATH_TY, get_ambient_temp, weather_zone, surface_ty
 from player import Player
 from enemy import Enemy
 from camera import Camera
@@ -551,7 +551,6 @@ def main():
                 print(f"[SCUBA] {'включён' if L['player'].has_scuba else 'выключен'}")
             elif event.key == pygame.K_t and L["state"] == "playing":
                 # ищем ближайший глубокий океан
-                from world import surface_ty, SURFACE_TY, TILE
                 px = L["player"].rect.centerx // TILE
                 best_tx = None
                 # ищем вправо-влево
