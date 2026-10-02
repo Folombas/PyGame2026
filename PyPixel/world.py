@@ -1,14 +1,9 @@
-"""World — тайловый мир 32×32 с процедурной генерацией.
-
-Единая система координат:
-  • Всё в ТАЙЛАХ (tx, ty). Пиксели = tx * TILE.
-  • surface_ty(tx) — Y ВЕРХНЕГО твёрдого тайла в колонке.
-  • Пещеры генерируются ТОЛЬКО глубоко (depth >= 8), чтобы поверхность была плотной.
-"""
+"""World — тайловый мир с fractal-рельефом, снежными горами, озёрами."""
+import math
 import pygame
 from blocks import (
-    TILE_SIZE, AIR, DIRT, GRASS, STONE, COPPER, IRON, GOLD, SAND, WATER,
-    draw_block,
+    TILE_SIZE, AIR, DIRT, GRASS, STONE, COPPER, IRON, GOLD, SAND,
+    WATER, SNOW, draw_block,
 )
 from water import WaterSim, draw_water_block
 from enemy import Enemy
@@ -18,11 +13,12 @@ from medkit import Medkit
 
 TILE = TILE_SIZE
 SURFACE_TY = 40                # базовый уровень поверхности (в тайлах)
-SEA_TY = 43                    # уровень моря — ниже этой линии низины заполняются водой
-DEATH_TY = SURFACE_TY + 55     # ниже — смерть (в тайлах)
+SEA_TY = 42                    # уровень моря: низины ниже заполняются водой
+SNOW_LINE_TY = 30              # выше этой линии — снег на горах
+DEATH_TY = SURFACE_TY + 55
 
 
-# ============ ШУМЫ ============
+# =============== ШУМЫ ===============
 def _h(x, y, seed=0):
     n = (int(x) * 374761393 + int(y) * 668265263 + int(seed) * 1274126177) & 0xFFFFFFFF
     n = (n ^ (n >> 13)) * 1274126177 & 0xFFFFFFFF
@@ -51,53 +47,71 @@ def _s2d(x, y, scale, seed=0):
     tx = xf - x0; ty = yf - y0
     tx = tx * tx * (3 - 2 * tx)
     ty = ty * ty * (3 - 2 * ty)
-    a = _h(x0,     y0,     seed)
-    b = _h(x0 + 1, y0,     seed)
-    c = _h(x0,     y0 + 1, seed)
+    a = _h(x0, y0, seed)
+    b = _h(x0 + 1, y0, seed)
+    c = _h(x0, y0 + 1, seed)
     d = _h(x0 + 1, y0 + 1, seed)
     ab = a + (b - a) * tx
     cd = c + (d - c) * tx
     return ab + (cd - ab) * ty
 
 
-# ============ ГЕНЕРАЦИЯ ============
+def _ridge(x, scale, seed=0):
+    """Ridge-noise — острые пики."""
+    v = _s1d(x, scale, seed)
+    return 1.0 - abs(v - 0.5) * 2
+
+
+# =============== ГЕНЕРАЦИЯ РЕЛЬЕФА ===============
 def surface_ty(tx):
-    """Y ВЕРХНЕГО твёрдого тайла в колонке tx (в тайлах)."""
+    """Y верхнего твёрдого тайла в колонке tx (в тайлах)."""
+    # Fractal — 4 октавы, всё мягче к мелкому
     base = SURFACE_TY
-    base += int((_s1d(tx, 12, 1) - 0.5) * 3)   # холмы ±3 тайла
-    base += int((_s1d(tx, 5, 2) - 0.5) * 1.5)  # мелкие кочки
-    # горы — редкие высокие пики
-    m = _s1d(tx, 25, 10)
-    if m > 0.68:
-        t = (m - 0.68) / 0.32
-        base -= int(t * t * 22)     # до 22 тайлов вверх (704 px)
+    base += int((_s1d(tx, 45, 1) - 0.5) * 4)      # большие холмы
+    base += int((_s1d(tx, 20, 2) - 0.5) * 3)
+    base += int((_s1d(tx, 9, 3) - 0.5) * 2)
+    base += int((_s1d(tx, 4, 4) - 0.5) * 1.5)
+
+    # Горные хребты — узкие высокие
+    r1 = _ridge(tx, 22, 10)
+    r2 = _ridge(tx, 11, 11)
+    peak = r1 * 0.7 + r2 * 0.3
+    if peak > 0.82:
+        t = (peak - 0.82) / 0.18
+        base -= int((t ** 1.4) * 26)   # до 26 тайлов вверх
+
     return base
 
 
 def gen_tile(tx, ty):
     st = surface_ty(tx)
     if ty < st:
-        # Низина ниже уровня моря → вода
-        if ty >= SEA_TY:
+        # выше поверхности: вода, если ниже уровня моря И поверхность впадина
+        if ty >= SEA_TY and st >= SEA_TY:
             return WATER
         return AIR
+
     depth = ty - st
 
+    # снег на вершинах
+    if st <= SNOW_LINE_TY and depth < 3:
+        return SNOW
+    if st <= SNOW_LINE_TY + 2 and depth == 0:
+        return SNOW
+
     if depth == 0:
-        return SAND if st < 20 else GRASS
+        return SAND if st < 22 else GRASS
     if depth < 4:
         return DIRT
 
-    # пещеры — только с depth >= 8
+    # пещеры — только с глубины 8
     if depth >= 8:
-        cave = (_s2d(tx, ty, 8, 5) * 0.55
-                + _s2d(tx, ty, 4, 6) * 0.45)
-        # чем глубже, тем больше пустот
+        cave = _s2d(tx, ty, 8, 5) * 0.55 + _s2d(tx, ty, 4, 6) * 0.45
         bias = min(0.22, (depth - 8) / 60.0)
         if cave > 0.62 - bias:
             return AIR
 
-    # руды на глубине
+    # руды
     if depth >= 10:
         r = _h(tx, ty, 42)
         if r > 0.988: return GOLD
@@ -107,13 +121,13 @@ def gen_tile(tx, ty):
     return STONE
 
 
-# ============ МИР ============
+# =============== МИР ===============
 class World:
-    DAY_LENGTH = 30.0        # секунд на полный цикл
+    DAY_LENGTH = 60.0
 
     def __init__(self, difficulty):
         self.difficulty = difficulty
-        self.mods = {}          # (tx,ty) -> block_type
+        self.mods = {}
         self.trees = []
         self.enemies = []
         self.pixels = []
@@ -121,28 +135,12 @@ class World:
         self.arrows = []
         self._spawned = set()
         self._last_chunk = None
-        self.time_of_day = 0.78   # старт — утро
-        self.torches = []         # [(wx, wy), ...] — для света
+        self.time_of_day = 0.30
         self.water_sim = WaterSim()
 
     def tick_time(self, dt):
         self.time_of_day = (self.time_of_day + dt / self.DAY_LENGTH) % 1.0
 
-    def get_light_sources(self, camera):
-        """Возвращает список (wx, wy, radius_px) видимых источников."""
-        sources = []
-        # факелы в модах
-        for (tx, ty), bt in self.mods.items():
-            if bt == 13:  # TORCH
-                wx = tx * TILE + TILE // 2
-                wy = ty * TILE + TILE // 2
-                # отсев
-                if (abs(wx - (camera.offset_x + camera.view_width // 2)) < 900 and
-                        abs(wy - (camera.offset_y + camera.view_height // 2)) < 700):
-                    sources.append((wx, wy, 180))
-        return sources
-
-    # --- доступ к блокам ---
     def get_block(self, tx, ty):
         if (tx, ty) in self.mods:
             return self.mods[(tx, ty)]
@@ -154,13 +152,14 @@ class World:
 
     def dig(self, tx, ty):
         bt = self.get_block(tx, ty)
-        if bt == AIR:
+        if bt == AIR or bt == WATER:
             return None
         self.mods[(tx, ty)] = AIR
         return bt
 
     def place(self, tx, ty, bt):
-        if self.get_block(tx, ty) != AIR:
+        cur = self.get_block(tx, ty)
+        if cur != AIR and cur != WATER:
             return False
         self.mods[(tx, ty)] = bt
         return True
@@ -176,21 +175,48 @@ class World:
                     return True
         return False
 
-    # --- чанки (спавн сущностей) ---
+    # ============ chop_tree ============
+    def chop_tree(self, wx, wy, radius_px=140):
+        """Ищет дерево рядом. Удаляет и возвращает (x, y) или None."""
+        best_i = -1
+        best_d = radius_px * radius_px
+        for i, t in enumerate(self.trees):
+            cx = t.base_x
+            cy = t.base_y - 50
+            d = (cx - wx) ** 2 + (cy - wy) ** 2
+            if d < best_d:
+                best_d = d
+                best_i = i
+        if best_i >= 0:
+            t = self.trees.pop(best_i)
+            return (t.base_x, t.base_y - 50)
+        return None
+
+    # ============ light sources ============
+    def get_light_sources(self, camera):
+        sources = []
+        cx = camera.offset_x + camera.view_width // 2
+        cy = camera.offset_y + camera.view_height // 2
+        for (tx, ty), bt in self.mods.items():
+            if bt == 13:      # TORCH
+                wx = tx * TILE + TILE // 2
+                wy = ty * TILE + TILE // 2
+                if abs(wx - cx) < 900 and abs(wy - cy) < 700:
+                    sources.append((wx, wy, 180))
+        return sources
+
+    # ============ update ============
     def update(self, camera):
-        # вода — до всего
         self.water_sim.update(self, camera)
         cx = int(camera.offset_x + camera.view_width // 2) // 512
         cy = int(camera.offset_y + camera.view_height // 2) // 512
         if (cx, cy) == self._last_chunk:
             return
         self._last_chunk = (cx, cy)
-
         for dx in range(-2, 3):
             for dy in range(-2, 3):
                 self._spawn(cx + dx, cy + dy)
 
-        # деспавн
         px = camera.offset_x + camera.view_width // 2
         py = camera.offset_y + camera.view_height // 2
         d = 2200
@@ -210,52 +236,58 @@ class World:
         x0 = cx * 512; x1 = x0 + 512
         y0 = cy * 512; y1 = y0 + 512
 
-        # --- деревья на поверхности ---
+        # деревья
         step = 180
         sx = (x0 // step) * step
         for wx in range(sx, x1 + step, step):
             if _h(wx // step, 0, 20) > 0.55:
                 tx = wx // TILE
-                sty = surface_ty(tx)
-                py = sty * TILE
+                st = surface_ty(tx)
+                if st <= SNOW_LINE_TY:    # на горах деревья не растут
+                    continue
+                if gen_tile(tx, st) == WATER:
+                    continue
+                py = st * TILE
                 if y0 - 250 < py < y1 + 250:
                     self.trees.append(AppleTree(wx, py))
 
-        # --- враги на поверхности ---
+        # враги
         dens = self.difficulty.get("enemy_density", 0.4)
         step = 280
         sx = (x0 // step) * step
         for wx in range(sx, x1 + step, step):
             if _h(wx // step, 0, 30) < dens:
                 tx = wx // TILE
-                sty = surface_ty(tx)
-                py = (sty - 1) * TILE
+                st = surface_ty(tx)
+                if gen_tile(tx, st) == WATER:
+                    continue
+                py = (st - 1) * TILE
                 if y0 - 40 < py < y1 + 40:
                     self.enemies.append(Enemy(wx, py))
 
-        # --- пиксели-очки ---
+        # пиксели
         step = 200
         sx = (x0 // step) * step
         for wx in range(sx, x1 + step, step):
             if _h(wx // step, cy, 50) > 0.72:
                 tx = wx // TILE
-                sty = surface_ty(tx)
-                py = sty * TILE - 100 - int(_h(wx // step, 1, 50) * 140)
+                st = surface_ty(tx)
+                py = st * TILE - 100 - int(_h(wx // step, 1, 50) * 140)
                 if y0 - 20 < py < y1:
                     self.pixels.append(Pixel(wx, py))
 
-        # --- аптечки ---
+        # аптечки
         step = 500
         sx = (x0 // step) * step
         for wx in range(sx, x1 + step, step):
             if _h(wx // step, 0, 40) > 0.65:
                 tx = wx // TILE
-                sty = surface_ty(tx)
-                py = (sty - 1) * TILE - 6
+                st = surface_ty(tx)
+                py = (st - 1) * TILE - 6
                 if y0 - 40 < py < y1:
                     self.medkits.append(Medkit(wx, py))
 
-    # --- отрисовка ---
+    # ============ DRAW ============
     def draw_tiles(self, screen, camera):
         ox, oy = camera.ox, camera.oy
         tx0 = ox // TILE - 1
@@ -291,7 +323,7 @@ class World:
         return [], self.enemies, self.pixels, self.trees, self.medkits
 
 
-# ============ УТИЛИТЫ ДЛЯ MAIN ============
+# ============ утилиты для main ============
 def get_ambient_temp(world_y):
     sy = SURFACE_TY * TILE
     if world_y < sy:
@@ -312,6 +344,5 @@ def weather_zone(world_y):
     return "cave_hot"
 
 
-# Совместимость
 SURFACE_Y = SURFACE_TY * TILE
 DEATH_Y = DEATH_TY * TILE

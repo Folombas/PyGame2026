@@ -308,7 +308,7 @@ def use_tool_at(L, wx, wy, mx, my):
         sounds.play("stomp" if hit_any else "hit")
 
     elif sel_tool == AXE:
-        pos = L["world"].chop_tree(wx, wy, radius_px=140) if hasattr(L["world"], "chop_tree") else None
+        pos = L["world"].chop_tree(wx, wy, radius_px=150)
         if pos:
             L["inventory"].add(WOOD, 4)
             L["score"] += 3
