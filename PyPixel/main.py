@@ -553,11 +553,15 @@ def main():
                 # ищем ближайший глубокий океан
                 px = L["player"].rect.centerx // TILE
                 best_tx = None
+                best_depth = 0
                 # ищем вправо-влево
-                for dist in range(0, 5000, 20):
+                for dist in range(0, 8000, 10):
                     for sign in (-1, 1):
                         tx = px + sign * dist
-                        if SURFACE_TY - surface_ty(tx) >= 25:
+                        d = SURFACE_TY - surface_ty(tx)
+                        if d > best_depth:
+                            best_depth = d
+                        if d >= 20:
                             best_tx = tx
                             break
                     if best_tx is not None:
@@ -570,7 +574,7 @@ def main():
                     L["camera"].offset_y = L["player"].rect.centery - HEIGHT // 2
                     print(f"[TP] Телепорт в океан: tx={best_tx}, depth={SURFACE_TY - surface_ty(best_tx)}")
                 else:
-                    print("[TP] Океан не найден в радиусе 5000 тайлов")
+                    print(f"[TP] Океан не найден. Максимальная глубина: {best_depth} тайлов")
             elif event.key == pygame.K_u and L["state"] == "playing":
                 px = L["player"].rect.centerx + (60 if L["player"].facing_right else -60)
                 py = L["player"].rect.bottom - 44
