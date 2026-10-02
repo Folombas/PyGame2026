@@ -104,9 +104,11 @@ def gen_tile(tx, ty):
 
 # ============ МИР ============
 class World:
+    DAY_LENGTH = 60.0        # секунд на полный цикл
+
     def __init__(self, difficulty):
         self.difficulty = difficulty
-        self.mods = {}          # (tx,ty) -> block_type (изменения игрока)
+        self.mods = {}          # (tx,ty) -> block_type
         self.trees = []
         self.enemies = []
         self.pixels = []
@@ -114,6 +116,25 @@ class World:
         self.arrows = []
         self._spawned = set()
         self._last_chunk = None
+        self.time_of_day = 0.30   # старт — утро
+        self.torches = []         # [(wx, wy), ...] — для света
+
+    def tick_time(self, dt):
+        self.time_of_day = (self.time_of_day + dt / self.DAY_LENGTH) % 1.0
+
+    def get_light_sources(self, camera):
+        """Возвращает список (wx, wy, radius_px) видимых источников."""
+        sources = []
+        # факелы в модах
+        for (tx, ty), bt in self.mods.items():
+            if bt == 13:  # TORCH
+                wx = tx * TILE + TILE // 2
+                wy = ty * TILE + TILE // 2
+                # отсев
+                if (abs(wx - (camera.offset_x + camera.view_width // 2)) < 900 and
+                        abs(wy - (camera.offset_y + camera.view_height // 2)) < 700):
+                    sources.append((wx, wy, 180))
+        return sources
 
     # --- доступ к блокам ---
     def get_block(self, tx, ty):

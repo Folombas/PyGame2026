@@ -16,6 +16,7 @@ SAND = 9
 PLANKS = 10
 BRICK = 11
 DOOR = 12
+TORCH = 13
 
 BLOCKS = {
     DIRT:   {"name": "Земля",  "color": (120, 80, 50),  "top": (140, 100, 65), "hardness": 14, "drop": DIRT, "tool": None},
@@ -30,14 +31,25 @@ BLOCKS = {
     PLANKS: {"name": "Доски",  "color": (150, 100, 60), "top": (170, 120, 75), "hardness": 20, "drop": PLANKS, "tool": "axe"},
     BRICK:  {"name": "Кирпич", "color": (150, 60, 60),  "top": (180, 80, 80),  "hardness": 40, "drop": BRICK,  "tool": "pickaxe"},
     DOOR:   {"name": "Дверь",  "color": (110, 70, 40),  "top": (150, 100, 60), "hardness": 15, "drop": DOOR,   "tool": "axe"},
+    TORCH:  {"name": "Факел",  "color": (255, 180, 80), "top": (255, 220, 120),"hardness": 6,  "drop": TORCH,  "tool": None, "light": 220},
 }
 
 
 def draw_block(surface, rect, block_type, offset=(0, 0)):
     if block_type == AIR or block_type not in BLOCKS:
         return
-    info = BLOCKS[block_type]
     r = pygame.Rect(rect.x - offset[0], rect.y - offset[1], rect.w, rect.h)
+
+    # Кастомная отрисовка факела
+    if block_type == TORCH:
+        cx = r.centerx
+        # палочка
+        pygame.draw.rect(surface, (110, 70, 40), (cx - 2, r.y + 10, 4, r.h - 10))
+        # пламя — три круга с градиентом
+        pygame.draw.circle(surface, (255, 100, 40), (cx, r.y + 8), 7)
+        pygame.draw.circle(surface, (255, 180, 60), (cx, r.y + 6), 5)
+        pygame.draw.circle(surface, (255, 240, 140), (cx, r.y + 5), 3)
+        return
 
     # тело
     pygame.draw.rect(surface, info["color"], r)

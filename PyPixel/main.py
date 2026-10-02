@@ -27,6 +27,8 @@ from crafting import CraftingUI
 from achievements import AchievementsUI
 from cards import roll_card, CARD_DEFS
 from weather import Weather
+from lighting import LightMask, ambient_from_time, sky_colors_from_time
+from blocks import TORCH
 import sounds
 import sound_settings
 
@@ -40,14 +42,13 @@ def draw_cloud(surface, cx, cy, size, color=(255, 255, 255)):
     pygame.draw.ellipse(surface, color, (cx - w // 4, cy - h + h // 2, w // 3, h))
 
 
-def draw_background(screen, camera):
+def draw_background(screen, camera, time_of_day=0.5):
     oy = camera.offset_y
     ox = camera.offset_x
     ground_y = SURFACE_TY * TILE - oy
 
-    # градиент небо/пещеры
-    sky_top = (90, 155, 220)
-    sky_bot = (185, 220, 245)
+    # Динамическое небо по времени суток
+    sky_top, sky_bot = sky_colors_from_time(time_of_day)
     cave_top = (45, 28, 25)
     cave_bot = (8, 5, 10)
 
@@ -176,6 +177,14 @@ def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
 
     score_txt = font_big.render(f"Очки: {L['score']}", True, TEXT_COLOR)
     screen.blit(score_txt, (WIDTH - score_txt.get_width() - 20, 15))
+
+    # часы
+    tod = L["world"].time_of_day
+    hours = int(tod * 24)
+    minutes = int((tod * 24 - hours) * 60)
+    icon = "☀" if 6 <= hours < 20 else "☾"
+    clock_txt = font_small.render(f"{icon} {hours:02d}:{minutes:02d}", True, TEXT_COLOR)
+    screen.blit(clock_txt, (WIDTH - clock_txt.get_width() - 20, 88))
 
     zone_names = {"freezing": "Вьюга", "snow": "Снега", "cold": "Холод",
                   "mild": "Погода", "cave_warm": "Пещеры", "cave_hot": "Лава"}
@@ -332,6 +341,7 @@ def new_session(difficulty):
     inv.add_tool(AXE)
     inv.add_tool(SWORD)
     inv.add_tool(BOW)
+    inv.add(TORCH, 30)
 
     return {
         "player": player,
@@ -365,6 +375,7 @@ def new_session(difficulty):
         "unlocked": set(),
         "achievement_toast": None,
         "achievement_toast_timer": 0,
+        "light_mask": LightMask(),
     }
 
 
@@ -490,6 +501,8 @@ def main():
             keys = pygame.key.get_pressed()
             L["player"].handle_input(keys)
 
+            dt = clock.get_time() / 1000.0
+            L["world"].tick_time(dt)
             L["world"].update(L["camera"])
             L["player"].update(L["world"])
 
@@ -728,7 +741,7 @@ def main():
         craft_ui.update()
 
         # ============ DRAW ============
-        draw_background(screen, L["camera"])
+        draw_background(screen, L["camera"], L["world"].time_of_day)
         ox, oy = L["camera"].ox, L["camera"].oy
 
         L["world"].draw_tiles(screen, L["camera"])
@@ -773,6 +786,18 @@ def main():
                 screen.blit(sprite, (tx_, ty_))
 
         L["particles"].draw(screen, ox, oy)
+
+        # --- ОСВЕЩЕНИЕ ---
+        ambient = ambient_from_time(L["world"].time_of_day)
+        # в пещерах темнее всегда
+        depth = L["player"].rect.centery - SURFACE_TY * TILE
+        if depth > 100:
+            ambient = min(240, ambient + int(min(150, depth / 20)))
+        light_sources = L["world"].get_light_sources(L["camera"])
+        # сам игрок немного светится
+        light_sources.append((L["player"].rect.centerx, L["player"].rect.centery, 130))
+        L["light_mask"].render(screen, L["camera"], light_sources, ambient)
+
         L["weather"].draw(screen, L["camera"].offset_y)
 
         draw_hud(screen, font_big, font_small, L, lives, difficulty_key)
