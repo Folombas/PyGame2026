@@ -454,7 +454,7 @@ class World:
                 pass
 
             # ЗАТОНУВШИЙ КОРАБЛЬ — раз в 3000 px по X
-            if _h(tx // 12, 0, 70) > 0.85 and len(self.ships) < 8:
+            if _h(tx // 12, 0, 70) > 0.75 and len(self.ships) < 8:
                 # ищем дно
                 for dy in range(0, 60):
                     ty_ = st + dy
@@ -466,7 +466,7 @@ class World:
                         break
 
             # РУИНЫ ХРАМА — очень редко
-            if _h(tx // 25, 0, 71) > 0.92 and len(self.temples) < 4:
+            if _h(tx // 25, 0, 71) > 0.85 and len(self.temples) < 4:
                 for dy in range(0, 60):
                     ty_ = st + dy
                     py_ = ty_ * TILE
@@ -477,7 +477,7 @@ class World:
                         break
 
             # СТАТУЯ ПОСЕЙДОНА — легендарно редко
-            if _h(tx // 40, 0, 72) > 0.96 and len(self.poseidons) < 2:
+            if _h(tx // 40, 0, 72) > 0.90 and len(self.poseidons) < 2:
                 for dy in range(0, 60):
                     ty_ = st + dy
                     py_ = ty_ * TILE

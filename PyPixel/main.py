@@ -549,6 +549,29 @@ def main():
                 if L["player"].has_scuba:
                     L["scuba_used"] = 1
                 print(f"[SCUBA] {'включён' if L['player'].has_scuba else 'выключен'}")
+            elif event.key == pygame.K_t and L["state"] == "playing":
+                # ищем ближайший глубокий океан
+                from world import surface_ty, SURFACE_TY, TILE
+                px = L["player"].rect.centerx // TILE
+                best_tx = None
+                # ищем вправо-влево
+                for dist in range(0, 5000, 20):
+                    for sign in (-1, 1):
+                        tx = px + sign * dist
+                        if SURFACE_TY - surface_ty(tx) >= 25:
+                            best_tx = tx
+                            break
+                    if best_tx is not None:
+                        break
+                if best_tx is not None:
+                    target_px = best_tx * TILE
+                    L["player"].rect.centerx = target_px
+                    L["player"].rect.y = (surface_ty(best_tx) + 3) * TILE
+                    L["camera"].offset_x = target_px - WIDTH // 2
+                    L["camera"].offset_y = L["player"].rect.centery - HEIGHT // 2
+                    print(f"[TP] Телепорт в океан: tx={best_tx}, depth={SURFACE_TY - surface_ty(best_tx)}")
+                else:
+                    print("[TP] Океан не найден в радиусе 5000 тайлов")
             elif event.key == pygame.K_u and L["state"] == "playing":
                 px = L["player"].rect.centerx + (60 if L["player"].facing_right else -60)
                 py = L["player"].rect.bottom - 44
