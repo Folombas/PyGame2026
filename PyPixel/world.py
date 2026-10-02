@@ -491,7 +491,7 @@ def weather_zone(world_y):
     if world_y < sy - 300: return "cold"
     if world_y < sy:       return "mild"
     if world_y < sy + 400: return "cave_warm"
-    return "cave_hot"
+    return "deep_ocean"
 
 
 SURFACE_Y = SURFACE_TY * TILE

@@ -173,7 +173,7 @@ def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
     screen.blit(clock_txt, (WIDTH - clock_txt.get_width() - 20, 88))
 
     zone_names = {"freezing": "Вьюга", "snow": "Снега", "cold": "Холод",
-                  "mild": "Погода", "cave_warm": "Пещеры", "cave_hot": "Лава"}
+                  "mild": "Погода", "cave_warm": "Пещеры", "deep_ocean": "Глубины"}
     zone = zone_names.get(weather_zone(L["player"].rect.centery), "")
     stats = (f"Дист: {distance}м  Глуб: {depth}м  {zone}  "
              f"Враги: {L['kills']}  Ябл: {L['apples']}")
@@ -597,11 +597,35 @@ def main():
             L["player"].handle_input(keys)
 
             dt = clock.get_time() / 1000.0
+            def nonlocal_do_death():
+                """Обрабатывает смерть: отнимает сердце, респавн или GAME OVER."""
+                nonlocal lives
+                lives -= 1
+                if lives <= 0:
+                    L["state"] = "game_over"
+                    sounds.play("game_over")
+                    save_record(L["score"], 0, 0, L["kills"], L["apples"],
+                                L["max_x"] // 10, difficulty_key)
+                else:
+                    # респавн на лугу
+                    L["player"] = Player(85 * TILE, (surface_ty(85) - 2) * TILE)
+                    L["camera"] = Camera(WIDTH)
+                    L["camera"].offset_x = L["player"].rect.centerx - WIDTH // 2
+                    L["camera"].offset_y = L["player"].rect.centery - HEIGHT // 2
+                    L["hp"] = L["max_hp"]
+                    L["body_temp"] = 100.0
+                    L["player"].oxygen = 100
+                    L["invuln"] = INVULN_TIME
+                    sounds.play("hit")
+
             def _drown():
-                L["hp"] -= 8
-                sounds.play("hit")
-                if L["hp"] <= 0:
-                    L["hp"] = 0
+                if L["invuln"] == 0:
+                    L["hp"] -= 10
+                    L["invuln"] = 30
+                    sounds.play("hit")
+                    if L["hp"] <= 0:
+                        L["hp"] = 0
+                        nonlocal_do_death()
             L["player"].on_drown = _drown
 
             def _shark_bite():
@@ -611,6 +635,7 @@ def main():
                     sounds.play("hit")
                     if L["hp"] <= 0:
                         L["hp"] = 0
+                        nonlocal_do_death()
             L["player"].on_shark_bite = _shark_bite
 
             # акулам — ссылка на игрока
