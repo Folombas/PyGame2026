@@ -123,6 +123,7 @@ class World:
         self._last_chunk = None
         self.time_of_day = 0.78   # старт — утро
         self.torches = []         # [(wx, wy), ...] — для света
+        self.water_sim = WaterSim()
 
     def tick_time(self, dt):
         self.time_of_day = (self.time_of_day + dt / self.DAY_LENGTH) % 1.0
