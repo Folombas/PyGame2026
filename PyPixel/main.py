@@ -280,6 +280,15 @@ def draw_achievement_toast(screen, font_big, font_small, L):
 
 # ================= ИНСТРУМЕНТЫ =================
 def use_tool_at(L, wx, wy, mx, my):
+    # --- проверка сундуков (не требует инструмента) ---
+    for c in L["world"].chests:
+        if c.opened:
+            continue
+        if c.rect.inflate(30, 30).collidepoint(wx, wy):
+            c.opened = True
+            _give_chest_loot(L, c)
+            return
+
     sel_tool = L["inventory"].selected_tool()
     if not sel_tool:
         return
@@ -380,10 +389,49 @@ def new_session(difficulty):
         "achievement_toast": None,
         "achievement_toast_timer": 0,
         "light_mask": LightMask(),
+        "fireflies": [],
     }
 
 
 # ================= MAIN =================
+def _give_chest_loot(L, chest):
+    """Выдаёт лут из сундука игроку."""
+    from blocks import COPPER, IRON, GOLD
+    from cards import roll_card
+    sounds.play("victory")
+    # искры вокруг сундука
+    cx = chest.rect.centerx
+    cy = chest.rect.centery
+    for _ in range(24):
+        import random as _r
+        L["particles"].spawn_sparks(cx, cy, count=1)
+    total_score = 0
+    for item, count in chest.loot:
+        if item == "gold_coin":
+            total_score += count * 3
+            L["score"] += count * 3
+        elif item == "iron_ore":
+            L["inventory"].add(IRON, count)
+            L["score"] += count
+        elif item == "copper_ore":
+            L["inventory"].add(COPPER, count)
+            L["score"] += count
+        elif item == "glowberry_seed":
+            from items import GLOWBERRY_SEED as _gs if False else None
+            # просто +1 карточка из пула
+            cid = roll_card("ore", L["cards"])
+            if cid:
+                L["cards"].add(cid)
+                L["card_toast"] = cid
+                L["card_toast_timer"] = 180
+        elif item == "card":
+            cid = roll_card("boss", L["cards"])  # любой из редких
+            if cid:
+                L["cards"].add(cid)
+                L["card_toast"] = cid
+                L["card_toast_timer"] = 180
+
+
 def main():
     pygame.init()
     sounds.init()
@@ -566,6 +614,33 @@ def main():
 
             # погода
             L["weather"].update(L["camera"].offset_y)
+
+            # --- СВЕТЛЯЧКИ (ночью, на поверхности) ---
+            tod = L["world"].time_of_day
+            is_night = (tod < 0.20 or tod > 0.80)
+            if is_night and random.random() < 0.15 and len(L["fireflies"]) < 40:
+                px_f = L["camera"].offset_x + random.randint(0, WIDTH)
+                py_f = SURFACE_TY * TILE - random.randint(40, 250)
+                L["fireflies"].append({
+                    "x": px_f, "y": py_f,
+                    "vx": random.uniform(-0.6, 0.6),
+                    "vy": random.uniform(-0.3, 0.3),
+                    "phase": random.uniform(0, 6.28),
+                    "life": random.randint(180, 400),
+                })
+            # обновление
+            for ff in L["fireflies"][:]:
+                ff["x"] += ff["vx"]
+                ff["y"] += ff["vy"]
+                ff["phase"] += 0.1
+                ff["life"] -= 1
+                # мягкий дрейф
+                ff["vx"] += random.uniform(-0.05, 0.05)
+                ff["vy"] += random.uniform(-0.05, 0.05)
+                ff["vx"] = max(-1, min(1, ff["vx"]))
+                ff["vy"] = max(-1, min(1, ff["vy"]))
+                if ff["life"] <= 0:
+                    L["fireflies"].remove(ff)
 
             # взмах + частицы
             if L["swing_timer"] > 0:
@@ -800,7 +875,22 @@ def main():
         light_sources = L["world"].get_light_sources(L["camera"])
         # сам игрок немного светится
         light_sources.append((L["player"].rect.centerx, L["player"].rect.centery, 130))
+        # светлячки — маленькие источники света
+        for ff in L["fireflies"]:
+            light_sources.append((ff["x"], ff["y"], 90))
         L["light_mask"].render(screen, L["camera"], light_sources, ambient)
+
+        # светлячки — яркие точки
+        for ff in L["fireflies"]:
+            fx = int(ff["x"] - ox)
+            fy = int(ff["y"] - oy)
+            if -5 < fx < WIDTH + 5 and -5 < fy < HEIGHT + 5:
+                import math as _m
+                glow_a = 100 + int(80 * _m.sin(ff["phase"]))
+                glow = pygame.Surface((20, 20), pygame.SRCALPHA)
+                pygame.draw.circle(glow, (200, 255, 150, glow_a // 3), (10, 10), 10)
+                pygame.draw.circle(glow, (255, 255, 180, glow_a), (10, 10), 3)
+                screen.blit(glow, (fx - 10, fy - 10))
 
         L["weather"].draw(screen, L["camera"].offset_y)
 

@@ -10,6 +10,7 @@ from enemy import Enemy
 from collectible import Pixel
 from tree import AppleTree
 from medkit import Medkit
+from chest import Chest
 
 TILE = TILE_SIZE
 SURFACE_TY = 40                # базовый уровень поверхности (в тайлах)
@@ -65,12 +66,24 @@ def _ridge(x, scale, seed=0):
 # =============== ГЕНЕРАЦИЯ РЕЛЬЕФА ===============
 def surface_ty(tx):
     """Y верхнего твёрдого тайла в колонке tx (в тайлах)."""
-    # Fractal — 4 октавы, всё мягче к мелкому
+    # Fractal — 4 октавы
     base = SURFACE_TY
-    base += int((_s1d(tx, 45, 1) - 0.5) * 4)      # большие холмы
+    base += int((_s1d(tx, 45, 1) - 0.5) * 4)
     base += int((_s1d(tx, 20, 2) - 0.5) * 3)
     base += int((_s1d(tx, 9, 3) - 0.5) * 2)
     base += int((_s1d(tx, 4, 4) - 0.5) * 1.5)
+
+    # ДОЛИНЫ — большие плоские области ниже уровня моря (озёра)
+    v = _s1d(tx, 70, 20)
+    if v < 0.40:
+        t = (0.40 - v) / 0.40
+        base += int((t ** 1.2) * 12)   # до 12 тайлов вниз
+
+    # Рвы — узкие, глубокие
+    v2 = _s1d(tx, 25, 21)
+    if v2 > 0.85:
+        t = (v2 - 0.85) / 0.15
+        base += int((t ** 1.5) * 6)
 
     # Горные хребты — узкие высокие
     r1 = _ridge(tx, 22, 10)
@@ -78,7 +91,7 @@ def surface_ty(tx):
     peak = r1 * 0.7 + r2 * 0.3
     if peak > 0.82:
         t = (peak - 0.82) / 0.18
-        base -= int((t ** 1.4) * 26)   # до 26 тайлов вверх
+        base -= int((t ** 1.4) * 26)
 
     return base
 
@@ -133,6 +146,7 @@ class World:
         self.pixels = []
         self.medkits = []
         self.arrows = []
+        self.chests = []
         self._spawned = set()
         self._last_chunk = None
         self.time_of_day = 0.30
@@ -227,6 +241,8 @@ class World:
                         if m.alive and abs(m.rect.centerx - px) < d]
         self.pixels = [p for p in self.pixels
                        if p.alive and abs(p.rect.centerx - px) < d]
+        self.chests = [c for c in self.chests
+                       if abs(c.rect.centerx - px) < d]
 
     def _spawn(self, cx, cy):
         key = (cx, cy)
@@ -287,6 +303,24 @@ class World:
                 if y0 - 40 < py < y1:
                     self.medkits.append(Medkit(wx, py))
 
+        # СУНДУКИ — в пещерах, глубже поверхности
+        step = 350
+        sx = (x0 // step) * step
+        for wx in range(sx, x1 + step, step):
+            if _h(wx // step, cy, 77) > 0.72:
+                tx = wx // TILE
+                st = surface_ty(tx)
+                # ищем пустую пещеру ниже 10 тайлов от поверхности
+                for dy in range(10, 40):
+                    ty = st + dy
+                    py = ty * TILE
+                    if py < y0 or py > y1:
+                        continue
+                    if gen_tile(tx, ty) == AIR and gen_tile(tx, ty + 1) != AIR:
+                        # нашли пол пещеры — ставим сундук
+                        self.chests.append(Chest(wx, py - 24))
+                        break
+
     # ============ DRAW ============
     def draw_tiles(self, screen, camera):
         ox, oy = camera.ox, camera.oy
@@ -308,6 +342,8 @@ class World:
                     draw_block(screen, r, bt)
 
     def draw_entities(self, screen, camera):
+        for c in self.chests:
+            c.draw(screen, camera.ox, camera.oy)
         for t in self.trees:
             t.draw(screen, camera.ox, camera.oy)
         for m in self.medkits:

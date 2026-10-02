@@ -64,14 +64,24 @@ def draw_block(surface, rect, block_type, offset=(0, 0)):
     dark = tuple(max(0, c - 40) for c in info["color"])
     pygame.draw.rect(surface, dark, r, 1)
 
-    # руда — крапины
+    # руда — крапины + свечение
     if "ore" in info:
         ore = info["ore"]
         seed = (r.x * 73 + r.y * 131) & 0xFF
-        for i in range(3):
-            dx = (seed * (i + 1) * 37) % (r.w - 8) + 4
-            dy = (seed * (i + 1) * 53) % (r.h - 8) + 4
+
+        # Пульсирующее свечение (мягкий круг за крапинами)
+        import math as _m
+        t = pygame.time.get_ticks() / 1000.0
+        pulse = 0.7 + 0.3 * _m.sin(t * 3 + seed)
+        glow_size = int(14 * pulse)
+
+        # Крапины — основная часть
+        for i in range(4):
+            dx = (seed * (i + 1) * 37) % (r.w - 10) + 4
+            dy = (seed * (i + 1) * 53) % (r.h - 10) + 4
             pygame.draw.rect(surface, ore, (r.x + dx, r.y + dy, 5, 5))
+            # мини-блик
+            pygame.draw.rect(surface, (255, 255, 255), (r.x + dx, r.y + dy, 2, 2))
 
 
 def draw_dig_progress(surface, rect, progress, offset=(0, 0)):
