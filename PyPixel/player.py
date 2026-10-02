@@ -34,6 +34,7 @@ class Player:
 
         # --- лодка ---
         self.in_boat = None      # ссылка на Boat если сидит
+        self.in_submarine = None  # ссылка на Submarine если пилотирует
 
     def handle_input(self, keys) -> None:
         self.keys = keys
@@ -111,6 +112,18 @@ class Player:
         self.head_in_water = (world.get_block(cx, cy_head) == WATER)
 
     def update(self, world) -> None:
+        # --- БАТИСКАФ ---
+        if self.in_submarine is not None:
+            sub = self.in_submarine
+            self.rect.midbottom = (sub.rect.centerx, sub.rect.top + 6)
+            self.vel_x = 0
+            self.vel_y = 0
+            self.on_ground = True
+            self.state = "idle"
+            # кислород восстанавливается в батискафе
+            self.oxygen = min(100, self.oxygen + 2.0)
+            return
+
         # --- ЛОДКА ---
         if self.in_boat is not None:
             boat = self.in_boat

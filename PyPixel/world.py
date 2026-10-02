@@ -12,10 +12,11 @@ from tree import AppleTree
 from medkit import Medkit
 from chest import Chest
 from underwater import Fish, Seaweed, Coral, Turtle, Seahorse, Shark
+from ocean import SunkenShip, TempleRuin, PoseidonStatue, Whale, BigShark, Column
 
 TILE = TILE_SIZE
 SURFACE_TY = 40                # базовый уровень поверхности (в тайлах)
-SEA_TY = 41                    # уровень моря: низины ниже заполняются водой
+SEA_TY = 40                    # уровень моря: низины ниже заполняются водой
 SNOW_LINE_TY = 30              # выше этой линии — снег на горах
 DEATH_TY = SURFACE_TY + 55
 
@@ -65,6 +66,18 @@ def _ridge(x, scale, seed=0):
 
 
 # =============== ГЕНЕРАЦИЯ РЕЛЬЕФА ===============
+def ocean_depth_at(tx):
+    """Насколько глубоко в океане находится колонка tx (в тайлах).
+    0 = мелко/берег, положительное = глубоко."""
+    # Океаны по X: большие зоны, где поверхность значительно ниже
+    v = _s1d(tx, 200, 33)
+    if v < 0.30:
+        # это океан!
+        t = (0.30 - v) / 0.30   # 0..1
+        return int((t ** 1.3) * 60)   # до 60 тайлов вниз
+    return 0
+
+
 def surface_ty(tx):
     """Y верхнего твёрдого тайла в колонке tx (в тайлах)."""
     # Fractal — 4 октавы
@@ -76,9 +89,12 @@ def surface_ty(tx):
 
     # ДОЛИНЫ — большие глубокие впадины (озёра)
     v = _s1d(tx, 70, 20)
-    if v < 0.45:
-        t = (0.45 - v) / 0.45
-        base += int((t ** 1.1) * 18)   # до 18 тайлов вниз
+    if v < 0.55:
+        t = (0.55 - v) / 0.55
+        base += int((t ** 1.0) * 22)
+
+    # ОКЕАНЫ — гигантские впадины (до 60 тайлов)
+    base += ocean_depth_at(tx)
 
     # Рвы — узкие, глубокие
     v2 = _s1d(tx, 25, 21)
@@ -154,6 +170,11 @@ class World:
         self.turtles = []
         self.seahorses = []
         self.sharks = []
+        self.ships = []
+        self.temples = []
+        self.poseidons = []
+        self.big_sharks = []
+        self.whales = []
         self._spawned = set()
         self._last_chunk = None
         self.time_of_day = 0.30
@@ -237,6 +258,16 @@ class World:
             s.update(self)
         for sh in self.sharks:
             sh.update(self, self._player_ref) if hasattr(self, "_player_ref") else None
+        for b in self.big_sharks:
+            b.update(self, self._player_ref) if hasattr(self, "_player_ref") else None
+        for w in self.whales:
+            w.update(self)
+        for s in self.ships:
+            s.update(self)
+        for t in self.temples:
+            t.update(self)
+        for p in self.poseidons:
+            p.update(self)
         for s in self.seaweeds:
             s.update()
         for c in self.corals:
@@ -274,6 +305,16 @@ class World:
                           if abs(s.rect.centerx - px) < d and abs(s.rect.centery - py) < d]
         self.sharks = [sh for sh in self.sharks
                        if abs(sh.rect.centerx - px) < d]
+        self.ships = [s for s in self.ships
+                      if abs(s.rect.centerx - px) < d and abs(s.rect.centery - py) < d]
+        self.temples = [t for t in self.temples
+                        if abs(t.x - px) < d and abs(t.y - py) < d]
+        self.poseidons = [p for p in self.poseidons
+                          if abs(p.x - px) < d and abs(p.y - py) < d]
+        self.big_sharks = [b for b in self.big_sharks
+                           if abs(b.rect.centerx - px) < d and abs(b.rect.centery - py) < d]
+        self.whales = [w for w in self.whales
+                       if abs(w.rect.centerx - px) < d and abs(w.rect.centery - py) < d]
 
     def _spawn(self, cx, cy):
         key = (cx, cy)
@@ -394,6 +435,80 @@ class World:
                         self.corals.append(Coral(wx, floor_py - 2))
                     break
 
+        # === ГЛУБОКИЙ ОКЕАН: корабли, руины, киты, большие акулы ===
+        step = 400
+        sx = (x0 // step) * step
+        for wx in range(sx, x1 + step, step):
+            tx = wx // TILE
+            st = surface_ty(tx)
+            # насколько глубоко океан в этом столбце
+            ocean_d = SURFACE_TY - st  # положительное = глубже
+            if ocean_d < 15:
+                continue    # не океан, пропускаем
+
+            # ищем поверхность дна
+            floor_ty = st
+            # проверяем что в этом месте глубокая вода
+            water_top = (st - ocean_d if ocean_d > 0 else st)
+            if gen_tile(tx, st + 2) != STONE and gen_tile(tx, st + 2) != SAND:
+                pass
+
+            # ЗАТОНУВШИЙ КОРАБЛЬ — раз в 3000 px по X
+            if _h(tx // 12, 0, 70) > 0.85 and len(self.ships) < 8:
+                # ищем дно
+                for dy in range(0, 60):
+                    ty_ = st + dy
+                    py_ = ty_ * TILE
+                    if py_ < y0 - 100 or py_ > y1 + 100:
+                        continue
+                    if gen_tile(tx, ty_) != WATER:
+                        self.ships.append(SunkenShip(wx - 70, py_ - 60))
+                        break
+
+            # РУИНЫ ХРАМА — очень редко
+            if _h(tx // 25, 0, 71) > 0.92 and len(self.temples) < 4:
+                for dy in range(0, 60):
+                    ty_ = st + dy
+                    py_ = ty_ * TILE
+                    if py_ < y0 - 150 or py_ > y1 + 150:
+                        continue
+                    if gen_tile(tx, ty_) != WATER:
+                        self.temples.append(TempleRuin(wx, py_))
+                        break
+
+            # СТАТУЯ ПОСЕЙДОНА — легендарно редко
+            if _h(tx // 40, 0, 72) > 0.96 and len(self.poseidons) < 2:
+                for dy in range(0, 60):
+                    ty_ = st + dy
+                    py_ = ty_ * TILE
+                    if py_ < y0 - 200 or py_ > y1 + 200:
+                        continue
+                    if gen_tile(tx, ty_) != WATER:
+                        self.poseidons.append(PoseidonStatue(wx, py_))
+                        break
+
+        # КИТЫ — большие, мирные, плавают на глубине
+        step = 1500
+        sx = (x0 // step) * step
+        for wx in range(sx, x1 + step, step):
+            tx = wx // TILE
+            st = surface_ty(tx)
+            if (SURFACE_TY - st) >= 12 and _h(tx // 10, 0, 73) > 0.5 and len(self.whales) < 3:
+                py = (st + 15) * TILE
+                if y0 - 200 < py < y1 + 200:
+                    self.whales.append(Whale(wx, py))
+
+        # БОЛЬШИЕ АКУЛЫ — редкие, глубоко
+        step = 1200
+        sx = (x0 // step) * step
+        for wx in range(sx, x1 + step, step):
+            tx = wx // TILE
+            st = surface_ty(tx)
+            if (SURFACE_TY - st) >= 18 and _h(tx // 8, 0, 74) > 0.7 and len(self.big_sharks) < 3:
+                py = (st + 20) * TILE
+                if y0 - 100 < py < y1 + 100:
+                    self.big_sharks.append(BigShark(wx, py))
+
         # СУНДУКИ — в пещерах, глубже поверхности
         step = 350
         sx = (x0 // step) * step
@@ -433,6 +548,14 @@ class World:
                     draw_block(screen, r, bt)
 
     def draw_underwater(self, screen, camera):
+        # руины и корабли — на дне
+        for s in self.ships:
+            s.draw(screen, camera.ox, camera.oy, self)
+        for t in self.temples:
+            t.draw(screen, camera.ox, camera.oy, self)
+        for p in self.poseidons:
+            p.draw(screen, camera.ox, camera.oy, self)
+        # флора
         for s in self.seaweeds:
             s.draw(screen, camera.ox, camera.oy, self)
         for c in self.corals:
@@ -443,10 +566,14 @@ class World:
             s.draw(screen, camera.ox, camera.oy, self)
 
     def draw_entities(self, screen, camera):
+        for w in self.whales:
+            w.draw(screen, camera.ox, camera.oy, self)
         for f in self.fishes:
             f.draw(screen, camera.ox, camera.oy, self)
         for sh in self.sharks:
             sh.draw(screen, camera.ox, camera.oy, self)
+        for b in self.big_sharks:
+            b.draw(screen, camera.ox, camera.oy, self)
         for c in self.chests:
             c.draw(screen, camera.ox, camera.oy)
         for t in self.trees:

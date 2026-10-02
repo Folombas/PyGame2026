@@ -21,11 +21,13 @@ from tools import (TOOLS, PICKAXE, AXE, SWORD, BOW,
 from particles import ParticleSystem
 from arrows import Arrow
 from boat import Boat
+from submarine import Submarine
 from records import save_record
 from menu import Menu
 from card_book import CardBook
 from crafting import CraftingUI
 from achievements import AchievementsUI
+from quests import QuestUI
 from cards import roll_card, CARD_DEFS
 from weather import Weather
 from lighting import LightMask, ambient_from_time, sky_colors_from_time
@@ -198,7 +200,10 @@ def draw_hud(screen, font_big, font_small, L, lives, difficulty_key):
             pygame.draw.rect(screen, col, (ox_x, ox_y, fill, ox_h))
         lbl = font_small.render(f"O2  {int(p.oxygen)}%", True, (255, 255, 255))
         screen.blit(lbl, (ox_x + 6, ox_y - 1))
-    if p.in_boat is not None:
+    if getattr(p, "in_submarine", None) is not None:
+        wat = font_big.render("~ БАТИСКАФ ~  (E — выйти)", True, (255, 220, 100))
+        screen.blit(wat, (WIDTH // 2 - wat.get_width() // 2, HEIGHT - 130))
+    elif p.in_boat is not None:
         wat = font_big.render("~ В ЛОДКЕ ~  (E — выйти)", True, (180, 220, 255))
         screen.blit(wat, (WIDTH // 2 - wat.get_width() // 2, HEIGHT - 130))
     elif p.in_water:
@@ -288,6 +293,7 @@ def use_tool_at(L, wx, wy, mx, my):
             continue
         if c.rect.inflate(30, 30).collidepoint(wx, wy):
             c.opened = True
+            L["chests_opened"] = L.get("chests_opened", 0) + 1
             _give_chest_loot(L, c)
             return
 
@@ -393,6 +399,11 @@ def new_session(difficulty):
         "light_mask": LightMask(),
         "fireflies": [],
         "boats": [],
+        "chests_opened": 0,
+        "seconds_underwater": 0.0,
+        "scuba_used": 0,
+        "_uw_seconds_accum": 0.0,
+        "submarines": [],
     }
 
 
@@ -447,6 +458,7 @@ def main():
     craft_ui = CraftingUI(font_big, font_small)
     card_book = CardBook(font_big, font_small)
     achievements = AchievementsUI(font_big, font_small)
+    quests_ui = QuestUI(font_big, font_small)
 
     app_state = "menu"
     difficulty_key = DEFAULT_DIFFICULTY
@@ -534,7 +546,14 @@ def main():
                 achievements.toggle()
             elif event.key == pygame.K_g and L["state"] == "playing":
                 L["player"].has_scuba = not L["player"].has_scuba
+                if L["player"].has_scuba:
+                    L["scuba_used"] = 1
                 print(f"[SCUBA] {'включён' if L['player'].has_scuba else 'выключен'}")
+            elif event.key == pygame.K_u and L["state"] == "playing":
+                px = L["player"].rect.centerx + (60 if L["player"].facing_right else -60)
+                py = L["player"].rect.bottom - 44
+                L["submarines"].append(Submarine(px, py))
+                print("[SUB] Батискаф поставлен")
             elif event.key == pygame.K_k and L["state"] == "playing":
                 # поставить лодку перед игроком
                 px = L["player"].rect.centerx + (60 if L["player"].facing_right else -60)
@@ -542,7 +561,11 @@ def main():
                 L["boats"].append(Boat(px, py))
                 print("[BOAT] поставлена")
             elif event.key in (pygame.K_e, pygame.K_f) and L["state"] == "playing":
-                if L["player"].in_boat is not None:
+                if getattr(L["player"], "in_submarine", None) is not None:
+                    sub = L["player"].in_submarine
+                    sub.eject(L["player"])
+                    sounds.play("jump")
+                elif L["player"].in_boat is not None:
                     # выход из лодки
                     boat = L["player"].in_boat
                     L["player"].in_boat = None
@@ -690,6 +713,18 @@ def main():
                 L["swing_angle"] = 0
             L["particles"].update()
 
+            # батискафы
+            for s in L["submarines"]:
+                s.update(L["world"], keys if s.has_pilot else None)
+                # посадка — E на близком расстоянии
+                if (getattr(L["player"], "in_submarine", None) is None and
+                        L["player"].in_water and
+                        L["player"].rect.colliderect(s.rect.inflate(20, 20))):
+                    if keys[pygame.K_e]:
+                        s.set_pilot(L["player"])
+                        L["player"].rect.center = s.rect.center
+                        sounds.play("collect")
+
             # лодки — покачивание и посадка
             for b in L["boats"]:
                 b.update(L["world"])
@@ -700,6 +735,13 @@ def main():
                     if pygame.key.get_pressed()[pygame.K_e]:
                         L["player"].in_boat = b
                         sounds.play("collect")
+
+            # счётчик времени под водой (для квеста)
+            if L["player"].head_in_water:
+                L["_uw_seconds_accum"] += dt
+                if L["_uw_seconds_accum"] >= 1.0:
+                    L["seconds_underwater"] += 1
+                    L["_uw_seconds_accum"] -= 1.0
 
             # пузырьки под водой
             if L["player"].head_in_water:
@@ -850,6 +892,26 @@ def main():
             if L["card_toast_timer"] > 0: L["card_toast_timer"] -= 1
             if L["achievement_toast_timer"] > 0: L["achievement_toast_timer"] -= 1
 
+            # --- проверка квестов ---
+            if not hasattr(L, "_quest_counter"):
+                L["_quest_counter"] = 0
+            L["_quest_counter"] += 1
+            if L["_quest_counter"] % 30 == 0:
+                qstats = {
+                    "blocks_dug": L.get("blocks_dug", 0),
+                    "chests_opened": L.get("chests_opened", 0),
+                    "kills": L.get("kills", 0),
+                    "max_depth": L.get("max_depth", 0),
+                    "cards_count": len(L.get("cards", set())),
+                    "seconds_underwater": int(L.get("seconds_underwater", 0)),
+                    "scuba_used": L.get("scuba_used", 0),
+                }
+                newly_q = quests_ui.check(qstats)
+                if newly_q:
+                    for q in newly_q:
+                        L["score"] += q["reward"]
+                    sounds.play("victory")
+
             # достижения (раз в 30 кадров)
             if not hasattr(L, "_ach_counter"): L["_ach_counter"] = 0
             L["_ach_counter"] += 1
@@ -877,6 +939,7 @@ def main():
         card_book.update()
         achievements.update()
         craft_ui.update()
+        quests_ui.update()
 
         # ============ DRAW ============
         draw_background(screen, L["camera"], L["world"].time_of_day)
@@ -887,6 +950,9 @@ def main():
         # лодки — рисуем до игрока (игрок сверху)
         for b in L["boats"]:
             b.draw(screen, ox, oy)
+        # батискафы
+        for s in L["submarines"]:
+            s.draw(screen, ox, oy)
         L["world"].draw_entities(screen, L["camera"])
 
         # подсветка блока под курсором
@@ -941,6 +1007,10 @@ def main():
         # светлячки — маленькие источники света
         for ff in L["fireflies"]:
             light_sources.append((ff["x"], ff["y"], 90))
+        # прожектор батискафа
+        for s in L["submarines"]:
+            lx, ly, lr = s.get_light()
+            light_sources.append((lx, ly, lr))
         L["light_mask"].render(screen, L["camera"], light_sources, ambient)
 
         # светлячки — яркие точки
@@ -958,6 +1028,19 @@ def main():
         L["weather"].draw(screen, L["camera"].offset_y)
 
         draw_hud(screen, font_big, font_small, L, lives, difficulty_key)
+
+        # Sidebar квестов
+        qstats = {
+            "blocks_dug": L.get("blocks_dug", 0),
+            "chests_opened": L.get("chests_opened", 0),
+            "kills": L.get("kills", 0),
+            "max_depth": L.get("max_depth", 0),
+            "cards_count": len(L.get("cards", set())),
+            "seconds_underwater": int(L.get("seconds_underwater", 0)),
+            "scuba_used": L.get("scuba_used", 0),
+        }
+        quests_ui.draw_sidebar(screen, qstats, difficulty_key)
+
         craft_ui.draw(screen, L["inventory"])
         draw_card_toast(screen, font_big, font_small, L)
         card_book.draw(screen, L["cards"])
