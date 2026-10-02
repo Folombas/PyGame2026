@@ -1,7 +1,6 @@
 """Сундуки с сокровищами. Спавнятся в пещерах, открываются ЛКМ."""
 import random
 import pygame
-from settings import TILE
 
 
 class Chest:
