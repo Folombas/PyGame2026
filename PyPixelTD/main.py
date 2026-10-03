@@ -13,6 +13,9 @@ from boot import BootScreen, LoginScreen
 import os_sounds
 
 
+_FULLSCREEN = False
+
+
 # =============== КАРТА ===============
 def make_world_map_surface(world):
     from world_td import T_GRASS, T_PATH, T_WATER, T_STONE, T_TREE, T_FLOWER
@@ -170,6 +173,8 @@ def get_ingame_bar_buttons():
         w = 160 if bid != "map" else 130
         rects.append((label, bid, pygame.Rect(x, HEIGHT - INGAME_BAR_H + 6, w, INGAME_BAR_H - 12)))
         x += w + 8
+    # Кнопка fullscreen справа
+    rects.append(("⛶", "fullscreen", pygame.Rect(WIDTH - 60, HEIGHT - INGAME_BAR_H + 6, 46, INGAME_BAR_H - 12)))
     return rects
 
 
@@ -238,6 +243,7 @@ def main():
     # ---- State ----
     # title → menu → world ⇄ interior ⇄ pc_boot → pc_login → pc
     state = "title"
+    prev_ingame_state = "world"  # куда вернуться из overlay
     toast = None
     toast_timer = 0
 
@@ -269,6 +275,21 @@ def main():
                 continue
 
             if event.type == pygame.KEYDOWN:
+                # F11 — fullscreen toggle в любом состоянии
+                if event.key == pygame.K_F11:
+                    global _FULLSCREEN
+                    _FULLSCREEN = not _FULLSCREEN
+                    from settings import WIDTH as _W, HEIGHT as _H
+                    try:
+                        if _FULLSCREEN:
+                            screen = pygame.display.set_mode((_W, _H),
+                                    pygame.FULLSCREEN | pygame.SCALED)
+                        else:
+                            screen = pygame.display.set_mode((_W, _H))
+                    except pygame.error:
+                        pass
+                    continue
+
                 if event.key == pygame.K_ESCAPE:
                     if state == "pc":
                         if interior:
@@ -336,6 +357,16 @@ def main():
                 elif state == "pc_login" and login_screen:
                     if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE):
                         login_screen.done = True
+
+                elif state == "pc":
+                    if event.unicode and event.unicode.isprintable():
+                        pc.handle_text(event.unicode)
+                    _r = pc.handle_key(event.key)
+                    if _r == "shutdown":
+                        if interior:
+                            interior.pc_on = False
+                        state = "interior"
+                        os_sounds.play("shutdown")
 
             elif state == "pc":
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

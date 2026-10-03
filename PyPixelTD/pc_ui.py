@@ -52,17 +52,17 @@ class Window:
     def on_close(self, mx, my):
         cx = self.rect.right - 22
         cy = self.rect.y + self.TITLE_H // 2
-        return (cx - 14 <= mx <= cx + 14 and cy - 14 <= my <= cy + 14)
+        return (cx - 18 <= mx <= cx + 18 and cy - 16 <= my <= cy + 16)
 
     def on_minimize(self, mx, my):
         cx = self.rect.right - 114
         cy = self.rect.y + self.TITLE_H // 2
-        return (cx - 14 <= mx <= cx + 14 and cy - 14 <= my <= cy + 14)
+        return (cx - 18 <= mx <= cx + 18 and cy - 16 <= my <= cy + 16)
 
     def on_maximize(self, mx, my):
         cx = self.rect.right - 68
         cy = self.rect.y + self.TITLE_H // 2
-        return (cx - 14 <= mx <= cx + 14 and cy - 14 <= my <= cy + 14)
+        return (cx - 18 <= mx <= cx + 18 and cy - 16 <= my <= cy + 16)
 
 
 class MiniPC:
@@ -850,17 +850,20 @@ class MiniPC:
         cont = pygame.Rect(r.x + 8, r.y + head_h + 6, r.w - 16, r.h - head_h - 16)
         pygame.draw.rect(screen, (10, 10, 15), cont)
 
-        # Строчки (снизу вверх, чтобы свежие были внизу)
+        # Строчки + prompt ввода ВСЕГДА виден
         line_h = 18
         max_lines = cont.h // line_h
-        visible = self.term_lines[-max_lines:] if len(self.term_lines) > max_lines else self.term_lines
+        # Резервируем 1 строку для активного prompt
+        reserve = 1 if self.term_active else 0
+        show_lines = max(1, max_lines - reserve)
+        visible = self.term_lines[-show_lines:] if len(self.term_lines) > show_lines else self.term_lines
 
         y = cont.y + 6
         for line in visible:
             color = (200, 240, 200)
             if line.startswith("zayka@"):
-                color = (100, 255, 100)  # зелёный prompt
-            elif "ошибка" in line.lower() or "error" in line.lower() or "не найдена" in line.lower():
+                color = (100, 255, 100)
+            elif "ошибка" in line.lower() or "error" in line.lower() or "не найдена" in line.lower() or "не найден" in line.lower():
                 color = (255, 120, 120)
             elif line.startswith("BunnyOS") or line.startswith("Kernel"):
                 color = (150, 200, 255)
@@ -868,23 +871,20 @@ class MiniPC:
             screen.blit(t, (cont.x + 4, y))
             y += line_h
 
-        # Строка ввода
+        # Строка ввода — фиксированно внизу
+        prompt = "zayka@bunnyos:~$ "
         if self.term_active:
-            prompt = "zayka@bunnyos:~$ "
             pt = self.font_small.render(prompt, True, (100, 255, 100))
             it = self.font_small.render(self.term_input, True, (255, 255, 255))
-            # позиция
+            py = cont.bottom - line_h - 4
             px = cont.x + 4
-            py = cont.y + 6 + len(visible) * line_h
-            if py + line_h < cont.bottom:
-                screen.blit(pt, (px, py))
-                screen.blit(it, (px + pt.get_width(), py))
-                # Мигающий курсор
-                if (pygame.time.get_ticks() // 500) % 2 == 0:
-                    cx = px + pt.get_width() + it.get_width() + 2
-                    pygame.draw.rect(screen, (200, 255, 200), (cx, py, 2, line_h - 2))
+            screen.blit(pt, (px, py))
+            screen.blit(it, (px + pt.get_width(), py))
+            # Мигающий курсор
+            if (pygame.time.get_ticks() // 500) % 2 == 0:
+                cx = px + pt.get_width() + it.get_width() + 2
+                pygame.draw.rect(screen, (200, 255, 200), (cx, py + 2, 2, line_h - 6))
         else:
-            # не активен — подсказка
             hint = self.font_small.render(
                 "(клик по окну для ввода · Esc — выход из ввода)",
                 True, (120, 120, 140))
