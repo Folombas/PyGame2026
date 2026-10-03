@@ -60,9 +60,10 @@ class Window:
         return (cx - 20 <= mx <= cx + 20 and cy - 18 <= my <= cy + 18)
 
     def on_maximize(self, mx, my):
+        # Кнопка разворота — на позиции right-68
         cx = self.rect.right - 68
         cy = self.rect.y + self.TITLE_H // 2
-        return (cx - 20 <= mx <= cx + 20 and cy - 18 <= my <= cy + 18)
+        return (cx - 22 <= mx <= cx + 22 and cy - 18 <= my <= cy + 18)
 
 
 class MiniPC:
@@ -235,14 +236,10 @@ class MiniPC:
         if keys[pygame.K_s]:  self.cursor_y += self.cursor_speed
         self.cursor_x = max(0.0, min(WIDTH - 1, self.cursor_x))
         self.cursor_y = max(0.0, min(HEIGHT - 1, self.cursor_y))
-        # мышь — плавно догоняем
+        # мышь — МГНОВЕННО, без easing (иначе тормозит)
         mx, my = pygame.mouse.get_pos()
-        # Если мышь реально двигали — догоняем быстро
-        if abs(mx - self.cursor_x) > 2 or abs(my - self.cursor_y) > 2:
-            self.cursor_x += (mx - self.cursor_x) * 0.7
-            self.cursor_y += (my - self.cursor_y) * 0.7
-            if abs(mx - self.cursor_x) < 0.5: self.cursor_x = mx
-            if abs(my - self.cursor_y) < 0.5: self.cursor_y = my
+        self.cursor_x = float(mx)
+        self.cursor_y = float(my)
         # целочисленный вывод
         self._cx_int = int(self.cursor_x)
         self._cy_int = int(self.cursor_y)
@@ -309,6 +306,16 @@ class MiniPC:
         # Окна
         for w in reversed(self.windows):
             if w.minimized: continue
+            if w.on_maximize(mx, my):
+                if getattr(w, "_saved_rect", None) is None:
+                    w._saved_rect = w.rect.copy()
+                    w.rect = pygame.Rect(0, 0, WIDTH, HEIGHT - 44)
+                else:
+                    w.rect = w._saved_rect
+                    w._saved_rect = None
+                os_sounds.play("click")
+                return
+
             if w.on_close(mx, my):
                 self.close_window(w); os_sounds.play("click"); return
             if w.on_minimize(mx, my):
@@ -555,8 +562,8 @@ class MiniPC:
             screen.blit(bg, (WIDTH - bg.get_width() - 20, 20))
             screen.blit(t, (WIDTH - bg.get_width() - 10, 26))
 
-        # Курсор
-        self._draw_cursor(screen)
+        # Курсор — испольуем СИСТЕМНЫЙ (он быстрее)
+        # self._draw_cursor(screen)  # свой курсор не рисуем
 
     def _draw_taskbar(self, screen):
         tb = pygame.Rect(0, HEIGHT - 44, WIDTH, 44)
