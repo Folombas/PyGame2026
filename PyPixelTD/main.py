@@ -8,6 +8,8 @@ from player_td import PlayerTD
 from interior import Interior
 from pc_ui import MiniPC
 from boot import BootScreen, LoginScreen
+from title import TitleScreen
+from game_menu import GameMenu
 import os_sounds
 
 
@@ -100,12 +102,15 @@ def main():
 
     interior = None
     interior_return = None
-    state = "boot"   # boot | login | world | interior | map | pc
+    # title → menu → world → interior → map → pc_boot → pc
+    state = "title"
     toast = None
     toast_timer = 0
 
-    boot_screen = BootScreen(font_big, font_small)
-    login_screen = LoginScreen(font_big, font_small)
+    title_screen = TitleScreen(font_big, font_small)
+    game_menu = GameMenu(font_big, font_small)
+    boot_screen = None     # создастся при включении ПК
+    login_screen = None
 
     running = True
     while running:
@@ -117,9 +122,14 @@ def main():
                 running = False
 
             elif event.type == pygame.KEYDOWN:
+                if state == "menu":
+                    game_menu.handle_event(event)
+                    continue
                 if event.key == pygame.K_ESCAPE:
-                    if state in ("boot", "login"):
-                        state = "world"
+                    if state in ("title", "pc_boot", "pc_login"):
+                        state = "menu" if state == "title" else "interior"
+                    elif state == "menu":
+                        running = False
                     elif state == "pc":
                         # Выключаем ПК
                         if interior:
@@ -160,8 +170,11 @@ def main():
                                                        lambda: None)
                         if result == "pc":
                             if interior.pc_on:
-                                state = "pc"
-                                toast = "ПК включён"
+                                # Запускаем загрузку BunnyOS
+                                boot_screen = BootScreen(font_big, font_small)
+                                login_screen = None
+                                state = "pc_boot"
+                                toast = "BunnyOS загружается..."
                                 toast_timer = 120
                         # Проверяем выход из дома
                         p_rect = player.rect
@@ -186,14 +199,28 @@ def main():
         # ============ UPDATE ============
         keys = pygame.key.get_pressed()
 
-        if state == "boot":
-            boot_screen.update(dt)
-            if boot_screen.done:
-                state = "login"
-        elif state == "login":
-            login_screen.update(dt)
-            if login_screen.done:
+        if state == "title":
+            title_screen.update(dt)
+            if title_screen.done:
+                state = "menu"
+        elif state == "menu":
+            game_menu.update(dt)
+            if game_menu.result == "start":
                 state = "world"
+                game_menu.result = None
+            elif game_menu.result == "exit":
+                running = False
+        elif state == "pc_boot":
+            if boot_screen:
+                boot_screen.update(dt)
+                if boot_screen.done:
+                    state = "pc_login"
+                    login_screen = LoginScreen(font_big, font_small)
+        elif state == "pc_login":
+            if login_screen:
+                login_screen.update(dt)
+                if login_screen.done:
+                    state = "pc"
         elif state == "pc":
             pc.update(keys, dt)
         elif state == "world":

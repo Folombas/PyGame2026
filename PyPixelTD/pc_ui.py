@@ -5,6 +5,11 @@ from settings import WIDTH, HEIGHT
 import os_sounds
 
 
+def _clamp(triple):
+    """Ограничивает цвет 0..255."""
+    return tuple(max(0, min(255, int(x))) for x in triple)
+
+
 # Цвета XP Luna
 XP_BLUE = (30, 80, 160)
 XP_BLUE_LIGHT = (90, 145, 220)
@@ -41,7 +46,7 @@ def draw_xp_button(screen, rect, label, font, hovered=False, pressed=False, base
     # Градиент
     for y in range(rect.h):
         t = y / rect.h
-        col = tuple(int(top[i] * (1 - t) + bot[i] * t) for i in range(3))
+        col = _clamp(tuple(top[i] * (1 - t) + bot[i] * t for i in range(3)))
         pygame.draw.line(screen, col, (rect.x, rect.y + y), (rect.right, rect.y + y))
     # Внешняя тёмная рамка
     pygame.draw.rect(screen, (60, 80, 120), rect, 1)
@@ -387,7 +392,8 @@ class MiniPC:
                 r = int(120 - 40 * t2)
                 g = int(180 - 60 * t2)
                 b = int(80 - 40 * t2)
-            pygame.draw.line(screen, (r, g, b), (0, y), (WIDTH, y))
+            c = _clamp((r, g, b))
+            pygame.draw.line(screen, c, (0, y), (WIDTH, y))
 
         # Холмы
         hills = [(0, HEIGHT - 200, 300), (300, HEIGHT - 230, 400),
@@ -454,8 +460,8 @@ class MiniPC:
         # Градиент
         for y in range(tb.h):
             t = y / tb.h
-            col = tuple(int(XP_TASKBAR[i] * (1 - t * 0.4) + XP_TASKBAR_LIGHT[i] * t * 0.4)
-                        for i in range(3))
+            col = _clamp(tuple(XP_TASKBAR[i] * (1 - t * 0.4) + XP_TASKBAR_LIGHT[i] * t * 0.4
+                               for i in range(3)))
             pygame.draw.line(screen, col, (0, tb.y + y), (WIDTH, tb.y + y))
         pygame.draw.line(screen, XP_TASKBAR_LIGHT, (0, tb.y), (WIDTH, tb.y), 2)
         pygame.draw.line(screen, XP_BLUE_DARK, (0, tb.bottom - 1), (WIDTH, tb.bottom - 1), 1)
@@ -465,7 +471,7 @@ class MiniPC:
         # Градиент зелёный
         for y in range(start_rect.h):
             t = y / start_rect.h
-            col = tuple(int(XP_START[i] * (1 - t) + XP_START_LIGHT[i] * t) for i in range(3))
+            col = _clamp(tuple(XP_START[i] * (1 - t) + XP_START_LIGHT[i] * t for i in range(3)))
             pygame.draw.line(screen, col, (start_rect.x, start_rect.y + y),
                              (start_rect.right, start_rect.y + y))
         pygame.draw.rect(screen, (40, 100, 50), start_rect, 2)
@@ -487,7 +493,7 @@ class MiniPC:
                 bg_col = (80, 140, 220)
             for y in range(btn.h):
                 t = y / btn.h
-                col = tuple(int(bg_col[i] * (1 - t * 0.3)) for i in range(3))
+                col = _clamp(tuple(bg_col[i] * (1 - t * 0.3) for i in range(3)))
                 pygame.draw.line(screen, col, (btn.x, btn.y + y), (btn.right, btn.y + y))
             pygame.draw.rect(screen, XP_BLUE_DARK, btn, 1)
             screen.blit(txt, (btn.x + 12, btn.y + 8))
@@ -498,8 +504,8 @@ class MiniPC:
         tray_rect = pygame.Rect(WIDTH - tray_w, HEIGHT - 38, tray_w - 4, 36)
         for y in range(tray_rect.h):
             t = y / tray_rect.h
-            col = tuple(int(XP_BLUE_DARK[i] * (1 - t * 0.5) + XP_TASKBAR_LIGHT[i] * t * 0.4)
-                        for i in range(3))
+            col = _clamp(tuple(XP_BLUE_DARK[i] * (1 - t * 0.5) + XP_TASKBAR_LIGHT[i] * t * 0.4
+                               for i in range(3)))
             pygame.draw.line(screen, col, (tray_rect.x, tray_rect.y + y),
                              (tray_rect.right, tray_rect.y + y))
         pygame.draw.rect(screen, XP_BLUE_DARK, tray_rect, 1)
@@ -524,8 +530,8 @@ class MiniPC:
         header = pygame.Rect(menu.x, menu.y, menu.w, 60)
         for y in range(header.h):
             t = y / header.h
-            col = tuple(int(XP_BLUE[i] * (1 - t * 0.3) + XP_BLUE_LIGHT[i] * t * 0.5)
-                        for i in range(3))
+            col = _clamp(tuple(XP_BLUE[i] * (1 - t * 0.3) + XP_BLUE_LIGHT[i] * t * 0.5
+                               for i in range(3)))
             pygame.draw.line(screen, col, (header.x, header.y + y), (header.right, header.y + y))
         pygame.draw.rect(screen, XP_BLUE_DARK, header, 2)
         # Аватар
@@ -598,8 +604,8 @@ class MiniPC:
         title_rect = pygame.Rect(w.rect.x, w.rect.y, w.rect.w, 26)
         for y in range(title_rect.h):
             t = y / title_rect.h
-            col = tuple(int(XP_TITLE[i] * (1 - t * 0.3) + XP_BLUE_LIGHT[i] * t * 0.6)
-                        for i in range(3))
+            col = _clamp(tuple(XP_TITLE[i] * (1 - t * 0.3) + XP_BLUE_LIGHT[i] * t * 0.6
+                               for i in range(3)))
             pygame.draw.line(screen, col, (title_rect.x, title_rect.y + y),
                              (title_rect.right, title_rect.y + y))
         pygame.draw.rect(screen, XP_BLUE_DARK, title_rect, 1)
@@ -615,7 +621,7 @@ class MiniPC:
         close_rect = pygame.Rect(cx - 9, cy - 9, 18, 18)
         for y in range(close_rect.h):
             t = y / close_rect.h
-            c = tuple(int(col[i] * (1 - t * 0.3) + 255 * t * 0.2) for i in range(3))
+            c = _clamp(tuple(col[i] * (1 - t * 0.3) + 255 * t * 0.2 for i in range(3)))
             pygame.draw.line(screen, c, (close_rect.x, close_rect.y + y),
                              (close_rect.right, close_rect.y + y))
         pygame.draw.rect(screen, (80, 20, 20), close_rect, 1)
@@ -630,7 +636,7 @@ class MiniPC:
         min_rect = pygame.Rect(mx_ - 9, my_ - 9, 18, 18)
         for y in range(min_rect.h):
             t = y / min_rect.h
-            c = tuple(int(col_m[i] * (1 - t * 0.3) + 255 * t * 0.2) for i in range(3))
+            c = _clamp(tuple(col_m[i] * (1 - t * 0.3) + 255 * t * 0.2 for i in range(3)))
             pygame.draw.line(screen, c, (min_rect.x, min_rect.y + y),
                              (min_rect.right, min_rect.y + y))
         pygame.draw.rect(screen, (30, 60, 120), min_rect, 1)
@@ -761,7 +767,7 @@ class MiniPC:
         disp = pygame.Rect(r.x + 10, r.y + 10, r.w - 20, 60)
         for y in range(disp.h):
             t = y / disp.h
-            col = (int(240 - 20 * t), int(250 - 20 * t), int(220 - 20 * t))
+            col = _clamp((240 - 20 * t, 250 - 20 * t, 220 - 20 * t))
             pygame.draw.line(screen, col, (disp.x, disp.y + y), (disp.right, disp.y + y))
         pygame.draw.rect(screen, (60, 80, 60), disp, 2)
         # Текст дисплея — выравнивание вправо
@@ -793,8 +799,8 @@ class MiniPC:
             # Рисуем кнопку
             for y in range(brect.h):
                 tt = y / brect.h
-                col = tuple(int(base[i] * (1 - tt * 0.15) + 255 * tt * 0.1)
-                            for i in range(3))
+                col = _clamp(tuple(base[i] * (1 - tt * 0.15) + 255 * tt * 0.1
+                                   for i in range(3)))
                 pygame.draw.line(screen, col, (brect.x, brect.y + y),
                                  (brect.right, brect.y + y))
             pygame.draw.rect(screen, (80, 90, 120), brect, 1)
