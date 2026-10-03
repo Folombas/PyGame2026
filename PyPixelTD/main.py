@@ -173,8 +173,11 @@ def get_ingame_bar_buttons():
         w = 160 if bid != "map" else 130
         rects.append((label, bid, pygame.Rect(x, HEIGHT - INGAME_BAR_H + 6, w, INGAME_BAR_H - 12)))
         x += w + 8
-    # Кнопка fullscreen справа
-    rects.append(("⛶", "fullscreen", pygame.Rect(WIDTH - 60, HEIGHT - INGAME_BAR_H + 6, 46, INGAME_BAR_H - 12)))
+    # Две кнопки справа: "оконный развёрнутый" и "полный экран"
+    rects.append(("▢", "window_mode",
+                  pygame.Rect(WIDTH - 110, HEIGHT - INGAME_BAR_H + 6, 46, INGAME_BAR_H - 12)))
+    rects.append(("⛶", "fullscreen",
+                  pygame.Rect(WIDTH - 60, HEIGHT - INGAME_BAR_H + 6, 46, INGAME_BAR_H - 12)))
     return rects
 
 
@@ -424,6 +427,12 @@ def main():
         # ============ DRAW ============
         screen.fill((0, 0, 0))
 
+        # Прячем системный курсор в PC-режиме
+        if state == "pc":
+            pygame.mouse.set_visible(False)
+        else:
+            pygame.mouse.set_visible(True)
+
         if state == "title":
             title_screen.draw(screen)
         elif state == "menu":
@@ -457,9 +466,7 @@ def main():
             # Настройки сверху
             game_menu.draw(screen)
 
-        # DEBUG
-        dbg = font_tiny.render(f"STATE = {state}", True, (255, 100, 100))
-        screen.blit(dbg, (10, 10))
+        # (debug надпись убрана)
 
         # Toast
         if toast and toast_timer > 0:

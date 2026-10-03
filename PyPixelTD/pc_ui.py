@@ -52,17 +52,17 @@ class Window:
     def on_close(self, mx, my):
         cx = self.rect.right - 22
         cy = self.rect.y + self.TITLE_H // 2
-        return (cx - 18 <= mx <= cx + 18 and cy - 16 <= my <= cy + 16)
+        return (cx - 20 <= mx <= cx + 20 and cy - 18 <= my <= cy + 18)
 
     def on_minimize(self, mx, my):
         cx = self.rect.right - 114
         cy = self.rect.y + self.TITLE_H // 2
-        return (cx - 18 <= mx <= cx + 18 and cy - 16 <= my <= cy + 16)
+        return (cx - 20 <= mx <= cx + 20 and cy - 18 <= my <= cy + 18)
 
     def on_maximize(self, mx, my):
         cx = self.rect.right - 68
         cy = self.rect.y + self.TITLE_H // 2
-        return (cx - 18 <= mx <= cx + 18 and cy - 16 <= my <= cy + 16)
+        return (cx - 20 <= mx <= cx + 20 and cy - 18 <= my <= cy + 18)
 
 
 class MiniPC:
@@ -70,9 +70,10 @@ class MiniPC:
         self.font_small = font_small
         self.font_big = font_big
         self.world_map_surface = world_map_surface
-        self.cursor_x = WIDTH // 2
-        self.cursor_y = HEIGHT // 2
-        self.cursor_speed = 12
+        self.cursor_x = float(WIDTH // 2)
+        self.cursor_y = float(HEIGHT // 2)
+        self.cursor_speed = 15.0
+        self._mouse_active = True
         self.windows = []
         self.icon_rects = []
         self.browser_page = "home"
@@ -155,6 +156,16 @@ class MiniPC:
             if key == pygame.K_RETURN:
                 self._terminal_submit()
                 return None
+            if key == pygame.K_TAB:
+                # Автодополнение
+                completed, options = self.linux.complete(self.term_input)
+                self.term_input = completed
+                if options:
+                    # несколько вариантов — показываем список
+                    self.term_lines.append(" ".join(options))
+                    self.term_lines.append("")
+                os_sounds.play("click")
+                return None
             if key == pygame.K_UP:
                 # история команд
                 if self.term_lines:
@@ -222,12 +233,19 @@ class MiniPC:
         if keys[pygame.K_d] or keys[pygame.K_RIGHT]: self.cursor_x += self.cursor_speed
         if keys[pygame.K_w]:  self.cursor_y -= self.cursor_speed
         if keys[pygame.K_s]:  self.cursor_y += self.cursor_speed
-        self.cursor_x = max(0, min(WIDTH - 1, self.cursor_x))
-        self.cursor_y = max(0, min(HEIGHT - 1, self.cursor_y))
-        # мышь
+        self.cursor_x = max(0.0, min(WIDTH - 1, self.cursor_x))
+        self.cursor_y = max(0.0, min(HEIGHT - 1, self.cursor_y))
+        # мышь — плавно догоняем
         mx, my = pygame.mouse.get_pos()
-        if abs(mx - self.cursor_x) > 40 or abs(my - self.cursor_y) > 40:
-            self.cursor_x, self.cursor_y = mx, my
+        # Если мышь реально двигали — догоняем быстро
+        if abs(mx - self.cursor_x) > 2 or abs(my - self.cursor_y) > 2:
+            self.cursor_x += (mx - self.cursor_x) * 0.7
+            self.cursor_y += (my - self.cursor_y) * 0.7
+            if abs(mx - self.cursor_x) < 0.5: self.cursor_x = mx
+            if abs(my - self.cursor_y) < 0.5: self.cursor_y = my
+        # целочисленный вывод
+        self._cx_int = int(self.cursor_x)
+        self._cy_int = int(self.cursor_y)
         if self.toast_timer > 0:
             self.toast_timer -= 1
 
@@ -638,6 +656,7 @@ class MiniPC:
 
     def _draw_cursor(self, screen):
         x, y = int(self.cursor_x), int(self.cursor_y)
+        # отладка не нужна
         pts_o = [(0,0),(0,16),(4,12),(7,17),(10,16),(7,11),(12,11)]
         pts_i = [(2,2),(2,13),(5,10),(8,15),(9,15),(6,10),(10,10)]
         pygame.draw.polygon(screen, (0, 0, 0), [(x+dx, y+dy) for dx, dy in pts_o])

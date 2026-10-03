@@ -43,7 +43,7 @@ class LinuxSim:
             "/etc/hosts": {"type": "file", "content":
                 "127.0.0.1   localhost\n127.0.1.1   bunnyos\n10.0.0.1    gateway.carrot"},
             "/etc/motd": {"type": "file", "content":
-                "Добро пожаловать в BunnyOS!\nУдачи, Зайка-хакер."},
+                "Добро пожаловать в BunnyOS!\nУдачи, Зайка-хакер.\n\nСекретный пароль sudo: carrot"},
             "/etc/os-release": {"type": "file", "content":
                 'NAME="BunnyOS"\nVERSION="1.0 LTS (White Hacker)"\nID=carrot\nID_LIKE=debian'},
             "/var/log/syslog": {"type": "file", "content":
@@ -52,6 +52,55 @@ class LinuxSim:
                 "10:22:15 sshd: connection from 10.0.0.42\n10:22:16 sshd: failed password for root"},
         }
         self.start_time = time.time()
+
+    def complete(self, text):
+        """Автодополнение по Tab. Возвращает (completed_text, options)."""
+        if not text:
+            return text, []
+        parts = text.split()
+        if not parts:
+            return text, []
+        # Дополняем последнее слово
+        last = parts[-1]
+        all_cmds = ["help", "ls", "cd", "pwd", "cat", "echo", "whoami",
+                    "uname", "date", "uptime", "clear", "history", "neofetch",
+                    "tree", "touch", "mkdir", "rm", "cp", "mv", "grep",
+                    "head", "tail", "wc", "man", "ps", "top", "ip", "ifconfig",
+                    "ping", "curl", "sudo", "exit", "python", "neural"]
+        # Если это первое слово — дополняем по командам
+        if len(parts) == 1:
+            matches = [c for c in all_cmds if c.startswith(last)]
+        else:
+            # Дополняем по файлам/папкам в cwd
+            matches = []
+            # Из текущего каталога
+            if self._is_dir(self.cwd):
+                for c in self.fs[self.cwd]["children"]:
+                    if c.startswith(last):
+                        full = self.cwd.rstrip("/") + "/" + c
+                        if self._is_dir(full):
+                            matches.append(c + "/")
+                        else:
+                            matches.append(c)
+            # Плюс команды
+            for c in all_cmds:
+                if c.startswith(last):
+                    matches.append(c)
+        if not matches:
+            return text, []
+        if len(matches) == 1:
+            # Единственное совпадение — подставляем
+            prefix = " ".join(parts[:-1])
+            completed = (prefix + " " + matches[0]) if prefix else matches[0]
+            return completed, []
+        # Несколько — возвращаем список + общий префикс
+        common = matches[0]
+        for m in matches[1:]:
+            while not m.startswith(common):
+                common = common[:-1]
+        prefix = " ".join(parts[:-1])
+        completed = (prefix + " " + common) if prefix else common
+        return completed, matches
 
     def prompt(self):
         # ~/ вместо /home/zayka
@@ -154,7 +203,11 @@ class LinuxSim:
                 "  ping <хост>         — проверка связи",
                 "  curl <url>          — запрос по сети",
                 "  sudo <команда>      — суперпользователь",
+                "  python              — Python-интерпретатор (симуляция)",
+                "  neural              — нейросеть Зайки",
                 "  exit                — выход из сессии",
+                "",
+                "💡 Подсказка: Tab — автодополнение команд и файлов.",
             ]
 
         if cmd == "ls":
@@ -452,8 +505,45 @@ class LinuxSim:
             return [f"curl: не удалось подключиться к {u}"]
 
         if cmd == "sudo":
-            return ["Мы не доверяем тебе sudo... пока что. 🐰"]
+            if not args:
+                return ["usage: sudo <команда>"]
+            # Секретный пароль для теста — carrot
+            if self.user != "root":
+                return [
+                    "[sudo] password for zayka:",
+                    "Sorry, try again.",
+                    "Sorry, try again.",
+                    "sudo: 3 incorrect password attempts",
+                    "",
+                    "💡 Подсказка: пароль есть в /etc/motd 😉",
+                ]
+            return [f"[sudo] Running as root: {' '.join(args)}"]
+        if cmd == "su":
+            return ["su: введите пароль root:",
+                    "su: Authentication failure",
+                    "(попробуй 'sudo bash' — но пароль надо найти)"]
 
+        if cmd in ("python3", "python3.12", "py"):
+            return [
+                "Python 3.12.3 (main, BunnyOS 1.0) [GCC 11.4.0] on carrot-linux",
+                'Type "help", "copyright", "credits" for more info.',
+                "",
+                ">>> (интерактивный Python доступен в beta)",
+                ">>> import neural_net",
+                ">>> neural_net.status()",
+                "'все системы работают'",
+                ">>> ",
+            ]
+        if cmd == "neural":
+            return [
+                "🧠 NeuralNet v0.3 (бета)",
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                "Модель:    CarrotGPT-1B",
+                "Обучение:  62%",
+                "Запросов:  1 234",
+                "Статус:    ✅ онлайн",
+                "Лог:       учусь понимать морковь...",
+            ]
         if cmd == "exit":
             return ["__EXIT__"]
 
