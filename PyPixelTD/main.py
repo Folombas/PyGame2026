@@ -154,6 +154,60 @@ def _try_talk_villager(world, player):
     return False
 
 
+# =============== ИГРОВАЯ ПАНЕЛЬ ===============
+INGAME_BAR_H = 44
+
+def get_ingame_bar_buttons():
+    """Возвращает список (label, id, rect)."""
+    labels = [
+        ("☰  МЕНЮ", "menu"),
+        ("🗺  КАРТА", "map"),
+        ("⚙  НАСТРОЙКИ", "settings"),
+    ]
+    rects = []
+    x = 10
+    for label, bid in labels:
+        w = 160 if bid != "map" else 130
+        rects.append((label, bid, pygame.Rect(x, HEIGHT - INGAME_BAR_H + 6, w, INGAME_BAR_H - 12)))
+        x += w + 8
+    return rects
+
+
+def draw_ingame_bar(screen, font_small, cursor):
+    """Нижняя панель в игре."""
+    bar = pygame.Rect(0, HEIGHT - INGAME_BAR_H, WIDTH, INGAME_BAR_H)
+    # полупрозрачный фон
+    surf = pygame.Surface((WIDTH, INGAME_BAR_H), pygame.SRCALPHA)
+    surf.fill((15, 18, 30, 230))
+    screen.blit(surf, (0, HEIGHT - INGAME_BAR_H))
+    pygame.draw.line(screen, (60, 90, 140), (0, bar.y), (WIDTH, bar.y), 2)
+
+    mx, my = cursor
+    for label, bid, r in get_ingame_bar_buttons():
+        hover = r.collidepoint(mx, my)
+        # фон
+        if hover:
+            pygame.draw.rect(screen, (40, 80, 130), r)
+        else:
+            pygame.draw.rect(screen, (25, 40, 65), r)
+        pygame.draw.rect(screen, (80, 120, 180), r, 1)
+        t = font_small.render(label, True, (230, 240, 255))
+        screen.blit(t, (r.centerx - t.get_width() // 2,
+                        r.centery - t.get_height() // 2))
+
+    # Подсказка справа
+    hint = font_small.render("Esc — выход   M — карта", True, (140, 160, 190))
+    screen.blit(hint, (WIDTH - hint.get_width() - 16, HEIGHT - INGAME_BAR_H + 16))
+
+
+def handle_ingame_bar_click(mx, my):
+    """Возвращает 'menu' / 'map' / 'settings' / None."""
+    for label, bid, r in get_ingame_bar_buttons():
+        if r.collidepoint(mx, my):
+            return bid
+    return None
+
+
 # =============== MAIN ===============
 def main():
     pygame.init()
@@ -201,6 +255,17 @@ def main():
             # ----- Меню — своя обработка -----
             if state == "menu":
                 game_menu.handle_event(event)
+                if game_menu.result == "start":
+                    state = prev_ingame_state  # вернуться к сохранённой игре
+                    game_menu.result = None
+                elif game_menu.result == "exit":
+                    running = False
+                continue
+            if state == "ingame_settings":
+                game_menu.handle_event(event)
+                if game_menu.result == "back_to_game":
+                    state = prev_ingame_state
+                    game_menu.result = None
                 continue
 
             if event.type == pygame.KEYDOWN:
@@ -260,7 +325,9 @@ def main():
 
                 elif state == "map":
                     if event.key == pygame.K_m:
-                        state = "world"
+                        state = prev_ingame_state
+                    elif event.key == pygame.K_ESCAPE:
+                        state = prev_ingame_state
 
                 elif state == "pc_boot" and boot_screen:
                     if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE):
@@ -271,17 +338,7 @@ def main():
                         login_screen.done = True
 
             elif state == "pc":
-                if event.type == pygame.KEYDOWN:
-                    # Unicode символы → в терминал
-                    if event.unicode and event.unicode.isprintable():
-                        pc.handle_text(event.unicode)
-                    r = pc.handle_key(event.key)
-                    if r == "shutdown":
-                        if interior:
-                            interior.pc_on = False
-                        state = "interior"
-                        os_sounds.play("shutdown")
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     r = pc.handle_click(*pygame.mouse.get_pos(), button=1)
                     if r == "shutdown":
                         if interior:
@@ -352,13 +409,22 @@ def main():
             world.draw(screen, camera)
             world.draw_villagers(screen, camera, font_tiny)
             player.draw(screen, camera.x, camera.y)
-            _draw_hint(screen, font_small,
-                       "WASD — ходить   E — говорить/зайти   M — карта   Esc — выход")
+            draw_ingame_bar(screen, font_small, (pc.cursor_x, pc.cursor_y))
         elif state == "interior" and interior:
             interior.draw(screen, camera.x, camera.y, font_tiny)
             player.draw(screen, camera.x, camera.y)
-            _draw_hint(screen, font_small,
-                       "WASD — ходить   E — сесть/выйти/вкл ПК   Esc — выход")
+            draw_ingame_bar(screen, font_small, (pc.cursor_x, pc.cursor_y))
+        elif state == "ingame_settings":
+            # Рисуем замороженный мир в фоне
+            if prev_ingame_state == "interior" and interior:
+                interior.draw(screen, camera.x, camera.y, font_tiny)
+                player.draw(screen, camera.x, camera.y)
+            else:
+                world.draw(screen, camera)
+                world.draw_villagers(screen, camera, font_tiny)
+                player.draw(screen, camera.x, camera.y)
+            # Настройки сверху
+            game_menu.draw(screen)
 
         # DEBUG
         dbg = font_tiny.render(f"STATE = {state}", True, (255, 100, 100))

@@ -34,6 +34,8 @@ class GameMenu:
             {"id": "back",       "label": "НАЗАД"},
         ]
         self.graphics = "высокая"
+        self.overlay = False     # если True — рисуем поверх игры, без своего фона
+        self.return_to_game = False  # если True — Esc возвращает в игру
         self.difficulty = "normal"
         self.volume_step = 4     # 80%
         self.fullscreen = True
@@ -96,9 +98,23 @@ class GameMenu:
         elif event.key == pygame.K_ESCAPE:
             self.result = "exit"
 
+    def open_from_game(self):
+        """Открывает настройки поверх игры."""
+        self.overlay = True
+        self.return_to_game = True
+        self.in_settings = True
+        self.settings_idx = 0
+        self.result = None
+
     def _handle_settings(self, event):
         if event.key == pygame.K_ESCAPE:
-            self.in_settings = False
+            if self.return_to_game:
+                self.result = "back_to_game"
+                self.overlay = False
+                self.return_to_game = False
+                self.in_settings = False
+            else:
+                self.in_settings = False
             os_sounds.play("click")
             return
         if event.key in (pygame.K_UP, pygame.K_w):
@@ -156,24 +172,35 @@ class GameMenu:
         self._draw_main(screen)
 
     def _draw_settings(self, screen):
-        # Фон — тот же матричный
+        if self.overlay:
+            # полупрозрачный оверлей поверх игры
+            veil = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            veil.fill((0, 0, 0, 200))
+            screen.blit(veil, (0, 0))
+            self._draw_settings_content(screen)
+            return
+        # Обычный фон
         screen.fill((2, 8, 5))
-        import random
-        rng = random.Random(13)
-        chars = "01アイウ$#@"
-        t = self.timer
-        for col_i in range(0, WIDTH, 24):
-            seed = col_i // 24
-            speed = 2 + (seed * 5 % 4)
-            offset = (t * speed + seed * 30) % (HEIGHT + 200)
-            for j in range(6):
-                y = offset - j * 24
-                if -20 < y < HEIGHT:
-                    fade = max(0, 0.3 - j * 0.05)
-                    r = rng.randint(0, len(chars) - 1)
-                    col = (int(20 * fade), int(80 * fade), int(40 * fade))
-                    s = self.font_small.render(chars[r], True, col)
-                    screen.blit(s, (col_i, int(y)))
+        self._draw_settings_content(screen)
+
+    def _draw_settings_content(self, screen):
+        if not self.overlay:
+            import random
+            rng = random.Random(13)
+            chars = "01アイウ$#@"
+            t = self.timer
+            for col_i in range(0, WIDTH, 24):
+                seed = col_i // 24
+                speed = 2 + (seed * 5 % 4)
+                offset = (t * speed + seed * 30) % (HEIGHT + 200)
+                for j in range(6):
+                    y = offset - j * 24
+                    if -20 < y < HEIGHT:
+                        fade = max(0, 0.3 - j * 0.05)
+                        r = rng.randint(0, len(chars) - 1)
+                        col = (int(20 * fade), int(80 * fade), int(40 * fade))
+                        s = self.font_small.render(chars[r], True, col)
+                        screen.blit(s, (col_i, int(y)))
 
         title = self.font_big.render("НАСТРОЙКИ", True, (100, 255, 140))
         screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 60))

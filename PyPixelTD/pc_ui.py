@@ -55,12 +55,12 @@ class Window:
         return (cx - 14 <= mx <= cx + 14 and cy - 14 <= my <= cy + 14)
 
     def on_minimize(self, mx, my):
-        cx = self.rect.right - 68
+        cx = self.rect.right - 114
         cy = self.rect.y + self.TITLE_H // 2
         return (cx - 14 <= mx <= cx + 14 and cy - 14 <= my <= cy + 14)
 
     def on_maximize(self, mx, my):
-        cx = self.rect.right - 114
+        cx = self.rect.right - 68
         cy = self.rect.y + self.TITLE_H // 2
         return (cx - 14 <= mx <= cx + 14 and cy - 14 <= my <= cy + 14)
 
@@ -670,8 +670,8 @@ class MiniPC:
         pygame.draw.line(screen, col, (cx - 5, cy - 5), (cx + 5, cy + 5), 2)
         pygame.draw.line(screen, col, (cx - 5, cy + 5), (cx + 5, cy - 5), 2)
 
-        # Maximize
-        mx2 = w.rect.right - 114
+        # Maximize (в центре между close и minimize)
+        mx2 = w.rect.right - 68
         my2 = w.rect.y + 16
         hov_x = w.on_maximize(self.cursor_x, self.cursor_y)
         if hov_x:
@@ -684,8 +684,8 @@ class MiniPC:
         else:
             pygame.draw.rect(screen, (30, 30, 30), (mx2 - 5, my2 - 5, 10, 10), 1)
 
-        # Minimize
-        mx_ = w.rect.right - 68
+        # Minimize (левее maximize)
+        mx_ = w.rect.right - 114
         my_ = w.rect.y + 16
         hov_m = w.on_minimize(self.cursor_x, self.cursor_y)
         if hov_m:
