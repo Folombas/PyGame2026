@@ -92,7 +92,7 @@ def _try_enter_house(world, player, return_state):
     """Проверяет стоит ли игрок у двери дома. Возвращает Interior или None."""
     p_rect = player.rect
     for h in world.houses:
-        dr = h.door_rect_px().inflate(20, 20)
+        dr = h.door_rect_px().inflate(45, 45)
         if dr.colliderect(p_rect):
             interior = Interior(house_index=world.houses.index(h))
             # Зайти внутрь — зайка появляется у двери изнутри
@@ -272,6 +272,9 @@ def main():
 
             elif state == "pc":
                 if event.type == pygame.KEYDOWN:
+                    # Unicode символы → в терминал
+                    if event.unicode and event.unicode.isprintable():
+                        pc.handle_text(event.unicode)
                     r = pc.handle_key(event.key)
                     if r == "shutdown":
                         if interior:

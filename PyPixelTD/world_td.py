@@ -184,13 +184,14 @@ class World:
         # ОДИН домик Зайки
         self.houses.append(House(16, 18, 4, 3))
 
-        # Грядки с морковью — слева от дома
-        for gy in range(21, 23):
-            for gx in range(11, 15):
+        # Грядки рядом (слева от дома, компактный огород)
+        # Морковь — верхний блок
+        for gy in range(17, 19):
+            for gx in range(10, 14):
                 self.tiles[gy][gx] = T_GARDEN_CARROT
-        # Грядки с капустой — справа от дома
-        for gy in range(21, 23):
-            for gx in range(22, 26):
+        # Капуста — прямо под морковью
+        for gy in range(19, 21):
+            for gx in range(10, 14):
                 self.tiles[gy][gx] = T_GARDEN_CABBAGE
 
         # Жители — только парочка (прохожие)

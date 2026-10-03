@@ -24,6 +24,7 @@ CLOSE_HOVER = (232, 17, 35)
 DESKTOP_BG = (0, 120, 215)
 
 DESKTOP_ICONS = [
+    {"id": "terminal",   "name": "Терминал",   "icon": ">_"},
     {"id": "mycomputer", "name": "Мой кролик", "icon": "🖥"},
     {"id": "browser",    "name": "Интернет",   "icon": "🌐"},
     {"id": "map",        "name": "Карта",      "icon": "🗺"},
@@ -88,6 +89,16 @@ class MiniPC:
         self.calc_tokens = []         # ["2", "-", "1"]
         self.calc_current = "0"
         self.calc_after_eq = False
+        # Терминал
+        self.term_lines = [
+            "BunnyOS 1.0 LTS · ядро Carrot Linux 5.15.0-x86_64",
+            "",
+            "Добро пожаловать в BunnyOS!",
+            "Введи 'help' для списка команд.",
+            "",
+        ]
+        self.term_input = ""
+        self.term_active = False   # идёт ввод в терминал
 
     # ============= ОКНА =============
     def toggle_window(self, wtype):
@@ -102,13 +113,15 @@ class MiniPC:
                   "browser": "BunnyNet Explorer",
                   "map": "Карта мира",
                   "notes": "Заметки — Блокнот",
-                  "calc": "Калькулятор"}
+                  "calc": "Калькулятор",
+                  "terminal": "Терминал — zayka@bunnyos"}
         x = 180 + len(self.windows) * 30
         y = 80 + len(self.windows) * 30
         w = Window(wtype, x, y, title=titles.get(wtype, wtype))
         if wtype == "map": w.rect.w, w.rect.h = 720, 500
         if wtype == "calc": w.rect.w, w.rect.h = 340, 500
         if wtype == "notes": w.rect.w, w.rect.h = 500, 400
+        if wtype == "terminal": w.rect.w, w.rect.h = 640, 420
         self.windows.append(w)
         self.active_idx = len(self.windows) - 1
 
@@ -120,6 +133,26 @@ class MiniPC:
 
     def handle_key(self, key):
         """Клавиши в PC. Возвращает 'shutdown' или None."""
+        # Если терминал открыт и активен — туда идёт ввод
+        if self._is_terminal_active():
+            if key == pygame.K_ESCAPE:
+                self.term_active = False
+                return None
+            if key == pygame.K_BACKSPACE:
+                self.term_input = self.term_input[:-1]
+                return None
+            if key == pygame.K_RETURN:
+                self._terminal_submit()
+                return None
+            if key == pygame.K_UP:
+                # история команд
+                if self.term_lines:
+                    pass
+                return None
+            if key == pygame.K_DOWN:
+                return None
+            return None
+        # Обычное переключение окон
         if key == pygame.K_UP and self.windows:
             self.active_idx = (self.active_idx - 1) % len(self.windows)
             os_sounds.play("click")
@@ -131,6 +164,98 @@ class MiniPC:
             w.minimized = not w.minimized
             os_sounds.play("click")
         return None
+
+    def handle_text(self, unicode_char):
+        """Обрабатывает ввод символа в терминал."""
+        if self._is_terminal_active() and unicode_char:
+            if len(self.term_input) < 80:
+                self.term_input += unicode_char
+
+    def _is_terminal_active(self):
+        """Проверяет открыт ли терминал и он ли активное окно."""
+        if not self.windows:
+            return False
+        if not (0 <= self.active_idx < len(self.windows)):
+            return False
+        w = self.windows[self.active_idx]
+        return (w.wtype == "terminal" and not w.minimized and self.term_active)
+
+    def _terminal_submit(self):
+        """Обрабатывает введённую команду."""
+        cmd = self.term_input.strip()
+        # Эхо
+        self.term_lines.append(f"zayka@bunnyos:~$ {cmd}")
+        if cmd:
+            output = self._terminal_run(cmd)
+            for line in output:
+                self.term_lines.append(line)
+        self.term_lines.append("")
+        self.term_input = ""
+
+    def _terminal_run(self, cmd):
+        """Эмуляция bash."""
+        parts = cmd.split()
+        name = parts[0].lower() if parts else ""
+        args = parts[1:]
+        if name == "help":
+            return ["BunnyOS — доступные команды:",
+                    "  help              — справка",
+                    "  ls                — список файлов",
+                    "  pwd               — текущая папка",
+                    "  cat <файл>        — показать файл",
+                    "  echo <текст>      — повторить",
+                    "  whoami            — кто я",
+                    "  uname -a          — инфа о системе",
+                    "  date              — дата",
+                    "  neofetch          — красивый вывод",
+                    "  clear             — очистить экран"]
+        if name == "ls":
+            return ["📁 Документы", "📁 Загрузки", "📄 README.txt",
+                    "📄 carrot.py", "🔒 secret.enc"]
+        if name == "pwd":
+            return ["/home/zayka"]
+        if name == "cat":
+            if not args:
+                return ["cat: не указан файл"]
+            fn = args[0]
+            if fn == "README.txt":
+                return ["Зайка — белый хакер.",
+                        "Этот мир — симуляция.",
+                        "Carrot Linux — дом родной."]
+            if fn == "carrot.py":
+                return ["import carrot", "carrot.grow()"]
+            if fn == "secret.enc":
+                return ["error: файл зашифрован", "(попробуй что-нибудь другое)"]
+            return [f"cat: {fn}: файл не найден"]
+        if name == "echo":
+            return [" ".join(args)] if args else [""]
+        if name == "whoami":
+            return ["zayka"]
+        if name == "uname":
+            if "-a" in args:
+                return ["Linux bunnyos 5.15.0-carrot #1 SMP x86_64 GNU/Linux"]
+            return ["Linux"]
+        if name == "date":
+            import datetime
+            return [datetime.datetime.now().strftime("%a %b %d %H:%M:%S %Y")]
+        if name == "clear":
+            self.term_lines = []
+            return []
+        if name == "neofetch":
+            return ["      /\\      zayka@bunnyos",
+                    "     /  \\     ─────────────",
+                    "    / /\ \\    OS: BunnyOS 1.0 LTS",
+                    "   / /  \ \\   Kernel: Carrot 5.15.0",
+                    "  ( (    ) )  Shell: bash 5.2",
+                    "   \ \__/ /   DE: Luna Desktop",
+                    "    \____/    CPU: BunnyCore i7",
+                    "              Memory: 8ГБ / 16ГБ"]
+        if name == "sudo":
+            return ["Не доверяем мы тебе sudo... пока что. 🐰"]
+        if name == "exit":
+            self.term_active = False
+            return ["[сессия завершена]"]
+        return [f"bash: {name}: команда не найдена"]
 
     def update(self, keys, dt):
         self.desk_anim += dt
@@ -200,6 +325,12 @@ class MiniPC:
                 os_sounds.play("click")
                 return
             tx += bw + 4
+
+        # Клик по окну терминала — активирует ввод
+        for w in reversed(self.windows):
+            if w.wtype == "terminal" and not w.minimized and w.rect.collidepoint(mx, my):
+                self.term_active = True
+                break
 
         # Окна
         for w in reversed(self.windows):
@@ -599,6 +730,7 @@ class MiniPC:
         elif w.wtype == "notes": self._draw_notes(screen, cr)
         elif w.wtype == "calc": self._draw_calc(screen, cr, w)
         elif w.wtype == "mycomputer": self._draw_mycomputer(screen, cr)
+        elif w.wtype == "terminal": self._draw_terminal(screen, cr, w)
 
     def _draw_browser(self, screen, r):
         nav = pygame.Rect(r.x, r.y, r.w, 30)
@@ -727,6 +859,66 @@ class MiniPC:
             t = self.font_big.render(lbl, True, tc)
             screen.blit(t, (br.centerx - t.get_width() // 2,
                             br.centery - t.get_height() // 2))
+
+    def _draw_terminal(self, screen, r, w):
+        """Рисует окно терминала — Linux-style."""
+        pygame.draw.rect(screen, (12, 12, 12), r)
+        pygame.draw.rect(screen, (60, 60, 60), r, 1)
+
+        # Заголовок внутри окна
+        head_h = 22
+        head = pygame.Rect(r.x, r.y, r.w, head_h)
+        pygame.draw.rect(screen, (40, 40, 40), head)
+        # Кнопки (полоски)
+        pygame.draw.circle(screen, (200, 80, 80), (r.x + 12, r.y + 11), 5)
+        pygame.draw.circle(screen, (220, 180, 80), (r.x + 30, r.y + 11), 5)
+        pygame.draw.circle(screen, (100, 200, 100), (r.x + 48, r.y + 11), 5)
+        title = self.font_small.render("zayka@bunnyos: ~", True, (200, 200, 200))
+        screen.blit(title, (r.x + r.w // 2 - title.get_width() // 2, r.y + 4))
+
+        # Контент терминала
+        cont = pygame.Rect(r.x + 8, r.y + head_h + 6, r.w - 16, r.h - head_h - 16)
+        pygame.draw.rect(screen, (10, 10, 15), cont)
+
+        # Строчки (снизу вверх, чтобы свежие были внизу)
+        line_h = 18
+        max_lines = cont.h // line_h
+        visible = self.term_lines[-max_lines:] if len(self.term_lines) > max_lines else self.term_lines
+
+        y = cont.y + 6
+        for line in visible:
+            color = (200, 240, 200)
+            if line.startswith("zayka@"):
+                color = (100, 255, 100)  # зелёный prompt
+            elif "ошибка" in line.lower() or "error" in line.lower() or "не найдена" in line.lower():
+                color = (255, 120, 120)
+            elif line.startswith("BunnyOS") or line.startswith("Kernel"):
+                color = (150, 200, 255)
+            t = self.font_small.render(line[:90], True, color)
+            screen.blit(t, (cont.x + 4, y))
+            y += line_h
+
+        # Строка ввода
+        if self.term_active:
+            prompt = "zayka@bunnyos:~$ "
+            pt = self.font_small.render(prompt, True, (100, 255, 100))
+            it = self.font_small.render(self.term_input, True, (255, 255, 255))
+            # позиция
+            px = cont.x + 4
+            py = cont.y + 6 + len(visible) * line_h
+            if py + line_h < cont.bottom:
+                screen.blit(pt, (px, py))
+                screen.blit(it, (px + pt.get_width(), py))
+                # Мигающий курсор
+                if (pygame.time.get_ticks() // 500) % 2 == 0:
+                    cx = px + pt.get_width() + it.get_width() + 2
+                    pygame.draw.rect(screen, (200, 255, 200), (cx, py, 2, line_h - 2))
+        else:
+            # не активен — подсказка
+            hint = self.font_small.render(
+                "(клик по окну для ввода · Esc — выход из ввода)",
+                True, (120, 120, 140))
+            screen.blit(hint, (cont.x + 4, cont.bottom - 20))
 
     def _draw_mycomputer(self, screen, r):
         pygame.draw.rect(screen, (255, 255, 255), r)
