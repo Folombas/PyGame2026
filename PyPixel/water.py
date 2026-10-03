@@ -81,10 +81,14 @@ def draw_water_block(surface, rect, is_surface, t=0.0):
     import math
     x, y, w, h = rect.x, rect.y, rect.w, rect.h
 
-    # тело воды — синий, слегка прозрачный
-    body = (30, 90, 150)
+    # тело воды — насыщенный синий
+    body = (60, 140, 210)
     pygame_surf = surface
     pygame.draw.rect(pygame_surf, body, rect)
+    # светлый градиент сверху вниз
+    for i in range(4):
+        alpha_col = (90, 170, 230)
+        pygame.draw.rect(pygame_surf, alpha_col, (x, y + i * 8, w, 2))
 
     # поверхностная рябь — если над водой воздух
     if is_surface:
