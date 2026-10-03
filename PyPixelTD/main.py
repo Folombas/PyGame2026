@@ -1,24 +1,24 @@
-"""PyPixel TopDown — зайка, деревня, дом с ПК."""
+"""PyPixel TopDown — Зайка-программист."""
 import sys
 import pygame
 
-from settings import *
-from world_td import World, Camera, TILE
+from settings import WIDTH, HEIGHT, FPS, TILE
+from world_td import World, Camera
 from player_td import PlayerTD
 from interior import Interior
 from pc_ui import MiniPC
-from boot import BootScreen, LoginScreen
 from title import TitleScreen
 from game_menu import GameMenu
+from boot import BootScreen, LoginScreen
 import os_sounds
 
 
+# =============== КАРТА ===============
 def make_world_map_surface(world):
-    """Рендер карты мира в Surface для окна браузера."""
+    from world_td import T_GRASS, T_PATH, T_WATER, T_STONE, T_TREE, T_FLOWER
     s = 8
     surf = pygame.Surface((world.w * s, world.h * s))
     surf.fill((15, 20, 35))
-    from world_td import T_GRASS, T_PATH, T_WATER, T_STONE, T_TREE, T_FLOWER
     colors = {
         T_GRASS: (60, 130, 70), T_PATH: (180, 160, 120),
         T_WATER: (60, 130, 200), T_STONE: (110, 110, 120),
@@ -27,29 +27,31 @@ def make_world_map_surface(world):
     for ty in range(world.h):
         for tx in range(world.w):
             t = world.tiles[ty][tx]
-            pygame.draw.rect(surf, colors.get(t, (60, 130, 70)), (tx * s, ty * s, s, s))
+            pygame.draw.rect(surf, colors.get(t, (60, 130, 70)),
+                             (tx * s, ty * s, s, s))
     for h in world.houses:
-        pygame.draw.rect(surf, (200, 90, 80), (h.tx * s, h.ty * s, h.w * s, h.h * s))
+        pygame.draw.rect(surf, (200, 90, 80),
+                         (h.tx * s, h.ty * s, h.w * s, h.h * s))
     return surf
 
 
 def draw_big_map(screen, world, player, font_big, font_small):
-    """Полноэкранная карта (клавиша M)."""
+    from world_td import T_GRASS, T_PATH, T_WATER, T_STONE, T_TREE, T_FLOWER
     screen.fill((15, 20, 35))
-    map_w = world.w * 10
-    map_h = world.h * 10
+    s = 10
+    map_w = world.w * s
+    map_h = world.h * s
     x0 = (WIDTH - map_w) // 2
     y0 = (HEIGHT - map_h) // 2
-    pygame.draw.rect(screen, (60, 50, 80), (x0 - 4, y0 - 4, map_w + 8, map_h + 8))
-    pygame.draw.rect(screen, UI_BORDER, (x0 - 4, y0 - 4, map_w + 8, map_h + 8), 2)
 
-    from world_td import T_GRASS, T_PATH, T_WATER, T_STONE, T_TREE, T_FLOWER
+    pygame.draw.rect(screen, (40, 35, 55), (x0 - 6, y0 - 6, map_w + 12, map_h + 12))
+    pygame.draw.rect(screen, (200, 180, 120), (x0 - 6, y0 - 6, map_w + 12, map_h + 12), 2)
+
     colors = {
         T_GRASS: (60, 130, 70), T_PATH: (180, 160, 120),
         T_WATER: (60, 130, 200), T_STONE: (110, 110, 120),
         T_TREE: (30, 90, 50), T_FLOWER: (180, 160, 100),
     }
-    s = 10
     for ty in range(world.h):
         for tx in range(world.w):
             t = world.tiles[ty][tx]
@@ -71,122 +73,202 @@ def draw_big_map(screen, world, player, font_big, font_small):
     pygame.draw.circle(screen, (100, 240, 255), (px, py), 7)
     pygame.draw.circle(screen, (255, 255, 255), (px, py), 7, 2)
 
-    title = font_big.render("КАРТА МИРА", True, UI_TEXT)
+    title = font_big.render("КАРТА МИРА", True, (240, 240, 200))
     screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 20))
     hint = font_small.render("M или Esc — закрыть", True, (200, 200, 180))
     screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 40))
 
 
+# =============== ВСПОМОГАТЕЛЬНОЕ ===============
+def _draw_hint(screen, font_small, text):
+    hint = font_small.render(text, True, (220, 220, 220))
+    bg = pygame.Surface((hint.get_width() + 20, hint.get_height() + 10), pygame.SRCALPHA)
+    bg.fill((0, 0, 0, 160))
+    screen.blit(bg, (20, HEIGHT - 50))
+    screen.blit(hint, (30, HEIGHT - 45))
+
+
+def _try_enter_house(world, player, return_state):
+    """Проверяет стоит ли игрок у двери дома. Возвращает Interior или None."""
+    p_rect = player.rect
+    for h in world.houses:
+        dr = h.door_rect_px().inflate(20, 20)
+        if dr.colliderect(p_rect):
+            interior = Interior(house_index=world.houses.index(h))
+            # Зайти внутрь — зайка появляется у двери изнутри
+            player.x = interior.exit_tx * TILE + (TILE - player.w) // 2
+            player.y = (interior.exit_ty - 1) * TILE + (TILE - player.h)
+            player.direction = "up"
+            return interior
+    return None
+
+
+def _try_enter_pc(interior, player):
+    """Проверяет стоит ли игрок у стула — садит/включает ПК.
+    Возвращает 'sit' | 'pc_on' | 'pc_off' | None."""
+    p_rect = player.rect
+    if interior.chair_rect().colliderect(p_rect):
+        if not interior.sitting:
+            interior.sitting = True
+            player.x = interior.chair.x + (interior.chair.w - player.w) // 2
+            player.y = interior.chair.y + (interior.chair.h - player.h) // 2
+            player.direction = "up"
+            return "sit"
+        else:
+            # Уже сидит — переключаем ПК
+            interior.pc_on = not interior.pc_on
+            if interior.pc_on:
+                return "pc_on"
+            else:
+                return "pc_off"
+    else:
+        if interior.sitting:
+            interior.sitting = False
+    return None
+
+
+def _try_exit_house(interior, player):
+    """Проверяет стоит ли игрок у двери (выход)."""
+    door_rect = pygame.Rect(interior.exit_tx * TILE,
+                            interior.exit_ty * TILE,
+                            TILE, TILE)
+    return door_rect.colliderect(player.rect)
+
+
+def _try_talk_villager(world, player):
+    """Говорит с ближайшим NPC."""
+    for v in world.villagers:
+        dx = (v.tx * TILE + TILE // 2) - (player.x + player.w // 2)
+        dy = (v.ty * TILE + TILE // 2) - (player.y + player.h // 2)
+        if dx * dx + dy * dy < 70 * 70:
+            import random as _r
+            lines = [
+                f"Привет, я {v.name}!",
+                "Зайка, покормил грядки?",
+                "Компьютер в доме — вещь!",
+                "У озера что-то странное.",
+                "Осторожнее на востоке.",
+            ]
+            v.say(_r.choice(lines), frames=180)
+            return True
+    return False
+
+
+# =============== MAIN ===============
 def main():
     pygame.init()
     os_sounds.init()
-    # FULLSCREEN | SCALED для правильного масштаба
-    try:
-        screen = pygame.display.set_mode((WIDTH, HEIGHT),
-                                          pygame.FULLSCREEN | pygame.SCALED)
-    except pygame.error:
-        screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("🐰 Зайка — Мир")
     clock = pygame.time.Clock()
     font_big = pygame.font.SysFont("monospace", 26, bold=True)
     font_small = pygame.font.SysFont("monospace", 14, bold=True)
     font_tiny = pygame.font.SysFont("monospace", 12, bold=True)
 
+    # ---- Game objects ----
     world = World()
     camera = Camera()
     player = PlayerTD(15, 22)
-
-    # Карта мира — рендер один раз
     map_surface = make_world_map_surface(world)
     pc = MiniPC(font_small, font_big, map_surface)
 
+    # ---- Screens ----
+    title_screen = TitleScreen(font_big, font_small)
+    game_menu = GameMenu(font_big, font_small)
+    boot_screen = None
+    login_screen = None
+
     interior = None
     interior_return = None
-    # title → menu → world → interior → map → pc_boot → pc
+
+    # ---- State ----
+    # title → menu → world ⇄ interior ⇄ pc_boot → pc_login → pc
     state = "title"
     toast = None
     toast_timer = 0
 
-    title_screen = TitleScreen(font_big, font_small)
-    game_menu = GameMenu(font_big, font_small)
-    boot_screen = None     # создастся при включении ПК
-    login_screen = None
-
     running = True
     while running:
         dt = clock.tick(FPS) / 1000.0
+        keys = pygame.key.get_pressed()
 
         # ============ EVENTS ============
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                continue
 
-            elif event.type == pygame.KEYDOWN:
-                if state == "menu":
-                    game_menu.handle_event(event)
-                    continue
+            # ----- Меню — своя обработка -----
+            if state == "menu":
+                game_menu.handle_event(event)
+                continue
+
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    if state in ("title", "pc_boot", "pc_login"):
-                        state = "menu" if state == "title" else "interior"
-                    elif state == "menu":
-                        running = False
-                    elif state == "pc":
-                        # Выключаем ПК
+                    if state == "pc":
                         if interior:
                             interior.pc_on = False
                         state = "interior"
-                        toast = "ПК выключен"
-                        toast_timer = 100
+                        os_sounds.play("shutdown")
+                    elif state == "interior":
+                        # Выход на улицу
+                        state = "world"
+                        if interior_return:
+                            player.x, player.y = interior_return
+                        interior = None
                     elif state == "map":
                         state = "world"
-                    elif state == "interior":
-                        running = False
+                    elif state == "title":
+                        title_screen.done = True
                     else:
                         running = False
+                    continue
 
-                elif event.key == pygame.K_m:
-                    if state == "map":
-                        state = "world"
-                    elif state == "world":
+                if state == "title":
+                    if event.key in (pygame.K_SPACE, pygame.K_RETURN):
+                        title_screen.done = True
+
+                elif state == "world":
+                    if event.key == pygame.K_m:
                         state = "map"
-
-                elif event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN):
-                    if state == "world":
-                        _try_interact_world(world, player)
-                        # Проверяем — не вошли ли в дом
-                        pending = getattr(world, "_pending_enter", None)
-                        if pending:
-                            interior = Interior(house_index=world.houses.index(pending))
+                    elif event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN):
+                        # Войти в дом?
+                        new_int = _try_enter_house(world, player, state)
+                        if new_int:
                             interior_return = (player.x, player.y)
-                            player.x = interior.exit_tx * TILE + (TILE - player.w) // 2
-                            player.y = (interior.exit_ty - 1) * TILE + (TILE - player.h)
-                            player.direction = "up"
+                            interior = new_int
                             state = "interior"
-                            toast = f"Вошли в дом"
-                            toast_timer = 100
-                            world._pending_enter = None
-                    elif state == "interior" and interior:
-                        result = _try_interact_interior(interior, player,
-                                                       lambda: None)
-                        if result == "pc":
-                            if interior.pc_on:
-                                # Запускаем загрузку BunnyOS
-                                boot_screen = BootScreen(font_big, font_small)
-                                login_screen = None
-                                state = "pc_boot"
-                                toast = "BunnyOS загружается..."
-                                toast_timer = 120
-                        # Проверяем выход из дома
-                        p_rect = player.rect
-                        door_rect = pygame.Rect(interior.exit_tx * TILE,
-                                                interior.exit_ty * TILE, TILE, TILE)
-                        if door_rect.colliderect(p_rect):
+                            toast = f"Дом #{world.houses.index(new_int.house_index.__class__) if False else ''}"
+                            toast_timer = 60
+                        else:
+                            _try_talk_villager(world, player)
+
+                elif state == "interior" and interior:
+                    if event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN):
+                        # Сначала — выход у двери
+                        if _try_exit_house(interior, player):
                             state = "world"
                             if interior_return:
                                 player.x, player.y = interior_return
                             interior = None
-                            toast = "Вышли из дома"
-                            toast_timer = 100
+                        else:
+                            res = _try_enter_pc(interior, player)
+                            if res == "pc_on":
+                                boot_screen = BootScreen(font_big, font_small)
+                                login_screen = None
+                                state = "pc_boot"
+
+                elif state == "map":
+                    if event.key == pygame.K_m:
+                        state = "world"
+
+                elif state == "pc_boot" and boot_screen:
+                    if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE):
+                        boot_screen.done = True
+
+                elif state == "pc_login" and login_screen:
+                    if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE):
+                        login_screen.done = True
 
             elif event.type == pygame.MOUSEBUTTONDOWN and state == "pc":
                 if event.button == 1:
@@ -197,8 +279,6 @@ def main():
                 pc.handle_mouse_motion(*pygame.mouse.get_pos())
 
         # ============ UPDATE ============
-        keys = pygame.key.get_pressed()
-
         if state == "title":
             title_screen.update(dt)
             if title_screen.done:
@@ -210,19 +290,6 @@ def main():
                 game_menu.result = None
             elif game_menu.result == "exit":
                 running = False
-        elif state == "pc_boot":
-            if boot_screen:
-                boot_screen.update(dt)
-                if boot_screen.done:
-                    state = "pc_login"
-                    login_screen = LoginScreen(font_big, font_small)
-        elif state == "pc_login":
-            if login_screen:
-                login_screen.update(dt)
-                if login_screen.done:
-                    state = "pc"
-        elif state == "pc":
-            pc.update(keys, dt)
         elif state == "world":
             player.update(keys, world.can_walk)
             camera.follow(player.rect, world.w * TILE, world.h * TILE)
@@ -231,21 +298,38 @@ def main():
         elif state == "interior" and interior:
             player.update(keys, interior.can_walk)
             interior.update(dt)
-            room_w = interior.w * TILE
-            room_h = interior.h * TILE
-            camera.x = max(0, room_w // 2 - WIDTH // 2)
-            camera.y = max(0, room_h // 2 - HEIGHT // 2)
+            camera.x = max(0, interior.w * TILE // 2 - WIDTH // 2)
+            camera.y = max(0, interior.h * TILE // 2 - HEIGHT // 2)
+        elif state == "pc_boot":
+            if boot_screen:
+                boot_screen.update(dt)
+                if boot_screen.done:
+                    login_screen = LoginScreen(font_big, font_small)
+                    state = "pc_login"
+        elif state == "pc_login":
+            if login_screen:
+                login_screen.update(dt)
+                if login_screen.done:
+                    state = "pc"
+        elif state == "pc":
+            pc.update(keys, dt)
 
         if toast_timer > 0:
             toast_timer -= 1
 
         # ============ DRAW ============
-        screen.fill(BG)
+        screen.fill((0, 0, 0))
 
-        if state == "boot":
+        if state == "title":
+            title_screen.draw(screen)
+        elif state == "menu":
+            game_menu.draw(screen)
+        elif state == "pc_boot" and boot_screen:
             boot_screen.draw(screen)
-        elif state == "login":
+        elif state == "pc_login" and login_screen:
             login_screen.draw(screen)
+        elif state == "pc":
+            pc.draw(screen)
         elif state == "map":
             draw_big_map(screen, world, player, font_big, font_small)
         elif state == "world":
@@ -258,11 +342,13 @@ def main():
             interior.draw(screen, camera.x, camera.y, font_tiny)
             player.draw(screen, camera.x, camera.y)
             _draw_hint(screen, font_small,
-                       "WASD — ходить   E — сесть/включить ПК / выйти   Esc — выход")
-        elif state == "pc":
-            pc.draw(screen)
+                       "WASD — ходить   E — сесть/выйти/вкл ПК   Esc — выход")
 
-        # Тост
+        # DEBUG
+        dbg = font_tiny.render(f"STATE = {state}", True, (255, 100, 100))
+        screen.blit(dbg, (10, 10))
+
+        # Toast
         if toast and toast_timer > 0:
             txt = font_big.render(toast, True, (255, 240, 120))
             bg = pygame.Surface((txt.get_width() + 30, txt.get_height() + 16), pygame.SRCALPHA)
@@ -277,72 +363,6 @@ def main():
 
     pygame.quit()
     sys.exit()
-
-
-def _draw_hint(screen, font_small, text):
-    hint = font_small.render(text, True, (220, 220, 220))
-    bg = pygame.Surface((hint.get_width() + 20, hint.get_height() + 10), pygame.SRCALPHA)
-    bg.fill((0, 0, 0, 160))
-    screen.blit(bg, (20, HEIGHT - 50))
-    screen.blit(hint, (30, HEIGHT - 45))
-
-
-def _try_interact_world(world, player):
-    """Взаимодействие с миром: дом, NPC."""
-    p_rect = player.rect
-    for h in world.houses:
-        dr = h.door_rect_px().inflate(20, 20)
-        if dr.colliderect(p_rect):
-            world._pending_enter = h
-            return
-    for v in world.villagers:
-        dx = (v.tx * TILE + TILE // 2) - (player.x + player.w // 2)
-        dy = (v.ty * TILE + TILE // 2) - (player.y + player.h // 2)
-        if dx * dx + dy * dy < 60 * 60:
-            import random as _r
-            lines = [
-                f"Привет, я {v.name}!",
-                "Зайка, ты уже покормил грядки?",
-                "Компьютер в доме — вещь! Интернет, карты...",
-                "У озера видели что-то странное.",
-                "Осторожнее на востоке.",
-            ]
-            v.say(_r.choice(lines), frames=180)
-            break
-
-
-def _try_interact_interior(interior, player, enter_pc_fn):
-    """Взаимодействие внутри дома: сесть, включить ПК, выйти."""
-    p_rect = player.rect
-    # Стул рядом?
-    if interior.chair_rect().colliderect(p_rect):
-        if not interior.sitting:
-            interior.sitting = True
-            # Ставим игрока на стул
-            player.x = interior.chair.x + (interior.chair.w - player.w) // 2
-            player.y = interior.chair.y + (interior.chair.h - player.h) // 2
-            player.direction = "up"
-            return "sat"
-        else:
-            # Сидит — переключаем ПК
-            interior.pc_on = not interior.pc_on
-            if interior.pc_on:
-                enter_pc_fn()
-            return "pc"
-    else:
-        # Если игрок отошёл — перестаёт сидеть
-        if interior.sitting:
-            # проверяем что игрок всё ещё на стуле
-            if not interior.chair_rect().colliderect(p_rect):
-                interior.sitting = False
-    return None
-
-
-_pending_pc_entry = None
-
-def _enter_pc(interior, toast_fn):
-    global _pending_pc_entry
-    _pending_pc_entry = True
 
 
 if __name__ == "__main__":
