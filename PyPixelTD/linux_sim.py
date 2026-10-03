@@ -43,7 +43,7 @@ class LinuxSim:
             "/etc/hosts": {"type": "file", "content":
                 "127.0.0.1   localhost\n127.0.1.1   bunnyos\n10.0.0.1    gateway.carrot"},
             "/etc/motd": {"type": "file", "content":
-                "Добро пожаловать в BunnyOS!\nУдачи, Зайка-хакер.\n\nСекретный пароль sudo: carrot"},
+                "Добро пожаловать в BunnyOS!\nУдачи, Зайка-хакер."},
             "/etc/os-release": {"type": "file", "content":
                 'NAME="BunnyOS"\nVERSION="1.0 LTS (White Hacker)"\nID=carrot\nID_LIKE=debian'},
             "/var/log/syslog": {"type": "file", "content":
@@ -507,17 +507,9 @@ class LinuxSim:
         if cmd == "sudo":
             if not args:
                 return ["usage: sudo <команда>"]
-            # Секретный пароль для теста — carrot
-            if self.user != "root":
-                return [
-                    "[sudo] password for zayka:",
-                    "Sorry, try again.",
-                    "Sorry, try again.",
-                    "sudo: 3 incorrect password attempts",
-                    "",
-                    "💡 Подсказка: пароль есть в /etc/motd 😉",
-                ]
-            return [f"[sudo] Running as root: {' '.join(args)}"]
+            # Просто выполняем команду от root
+            return [f"[sudo] running as root: {' '.join(args)}",
+                    f"(команда '{args[0]}' выполнена с правами root)"]
         if cmd == "su":
             return ["su: введите пароль root:",
                     "su: Authentication failure",
