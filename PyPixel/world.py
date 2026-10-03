@@ -16,6 +16,8 @@ from medkit import Medkit
 from chest import Chest
 from underwater import Fish, Seaweed, Coral, Turtle, Seahorse, Shark
 from ocean import SunkenShip, TempleRuin, PoseidonStatue, Whale, BigShark, Column
+from village import House, Villager
+from farm import Cow, Carrot
 
 TILE = TILE_SIZE
 SURFACE_TY = 40                # базовый уровень поверхности
@@ -153,6 +155,10 @@ class World:
         self.poseidons = []
         self.big_sharks = []
         self.whales = []
+        self.houses = []
+        self.villagers = []
+        self.cows = []
+        self.carrots = []
         self.time_of_day = 0.30
         self.water_sim = WaterSim()
         self._populate()
@@ -312,6 +318,54 @@ class World:
         for tx, ty in whale_positions:
             self.whales.append(Whale(tx * TILE, ty * TILE))
 
+        # ============ ДЕРЕВНЯ ============
+        # Домики на лугу (80-110), чтобы игрок сразу их увидел
+        # Спавн 85 → деревня справа 92-108
+        house_positions = [
+            (92, 40),      # первый дом
+            (100, 40),     # второй
+            (107, 40),     # третий
+        ]
+        for tx, ty in house_positions:
+            st = _smooth_surface(tx)
+            # Дом ставится ОСНОВАНИЕМ на поверхность (bottom = st*TILE)
+            self.houses.append(House(tx * TILE + 8, st * TILE, style=len(self.houses) % 2))
+
+        # Жители рядом с домами
+        villager_data = [
+            (90, "Фермер"),
+            (96, "Кузнец"),
+            (103, "Торговец"),
+            (108, "Старейшина"),
+            (88, "Пастух"),
+        ]
+        for tx, name in villager_data:
+            st = _smooth_surface(tx)
+            vx = tx * TILE
+            vy = st * TILE - 32
+            self.villagers.append(Villager(vx, vy, name, home_x=vx))
+
+        # ============ ПАСТБИЩЕ КОРОВ ============
+        # Слева от спавна — 70-84
+        cow_positions = [
+            (72, 39), (76, 39), (80, 39), (83, 39), (86, 39),
+        ]
+        for tx, ty in cow_positions:
+            st = _smooth_surface(tx)
+            cx = tx * TILE
+            cy = st * TILE - 40   # высота коровы
+            self.cows.append(Cow(cx, cy))
+
+        # ============ ОГОРОД С МОРКОВЬЮ ============
+        # На лугу между пастбищем и деревней: 88-90
+        # или за домами
+        carrot_positions = [
+            (110, 40), (111, 40), (112, 40),
+            (110, 41), (111, 41), (112, 41),
+        ]
+        for tx, ty in carrot_positions:
+            self.carrots.append(Carrot(tx, ty))
+
     # ============= ДОСТУП К БЛОКАМ =============
     def get_block(self, tx, ty):
         if (tx, ty) in self.mods:
@@ -405,6 +459,14 @@ class World:
             p.update(self)
         for e in self.enemies:
             e.update(self)
+        for h in self.houses:
+            h.update()
+        for v in self.villagers:
+            v.update(self)
+        for c in self.cows:
+            c.update(self)
+        for c in self.carrots:
+            c.update()
 
     # ============= DRAW =============
     def draw_tiles(self, screen, camera):
@@ -458,10 +520,23 @@ class World:
         for t in self.trees:
             t.draw(screen, camera.ox, camera.oy)
 
-    def draw_all_entities(self, screen, camera):
-        """Деревья + враги + аптечки + пиксели — единый вызов."""
+    def draw_all_entities(self, screen, camera, night=False, font=None):
+        """Деревья, деревня, ферма, враги — единый вызов."""
+        # Дома и жители — сначала (задний план)
+        for h in self.houses:
+            h.draw(screen, camera.ox, camera.oy, night=night)
+        for v in self.villagers:
+            v.draw(screen, camera.ox, camera.oy, font=font)
+        # Коровы
+        for c in self.cows:
+            c.draw(screen, camera.ox, camera.oy)
+        # Деревья
         for t in self.trees:
             t.draw(screen, camera.ox, camera.oy)
+        # Морковь (грядки — на земле)
+        for c in self.carrots:
+            c.draw(screen, camera.ox, camera.oy)
+        # Остальное
         for m in self.medkits:
             m.draw(screen, camera.ox, camera.oy)
         for p in self.pixels:
