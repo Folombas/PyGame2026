@@ -8,8 +8,10 @@ T_GRASS = 0
 T_PATH = 1
 T_WATER = 2
 T_STONE = 3
-T_TREE = 4    # дерево (2x2) — маркер
+T_TREE = 4
 T_FLOWER = 5
+T_GARDEN_CARROT = 6   # грядка с морковью
+T_GARDEN_CABBAGE = 7  # грядка с капустой
 
 SOLID = {T_WATER, T_TREE}
 
@@ -179,18 +181,21 @@ class World:
             if self.tiles[y][x] == T_GRASS:
                 self.tiles[y][x] = T_STONE
 
-        # Дома в деревне (справа от спавна)
+        # ОДИН домик Зайки
         self.houses.append(House(16, 18, 4, 3))
-        self.houses.append(House(22, 18, 4, 3))
-        self.houses.append(House(28, 18, 4, 3))
-        self.houses.append(House(34, 18, 4, 3))
 
-        # Жители рядом с домами
-        self.villagers.append(Villager(15, 21, 0))
-        self.villagers.append(Villager(21, 21, 1))
-        self.villagers.append(Villager(27, 21, 2))
-        self.villagers.append(Villager(33, 21, 3))
-        self.villagers.append(Villager(39, 21, 4))
+        # Грядки с морковью — слева от дома
+        for gy in range(21, 23):
+            for gx in range(11, 15):
+                self.tiles[gy][gx] = T_GARDEN_CARROT
+        # Грядки с капустой — справа от дома
+        for gy in range(21, 23):
+            for gx in range(22, 26):
+                self.tiles[gy][gx] = T_GARDEN_CABBAGE
+
+        # Жители — только парочка (прохожие)
+        self.villagers.append(Villager(14, 21, 0))
+        self.villagers.append(Villager(27, 21, 1))
 
     # ---- Доступ ----
     def tile_at(self, tx, ty):
@@ -261,15 +266,46 @@ class World:
                     pygame.draw.circle(screen, (255, 220, 100), (sx + TILE // 2, sy + TILE // 2), 2)
                 elif t == T_TREE:
                     pygame.draw.rect(screen, GRASS, r)
-                    # тень
-                    pygame.draw.ellipse(screen, (0, 0, 0, 80) if False else GRASS_D,
+                    pygame.draw.ellipse(screen, GRASS_D,
                                         (sx + 4, sy + TILE - 8, TILE - 8, 6))
-                    # ствол
                     pygame.draw.rect(screen, TREE_TRUNK, (sx + TILE // 2 - 3, sy + TILE - 12, 6, 10))
-                    # крона
                     pygame.draw.circle(screen, TREE_LEAF_D, (sx + TILE // 2, sy + TILE // 2 - 2), 12)
                     pygame.draw.circle(screen, TREE_LEAF, (sx + TILE // 2 - 3, sy + TILE // 2 - 4), 9)
                     pygame.draw.circle(screen, (75, 165, 95), (sx + TILE // 2 + 3, sy + TILE // 2 - 6), 6)
+                elif t == T_GARDEN_CARROT:
+                    # грядка — вспаханная земля + морковка
+                    pygame.draw.rect(screen, (110, 75, 50), r)
+                    pygame.draw.rect(screen, (80, 55, 35), (sx, sy, TILE, 4))
+                    # борозды
+                    pygame.draw.line(screen, (70, 45, 30),
+                                     (sx, sy + 12), (sx + TILE, sy + 12), 1)
+                    pygame.draw.line(screen, (70, 45, 30),
+                                     (sx, sy + 22), (sx + TILE, sy + 22), 1)
+                    # морковь — зелёные ростки
+                    cx = sx + TILE // 2
+                    for dx, dy in [(-5, -3), (5, -3), (0, -8), (-3, -10), (3, -10)]:
+                        pygame.draw.line(screen, (70, 180, 80),
+                                         (cx, sy + 20), (cx + dx, sy + 20 + dy), 2)
+                    # оранжевая верхушка морковки виднеется
+                    pygame.draw.circle(screen, (240, 130, 50), (cx, sy + 24), 3)
+                elif t == T_GARDEN_CABBAGE:
+                    # грядка с капустой
+                    pygame.draw.rect(screen, (110, 75, 50), r)
+                    pygame.draw.rect(screen, (80, 55, 35), (sx, sy, TILE, 4))
+                    pygame.draw.line(screen, (70, 45, 30),
+                                     (sx, sy + 12), (sx + TILE, sy + 12), 1)
+                    pygame.draw.line(screen, (70, 45, 30),
+                                     (sx, sy + 22), (sx + TILE, sy + 22), 1)
+                    # капуста — круглый зелёный кочан
+                    cx = sx + TILE // 2
+                    cy = sy + TILE // 2 + 4
+                    pygame.draw.circle(screen, (110, 180, 90), (cx, cy), 10)
+                    pygame.draw.circle(screen, (150, 210, 120), (cx - 2, cy - 2), 7)
+                    pygame.draw.circle(screen, (80, 140, 70), (cx, cy), 10, 1)
+                    # прожилки
+                    pygame.draw.arc(screen, (80, 140, 70),
+                                    (cx - 10, cy - 10, 20, 20),
+                                    0.3, 2.8, 1)
 
         # Дома поверх тайлов
         for h in self.houses:

@@ -270,13 +270,25 @@ def main():
                     if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE):
                         login_screen.done = True
 
-            elif event.type == pygame.MOUSEBUTTONDOWN and state == "pc":
-                if event.button == 1:
-                    pc.handle_click(*pygame.mouse.get_pos(), button=1)
-            elif event.type == pygame.MOUSEBUTTONUP and state == "pc":
-                pc.handle_mouse_up()
-            elif event.type == pygame.MOUSEMOTION and state == "pc":
-                pc.handle_mouse_motion(*pygame.mouse.get_pos())
+            elif state == "pc":
+                if event.type == pygame.KEYDOWN:
+                    r = pc.handle_key(event.key)
+                    if r == "shutdown":
+                        if interior:
+                            interior.pc_on = False
+                        state = "interior"
+                        os_sounds.play("shutdown")
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    r = pc.handle_click(*pygame.mouse.get_pos(), button=1)
+                    if r == "shutdown":
+                        if interior:
+                            interior.pc_on = False
+                        state = "interior"
+                        os_sounds.play("shutdown")
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    pc.mouse_up()
+                elif event.type == pygame.MOUSEMOTION:
+                    pc.mouse_motion(*pygame.mouse.get_pos())
 
         # ============ UPDATE ============
         if state == "title":
