@@ -351,7 +351,7 @@ def use_tool_at(L, wx, wy, mx, my):
 # ================= СЕССИЯ =================
 def new_session(difficulty):
     # Спавн — на лугу, чуть левее деревни
-    spawn_tx = 85
+    spawn_tx = 87
     from world import surface_ty as _st
     spawn_ty = _st(spawn_tx)
     # ставим игрока НА поверхность (bottom = верхний тайл земли)
@@ -609,7 +609,7 @@ def main():
                                 L["max_x"] // 10, difficulty_key)
                 else:
                     # респавн на лугу
-                    L["player"] = Player(85 * TILE, surface_ty(85) * TILE - 32)
+                    L["player"] = Player(87 * TILE, surface_ty(87) * TILE - 32)
                     L["camera"] = Camera(WIDTH)
                     L["camera"].offset_x = L["player"].rect.centerx - WIDTH // 2
                     L["camera"].offset_y = L["player"].rect.centery - HEIGHT // 2
@@ -667,7 +667,7 @@ def main():
                     save_record(L["score"], 0, 0, L["kills"], L["apples"],
                                 L["max_x"] // 10, difficulty_key)
                 else:
-                    L["player"] = Player(85 * TILE, surface_ty(85) * TILE - 32)
+                    L["player"] = Player(87 * TILE, surface_ty(87) * TILE - 32)
                     L["camera"] = Camera(WIDTH)
                     L["hp"] = L["max_hp"]
                     sounds.play("hit")
@@ -694,7 +694,7 @@ def main():
                         save_record(L["score"], 0, 0, L["kills"], L["apples"],
                                     L["max_x"] // 10, difficulty_key)
                     else:
-                        L["player"] = Player(85 * TILE, surface_ty(85) * TILE - 32)
+                        L["player"] = Player(87 * TILE, surface_ty(87) * TILE - 32)
                         L["camera"] = Camera(WIDTH)
                         L["hp"] = L["max_hp"]
                         L["body_temp"] = 100.0
@@ -862,7 +862,7 @@ def main():
                                 save_record(L["score"], 0, 0, L["kills"], L["apples"],
                                             L["max_x"] // 10, difficulty_key)
                             else:
-                                L["player"] = Player(85 * TILE, surface_ty(85) * TILE - 32)
+                                L["player"] = Player(87 * TILE, surface_ty(87) * TILE - 32)
                                 L["camera"] = Camera(WIDTH)
                                 L["hp"] = L["max_hp"]
 
