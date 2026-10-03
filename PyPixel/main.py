@@ -286,6 +286,62 @@ def draw_achievement_toast(screen, font_big, font_small, L):
 
 
 # ================= ИНСТРУМЕНТЫ =================
+def try_interact(L, wx, wy):
+    """Игрок нажал E — что-то рядом: житель/корова/морковь."""
+    from world import TILE
+    # Радиус взаимодействия 60px
+    R = 60
+
+    # Житель
+    for v in L["world"].villagers:
+        dx = v.rect.centerx - wx
+        dy = v.rect.centery - wy
+        if dx * dx + dy * dy < R * R:
+            lines = [
+                f"Привет, путник!",
+                f"Я {v.name}.",
+                f"Тут у нас тихо, но бывает всякое...",
+                f"Слева горы, справа океан.",
+                f"Береги себя в глубинах.",
+            ]
+            import random as _r
+            v.say(_r.choice(lines), frames=180)
+            return True
+
+    # Корова
+    for c in L["world"].cows:
+        dx = c.rect.centerx - wx
+        dy = c.rect.centery - wy
+        if dx * dx + dy * dy < R * R:
+            c.is_mooing = True
+            c.moo_timer = 200
+            # +1 к яблокам как бонус (временно)
+            L["apples"] += 1
+            L["score"] += 1
+            return True
+
+    # Морковь — если готова
+    for c in L["world"].carrots:
+        cx = c.tx * TILE + TILE // 2
+        cy = c.ty * TILE + TILE // 2
+        dx = cx - wx
+        dy = cy - wy
+        if dx * dx + dy * dy < R * R:
+            if c.ready:
+                # Собрали морковь
+                L["carrots_collected"] = L.get("carrots_collected", 0) + 1
+                L["score"] += 5
+                c.stage = 0
+                c.timer = 0
+                c.ready = False
+                return True
+            else:
+                # Ещё не готова — подсказка
+                return "growing"
+
+    return False
+
+
 def use_tool_at(L, wx, wy, mx, my):
     # --- проверка сундуков (не требует инструмента) ---
     for c in L["world"].chests:
@@ -578,7 +634,11 @@ def main():
                     mx, my = pygame.mouse.get_pos()
                     wx = mx + L["camera"].ox
                     wy = my + L["camera"].oy
-                    use_tool_at(L, wx, wy, mx, my)
+                    # Сначала попробовать взаимодействие (жители, коровы, морковь)
+                    interacted = try_interact(L, L["player"].rect.centerx,
+                                              L["player"].rect.centery)
+                    if not interacted:
+                        use_tool_at(L, wx, wy, mx, my)
             elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5,
                                pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9, pygame.K_0):
                 n = event.key - pygame.K_1
