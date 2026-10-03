@@ -159,19 +159,33 @@ class Player:
         self._check_water(world)
 
         if self.in_water:
-            # --- ПЛАВАНИЕ: W/S/A/D + Space ---
+            # --- ПЛАВАНИЕ ---
             keys = getattr(self, "keys", None)
+            # Просто стоим в воде — не тонем
+            self.vel_y *= 0.85   # затухание
             if keys:
                 if keys[pygame.K_UP] or keys[pygame.K_w] or keys[pygame.K_SPACE]:
-                    self.vel_y -= 0.55
-                    self.vel_y = max(self.vel_y, -3.0)
-                if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-                    self.vel_y += 0.45
-                    self.vel_y = min(self.vel_y, 3.0)
+                    # Сильное всплытие
+                    self.vel_y = -4.5
+                elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
+                    # Ныряем
+                    self.vel_y = 3.0
+                else:
+                    # Медленно тонем
+                    self.vel_y += 0.15
 
-            self.vel_y += GRAVITY * 0.15
-            self.vel_y = min(self.vel_y, 2.5)
-            self.vel_x *= 0.90
+            self.vel_y = max(-5.0, min(4.0, self.vel_y))
+            self.vel_x *= 0.88
+
+            # Выход из воды на берег: если сверху есть воздух и игрок жмёт прыжок
+            if keys and (keys[pygame.K_SPACE] or keys[pygame.K_UP] or keys[pygame.K_w]):
+                # проверяем есть ли твёрдый блок прямо над водой
+                cx = self.rect.centerx // TILE_SIZE
+                head_ty = (self.rect.top - 4) // TILE_SIZE
+                if world.get_block(cx, head_ty) == AIR:
+                    # наверху воздух — выпрыгиваем
+                    self.vel_y = JUMP_POWER
+                    self.in_water = False
         else:
             if self.jump_held and self.vel_y < 0:
                 self.vel_y += GRAVITY * 0.45
