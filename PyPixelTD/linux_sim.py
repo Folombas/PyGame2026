@@ -203,7 +203,7 @@ class LinuxSim:
                 "  ping <хост>         — проверка связи",
                 "  curl <url>          — запрос по сети",
                 "  sudo <команда>      — суперпользователь",
-                "  python              — Python-интерпретатор (симуляция)",
+                "  python / python3    — Python-интерпретатор (симуляция)",
                 "  neural              — нейросеть Зайки",
                 "  exit                — выход из сессии",
                 "",
@@ -523,7 +523,7 @@ class LinuxSim:
                     "su: Authentication failure",
                     "(попробуй 'sudo bash' — но пароль надо найти)"]
 
-        if cmd in ("python3", "python3.12", "py"):
+        if cmd in ("python", "python3", "python3.12", "py"):
             return [
                 "Python 3.12.3 (main, BunnyOS 1.0) [GCC 11.4.0] on carrot-linux",
                 'Type "help", "copyright", "credits" for more info.',
