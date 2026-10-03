@@ -19,12 +19,21 @@ class GameMenu:
         self.font_small = font_small
         self.selected = 0
         self.items = [
-            {"id": "start",      "label": "СТАРТ ИГРЫ"},
+            {"id": "start",    "label": "СТАРТ ИГРЫ"},
+            {"id": "settings", "label": "НАСТРОЙКИ"},
+            {"id": "exit",     "label": "ВЫХОД"},
+        ]
+        # Настройки — подменю
+        self.in_settings = False
+        self.settings_idx = 0
+        self.settings = [
             {"id": "difficulty", "label": "СЛОЖНОСТЬ"},
             {"id": "volume",     "label": "ГРОМКОСТЬ"},
             {"id": "fullscreen", "label": "ПОЛНЫЙ ЭКРАН"},
-            {"id": "exit",       "label": "ВЫХОД"},
+            {"id": "graphics",   "label": "ГРАФИКА"},
+            {"id": "back",       "label": "НАЗАД"},
         ]
+        self.graphics = "высокая"
         self.difficulty = "normal"
         self.volume_step = 4     # 80%
         self.fullscreen = True
@@ -63,48 +72,154 @@ class GameMenu:
     def handle_event(self, event):
         if event.type != pygame.KEYDOWN:
             return
+        if self.in_settings:
+            self._handle_settings(event)
+            return
+        # Главное меню
         if event.key in (pygame.K_UP, pygame.K_w):
             self.selected = (self.selected - 1) % len(self.items)
             os_sounds.play("click")
         elif event.key in (pygame.K_DOWN, pygame.K_s):
             self.selected = (self.selected + 1) % len(self.items)
             os_sounds.play("click")
-        elif event.key in (pygame.K_LEFT, pygame.K_a):
-            item = self.items[self.selected]["id"]
-            if item == "difficulty":
-                keys = list(DIFFICULTIES.keys())
-                i = keys.index(self.difficulty)
-                self.difficulty = keys[(i - 1) % len(keys)]
-                os_sounds.play("click")
-            elif item == "volume":
-                self.volume_step = (self.volume_step - 1) % len(VOLUME_STEPS)
-                os_sounds.play("click")
-        elif event.key in (pygame.K_RIGHT, pygame.K_d):
-            item = self.items[self.selected]["id"]
-            if item == "difficulty":
-                self._cycle_difficulty()
-            elif item == "volume":
-                self._cycle_volume()
         elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
             item = self.items[self.selected]["id"]
             if item == "start":
                 os_sounds.play("start")
                 self.result = "start"
-            elif item == "difficulty":
-                self._cycle_difficulty()
-            elif item == "volume":
-                self._cycle_volume()
-            elif item == "fullscreen":
-                self._toggle_fullscreen()
+            elif item == "settings":
+                self.in_settings = True
+                self.settings_idx = 0
+                os_sounds.play("click")
             elif item == "exit":
                 self.result = "exit"
         elif event.key == pygame.K_ESCAPE:
             self.result = "exit"
 
+    def _handle_settings(self, event):
+        if event.key == pygame.K_ESCAPE:
+            self.in_settings = False
+            os_sounds.play("click")
+            return
+        if event.key in (pygame.K_UP, pygame.K_w):
+            self.settings_idx = (self.settings_idx - 1) % len(self.settings)
+            os_sounds.play("click")
+        elif event.key in (pygame.K_DOWN, pygame.K_s):
+            self.settings_idx = (self.settings_idx + 1) % len(self.settings)
+            os_sounds.play("click")
+        elif event.key in (pygame.K_LEFT, pygame.K_a):
+            self._settings_change(-1)
+        elif event.key in (pygame.K_RIGHT, pygame.K_d):
+            self._settings_change(1)
+        elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+            item = self.settings[self.settings_idx]["id"]
+            if item == "back":
+                self.in_settings = False
+                os_sounds.play("click")
+            elif item == "fullscreen":
+                self._toggle_fullscreen()
+            elif item == "difficulty":
+                self._cycle_difficulty()
+            elif item == "volume":
+                self._cycle_volume()
+            elif item == "graphics":
+                self._cycle_graphics()
+
+    def _settings_change(self, direction):
+        item = self.settings[self.settings_idx]["id"]
+        if item == "difficulty":
+            keys = list(DIFFICULTIES.keys())
+            i = keys.index(self.difficulty)
+            self.difficulty = keys[(i + direction) % len(keys)]
+            os_sounds.play("click")
+        elif item == "volume":
+            self.volume_step = (self.volume_step + direction) % len(VOLUME_STEPS)
+            os_sounds.play("click")
+        elif item == "graphics":
+            self._cycle_graphics(direction)
+        elif item == "fullscreen":
+            self._toggle_fullscreen()
+
+    def _cycle_graphics(self, direction=1):
+        opts = ["низкая", "средняя", "высокая"]
+        i = opts.index(self.graphics)
+        self.graphics = opts[(i + direction) % len(opts)]
+        os_sounds.play("click")
+
     def update(self, dt):
         self.timer += 1
 
     def draw(self, screen):
+        if self.in_settings:
+            self._draw_settings(screen)
+            return
+        self._draw_main(screen)
+
+    def _draw_settings(self, screen):
+        # Фон — тот же матричный
+        screen.fill((2, 8, 5))
+        import random
+        rng = random.Random(13)
+        chars = "01アイウ$#@"
+        t = self.timer
+        for col_i in range(0, WIDTH, 24):
+            seed = col_i // 24
+            speed = 2 + (seed * 5 % 4)
+            offset = (t * speed + seed * 30) % (HEIGHT + 200)
+            for j in range(6):
+                y = offset - j * 24
+                if -20 < y < HEIGHT:
+                    fade = max(0, 0.3 - j * 0.05)
+                    r = rng.randint(0, len(chars) - 1)
+                    col = (int(20 * fade), int(80 * fade), int(40 * fade))
+                    s = self.font_small.render(chars[r], True, col)
+                    screen.blit(s, (col_i, int(y)))
+
+        title = self.font_big.render("НАСТРОЙКИ", True, (100, 255, 140))
+        screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 60))
+
+        menu_x = WIDTH // 2
+        start_y = 180
+        for i, item in enumerate(self.settings):
+            selected = (i == self.settings_idx)
+            y = start_y + i * 60
+
+            val = ""
+            if item["id"] == "difficulty":
+                val = DIFFICULTIES[self.difficulty]["label"]
+            elif item["id"] == "volume":
+                val = f"{VOLUME_STEPS[self.volume_step]}%"
+            elif item["id"] == "fullscreen":
+                val = "ВКЛ" if self.fullscreen else "ВЫКЛ"
+            elif item["id"] == "graphics":
+                val = self.graphics
+
+            box_w = 400
+            box_h = 48
+            box = pygame.Rect(menu_x - box_w // 2, y, box_w, box_h)
+            if selected:
+                pygame.draw.rect(screen, (30, 100, 50), box)
+                pygame.draw.rect(screen, (100, 255, 140), box, 2)
+            else:
+                pygame.draw.rect(screen, (15, 40, 25), box)
+                pygame.draw.rect(screen, (50, 120, 70), box, 1)
+
+            label = item["label"]
+            if selected and item["id"] != "back":
+                label = f"<  {label}  >"
+            txt = self.font_big.render(label, True,
+                                        (255, 255, 255) if selected else (200, 220, 200))
+            screen.blit(txt, (box.centerx - txt.get_width() // 2, box.y + 8))
+
+            if val:
+                vt = self.font_small.render(val, True, (200, 255, 200))
+                screen.blit(vt, (box.right + 14, box.y + 14))
+
+        hint = self.font_small.render(
+            "↑↓ — выбор   ←→ — менять   Esc — назад", True, (140, 180, 150))
+        screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 40))
+
+    def _draw_main(self, screen):
         # Фон — градиент с матричным дождём
         screen.fill((2, 8, 5))
         import random

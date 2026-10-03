@@ -313,8 +313,9 @@ def main():
         elif state == "interior" and interior:
             player.update(keys, interior.can_walk)
             interior.update(dt)
-            camera.x = max(0, interior.w * TILE // 2 - WIDTH // 2)
-            camera.y = max(0, interior.h * TILE // 2 - HEIGHT // 2)
+            # Центрируем комнату (может быть отрицательный offset)
+            camera.x = (interior.w * TILE - WIDTH) // 2
+            camera.y = (interior.h * TILE - HEIGHT) // 2
         elif state == "pc_boot":
             if boot_screen:
                 boot_screen.update(dt)

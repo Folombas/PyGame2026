@@ -3,6 +3,7 @@ import math
 import pygame
 from settings import WIDTH, HEIGHT
 import os_sounds
+from linux_sim import LinuxSim
 
 
 def _clamp(t):
@@ -58,6 +59,11 @@ class Window:
         cy = self.rect.y + self.TITLE_H // 2
         return (cx - 14 <= mx <= cx + 14 and cy - 14 <= my <= cy + 14)
 
+    def on_maximize(self, mx, my):
+        cx = self.rect.right - 114
+        cy = self.rect.y + self.TITLE_H // 2
+        return (cx - 14 <= mx <= cx + 14 and cy - 14 <= my <= cy + 14)
+
 
 class MiniPC:
     def __init__(self, font_small, font_big, world_map_surface=None):
@@ -89,16 +95,19 @@ class MiniPC:
         self.calc_tokens = []         # ["2", "-", "1"]
         self.calc_current = "0"
         self.calc_after_eq = False
-        # Терминал
+        # Терминал — полноценный Linux-симулятор
+        self.linux = LinuxSim(user="zayka", host="bunnyos")
         self.term_lines = [
             "BunnyOS 1.0 LTS · ядро Carrot Linux 5.15.0-x86_64",
+            "(UI в стиле Windows 10)",
             "",
-            "Добро пожаловать в BunnyOS!",
+            "Добро пожаловать, Зайка!",
             "Введи 'help' для списка команд.",
             "",
         ]
         self.term_input = ""
-        self.term_active = False   # идёт ввод в терминал
+        self.term_active = False
+        self.term_maximized = False
 
     # ============= ОКНА =============
     def toggle_window(self, wtype):
@@ -124,6 +133,8 @@ class MiniPC:
         if wtype == "terminal": w.rect.w, w.rect.h = 640, 420
         self.windows.append(w)
         self.active_idx = len(self.windows) - 1
+        if wtype == "terminal":
+            self.term_active = True
 
     def close_window(self, w):
         if w in self.windows:
@@ -181,81 +192,26 @@ class MiniPC:
         return (w.wtype == "terminal" and not w.minimized and self.term_active)
 
     def _terminal_submit(self):
-        """Обрабатывает введённую команду."""
+        """Отправляет команду в LinuxSim."""
         cmd = self.term_input.strip()
-        # Эхо
-        self.term_lines.append(f"zayka@bunnyos:~$ {cmd}")
+        prompt_str = self.linux.prompt()
+        # Эхо строки с prompt
         if cmd:
-            output = self._terminal_run(cmd)
+            self.term_lines.append(prompt_str + cmd)
+        else:
+            self.term_lines.append(prompt_str)
+        output = self.linux.run(cmd)
+        if "__CLEAR__" in output:
+            self.term_lines = []
+        elif "__EXIT__" in output:
+            self.term_active = False
+            self.term_lines.append("[сессия завершена]")
+        else:
             for line in output:
                 self.term_lines.append(line)
-        self.term_lines.append("")
+        if cmd:
+            self.term_lines.append("")
         self.term_input = ""
-
-    def _terminal_run(self, cmd):
-        """Эмуляция bash."""
-        parts = cmd.split()
-        name = parts[0].lower() if parts else ""
-        args = parts[1:]
-        if name == "help":
-            return ["BunnyOS — доступные команды:",
-                    "  help              — справка",
-                    "  ls                — список файлов",
-                    "  pwd               — текущая папка",
-                    "  cat <файл>        — показать файл",
-                    "  echo <текст>      — повторить",
-                    "  whoami            — кто я",
-                    "  uname -a          — инфа о системе",
-                    "  date              — дата",
-                    "  neofetch          — красивый вывод",
-                    "  clear             — очистить экран"]
-        if name == "ls":
-            return ["📁 Документы", "📁 Загрузки", "📄 README.txt",
-                    "📄 carrot.py", "🔒 secret.enc"]
-        if name == "pwd":
-            return ["/home/zayka"]
-        if name == "cat":
-            if not args:
-                return ["cat: не указан файл"]
-            fn = args[0]
-            if fn == "README.txt":
-                return ["Зайка — белый хакер.",
-                        "Этот мир — симуляция.",
-                        "Carrot Linux — дом родной."]
-            if fn == "carrot.py":
-                return ["import carrot", "carrot.grow()"]
-            if fn == "secret.enc":
-                return ["error: файл зашифрован", "(попробуй что-нибудь другое)"]
-            return [f"cat: {fn}: файл не найден"]
-        if name == "echo":
-            return [" ".join(args)] if args else [""]
-        if name == "whoami":
-            return ["zayka"]
-        if name == "uname":
-            if "-a" in args:
-                return ["Linux bunnyos 5.15.0-carrot #1 SMP x86_64 GNU/Linux"]
-            return ["Linux"]
-        if name == "date":
-            import datetime
-            return [datetime.datetime.now().strftime("%a %b %d %H:%M:%S %Y")]
-        if name == "clear":
-            self.term_lines = []
-            return []
-        if name == "neofetch":
-            return ["      /\\      zayka@bunnyos",
-                    "     /  \\     ─────────────",
-                    "    / /\ \\    OS: BunnyOS 1.0 LTS",
-                    "   / /  \ \\   Kernel: Carrot 5.15.0",
-                    "  ( (    ) )  Shell: bash 5.2",
-                    "   \ \__/ /   DE: Luna Desktop",
-                    "    \____/    CPU: BunnyCore i7",
-                    "              Memory: 8ГБ / 16ГБ"]
-        if name == "sudo":
-            return ["Не доверяем мы тебе sudo... пока что. 🐰"]
-        if name == "exit":
-            self.term_active = False
-            return ["[сессия завершена]"]
-        return [f"bash: {name}: команда не найдена"]
 
     def update(self, keys, dt):
         self.desk_anim += dt
@@ -713,6 +669,20 @@ class MiniPC:
             col = (30, 30, 30)
         pygame.draw.line(screen, col, (cx - 5, cy - 5), (cx + 5, cy + 5), 2)
         pygame.draw.line(screen, col, (cx - 5, cy + 5), (cx + 5, cy - 5), 2)
+
+        # Maximize
+        mx2 = w.rect.right - 114
+        my2 = w.rect.y + 16
+        hov_x = w.on_maximize(self.cursor_x, self.cursor_y)
+        if hov_x:
+            pygame.draw.rect(screen, (230, 230, 230), (mx2 - 22, w.rect.y, 22, w.TITLE_H))
+        # квадратик или восстановление
+        if hasattr(w, "_saved_rect"):
+            # две наложенные рамки — restore
+            pygame.draw.rect(screen, (30, 30, 30), (mx2 - 7, my2 - 5, 10, 8), 1)
+            pygame.draw.rect(screen, (30, 30, 30), (mx2 - 5, my2 - 7, 10, 8), 1)
+        else:
+            pygame.draw.rect(screen, (30, 30, 30), (mx2 - 5, my2 - 5, 10, 10), 1)
 
         # Minimize
         mx_ = w.rect.right - 68

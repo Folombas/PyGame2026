@@ -5,8 +5,8 @@ from settings import *
 
 class Interior:
     def __init__(self, house_index=0):
-        self.w = 15
-        self.h = 10
+        self.w = 30
+        self.h = 18
         self.house_index = house_index
         self.tiles = [[0 for _ in range(self.w)] for _ in range(self.h)]
         # Стены по краям
@@ -21,21 +21,23 @@ class Interior:
         self.exit_ty = self.h - 1
         self.tiles[self.exit_ty][self.exit_tx] = 2
 
-        # ---- МЕБЕЛЬ ----
+        # ---- МЕБЕЛЬ (просторно) ----
         # Кровать — левый верх
-        self.bed = pygame.Rect(2 * TILE, 1 * TILE + 8, 2 * TILE, 3 * TILE // 2 + 4)
+        self.bed = pygame.Rect(3 * TILE, 2 * TILE, 3 * TILE, 2 * TILE)
         # Диван — правый верх
-        self.sofa = pygame.Rect(10 * TILE, 1 * TILE + 12, 3 * TILE, TILE + 8)
-        # Стол с ПК — центр-низ
-        self.desk = pygame.Rect(6 * TILE, 6 * TILE, 3 * TILE, TILE + 8)
+        self.sofa = pygame.Rect(22 * TILE, 2 * TILE, 5 * TILE, TILE + 8)
+        # Стол с ПК — центр
+        self.desk = pygame.Rect(13 * TILE, 11 * TILE, 4 * TILE, TILE + 8)
         # Стул перед столом
-        self.chair = pygame.Rect(7 * TILE, 7 * TILE + 14, TILE, TILE - 4)
+        self.chair = pygame.Rect(14 * TILE, 13 * TILE + 4, TILE, TILE - 4)
         # Монитор на столе
-        self.monitor = pygame.Rect(7 * TILE - 4, self.desk.y - 24, TILE + 8, 26)
+        self.monitor = pygame.Rect(14 * TILE - 4, self.desk.y - 26, TILE + 12, 28)
         # Цветок — правый низ
-        self.flower_pos = (12 * TILE + 8, 7 * TILE + 16)
+        self.flower_pos = (25 * TILE, 13 * TILE + 16)
         # Ковёр — центр
-        self.rug = pygame.Rect(5 * TILE, 3 * TILE, 5 * TILE, 3 * TILE)
+        self.rug = pygame.Rect(10 * TILE, 5 * TILE, 10 * TILE, 5 * TILE)
+        # Второй коврик поменьше
+        self.rug2 = pygame.Rect(2 * TILE, 11 * TILE, 5 * TILE, 3 * TILE)
 
         self.pc_on = False
         self.sitting = False  # сидит ли зайка на стуле
@@ -104,11 +106,15 @@ class Interior:
                                      (sx, sy + TILE // 2), (sx + TILE, sy + TILE // 2), 1)
                     pygame.draw.line(screen, FLOOR_WOOD_D, (sx, sy), (sx, sy + TILE), 1)
 
-        # ---- Ковёр ----
+        # ---- Ковёр главный ----
         r = self.rug
         pygame.draw.rect(screen, (150, 60, 80), (r.x - cam_x, r.y - cam_y, r.w, r.h))
         pygame.draw.rect(screen, (200, 90, 110), (r.x - cam_x + 6, r.y - cam_y + 6, r.w - 12, r.h - 12), 2)
         pygame.draw.rect(screen, (170, 70, 90), (r.x - cam_x + 14, r.y - cam_y + 14, r.w - 28, r.h - 28), 2)
+        # Второй коврик
+        r2 = self.rug2
+        pygame.draw.rect(screen, (60, 120, 100), (r2.x - cam_x, r2.y - cam_y, r2.w, r2.h))
+        pygame.draw.rect(screen, (100, 180, 150), (r2.x - cam_x + 4, r2.y - cam_y + 4, r2.w - 8, r2.h - 8), 2)
 
         # ---- Кровать ----
         b = self.bed
