@@ -106,9 +106,25 @@ class Player:
 
     def _check_water(self, world):
         cx = self.rect.centerx // TILE_SIZE
+        cy_feet = (self.rect.bottom - 2) // TILE_SIZE
         cy_body = self.rect.centery // TILE_SIZE
         cy_head = (self.rect.top + 6) // TILE_SIZE
-        self.in_water = (world.get_block(cx, cy_body) == WATER)
+
+        # Проверяем воду под ногами
+        feet_in_water = (world.get_block(cx, cy_feet) == WATER)
+        body_in_water = (world.get_block(cx, cy_body) == WATER)
+
+        # Глубина: сколько тайлов воды ниже игрока
+        depth = 0
+        for dy in range(0, 6):
+            if world.get_block(cx, cy_feet + dy) == WATER:
+                depth += 1
+            else:
+                break
+
+        # Режим плавания включается только если воды БОЛЬШЕ 1 тайла
+        self.in_water = (feet_in_water and depth >= 2) or body_in_water
+        self.in_shallow = feet_in_water and depth < 2
         self.head_in_water = (world.get_block(cx, cy_head) == WATER)
 
     def update(self, world) -> None:
@@ -158,7 +174,15 @@ class Player:
 
         self._check_water(world)
 
-        if self.in_water:
+        if getattr(self, "in_shallow", False) and not self.in_water:
+            # Мелководье: ходим как по земле, но чуть медленнее
+            if self.jump_held and self.on_ground:
+                self.vel_y = JUMP_POWER
+                self.on_ground = False
+            self.vel_y += GRAVITY
+            self.vel_y = min(self.vel_y, 20)
+            self.vel_x *= 0.85
+        elif self.in_water:
             # --- ПЛАВАНИЕ ---
             keys = getattr(self, "keys", None)
             # Просто стоим в воде — не тонем
