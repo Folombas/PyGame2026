@@ -7,6 +7,8 @@ from world_td import World, Camera, TILE
 from player_td import PlayerTD
 from interior import Interior
 from pc_ui import MiniPC
+from boot import BootScreen, LoginScreen
+import os_sounds
 
 
 def make_world_map_surface(world):
@@ -75,7 +77,13 @@ def draw_big_map(screen, world, player, font_big, font_small):
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    os_sounds.init()
+    # FULLSCREEN | SCALED для правильного масштаба
+    try:
+        screen = pygame.display.set_mode((WIDTH, HEIGHT),
+                                          pygame.FULLSCREEN | pygame.SCALED)
+    except pygame.error:
+        screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("🐰 Зайка — Мир")
     clock = pygame.time.Clock()
     font_big = pygame.font.SysFont("monospace", 26, bold=True)
@@ -92,9 +100,12 @@ def main():
 
     interior = None
     interior_return = None
-    state = "world"   # world | interior | map | pc
+    state = "boot"   # boot | login | world | interior | map | pc
     toast = None
     toast_timer = 0
+
+    boot_screen = BootScreen(font_big, font_small)
+    login_screen = LoginScreen(font_big, font_small)
 
     running = True
     while running:
@@ -107,7 +118,9 @@ def main():
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    if state == "pc":
+                    if state in ("boot", "login"):
+                        state = "world"
+                    elif state == "pc":
                         # Выключаем ПК
                         if interior:
                             interior.pc_on = False
@@ -173,7 +186,15 @@ def main():
         # ============ UPDATE ============
         keys = pygame.key.get_pressed()
 
-        if state == "pc":
+        if state == "boot":
+            boot_screen.update(dt)
+            if boot_screen.done:
+                state = "login"
+        elif state == "login":
+            login_screen.update(dt)
+            if login_screen.done:
+                state = "world"
+        elif state == "pc":
             pc.update(keys, dt)
         elif state == "world":
             player.update(keys, world.can_walk)
@@ -194,7 +215,11 @@ def main():
         # ============ DRAW ============
         screen.fill(BG)
 
-        if state == "map":
+        if state == "boot":
+            boot_screen.draw(screen)
+        elif state == "login":
+            login_screen.draw(screen)
+        elif state == "map":
             draw_big_map(screen, world, player, font_big, font_small)
         elif state == "world":
             world.draw(screen, camera)

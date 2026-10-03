@@ -10,8 +10,8 @@ class PlayerTD:
     def __init__(self, tx, ty):
         self.x = float(tx * TILE)
         self.y = float(ty * TILE)
-        self.w = 20
-        self.h = 28
+        self.w = 30
+        self.h = 42
         self.direction = "down"
         self.anim_frame = 0
         self.anim_timer = 0

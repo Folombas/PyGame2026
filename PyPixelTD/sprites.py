@@ -168,7 +168,7 @@ def get_player_sprite(direction, frame):
     if key in _cache:
         return _cache[key]
     pattern = RABBIT_SPRITES[direction][frame]
-    sprite = build_sprite(pattern, RABBIT_PALETTE, scale=2)
+    sprite = build_sprite(pattern, RABBIT_PALETTE, scale=3)
     _cache[key] = sprite
     return sprite
 
@@ -197,6 +197,6 @@ def get_npc_sprite(shirt_color, direction="down"):
         return _cache[key]
     palette = {"K": (25, 20, 35), "H": NPC_HAIR, "S": NPC_SKIN, "B": shirt_color}
     pattern = NPC_PATTERNS.get(direction, NPC_PATTERNS["down"])
-    sprite = build_sprite(pattern, palette, scale=2)
+    sprite = build_sprite(pattern, palette, scale=3)
     _cache[key] = sprite
     return sprite
