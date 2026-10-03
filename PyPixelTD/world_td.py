@@ -194,8 +194,6 @@ class World:
                 self.tiles[gy][gx] = T_GARDEN_CABBAGE
 
         # Жители — только парочка (прохожие)
-        self.villagers.append(Villager(14, 21, 0))
-        self.villagers.append(Villager(27, 21, 1))
 
     # ---- Доступ ----
     def tile_at(self, tx, ty):

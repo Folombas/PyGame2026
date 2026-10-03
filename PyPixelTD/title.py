@@ -87,20 +87,20 @@ class TitleScreen:
         # Зайка — белый на чёрном, в очках хакера
         self._draw_hacker_rabbit(screen, cx, cy, 3)
 
-        # Название игры
+        # Название игры — БЕЗ дублирования
         if t > 20:
-            title_line1 = self.font_big.render("BUNNY", True, (80, 255, 130))
-            title_line2 = self.font_big.render("WHITE HACKER", True, (80, 255, 130))
-            # Свечение
+            ty = cy + glow_r + 30
+            # Свечение — 4 копии с небольшим смещением
             for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
-                sh1 = self.font_big.render("BUNNY", True, (20, 80, 40))
-                sh2 = self.font_big.render("WHITE HACKER", True, (20, 80, 40))
-                tx = cx - sh1.get_width() // 2
-                ty = cy + glow_r + 30
-                screen.blit(sh1, (tx + dx, ty + dy))
-                screen.blit(sh2, (tx + dx, ty + 50 + dy))
-            screen.blit(title_line1, (cx - title_line1.get_width() // 2, cy + glow_r + 30))
-            screen.blit(title_line2, (cx - title_line2.get_width() // 2, cy + glow_r + 60))
+                sh1 = self.font_big.render("BUNNY", True, (20, 90, 45))
+                sh2 = self.font_big.render("WHITE HACKER", True, (20, 90, 45))
+                screen.blit(sh1, (cx - sh1.get_width() // 2 + dx, ty + dy))
+                screen.blit(sh2, (cx - sh2.get_width() // 2 + dx, ty + 50 + dy))
+            # Сам текст поверх свечения
+            title1 = self.font_big.render("BUNNY", True, (80, 255, 130))
+            title2 = self.font_big.render("WHITE HACKER", True, (80, 255, 130))
+            screen.blit(title1, (cx - title1.get_width() // 2, ty))
+            screen.blit(title2, (cx - title2.get_width() // 2, ty + 50))
 
         # Подсказка
         if t > 90:
