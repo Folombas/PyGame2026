@@ -318,6 +318,43 @@ def main():
                         title_screen.done = True
 
                 elif state == "world":
+                    # Toggle режима тестера
+                    if event.key == pygame.K_t:
+                        World._test_mode = not getattr(World, "_test_mode", False)
+                        if World._test_mode:
+                            if not hasattr(World, "_tile_coords"):
+                                World._tile_coords = {
+                                    "grass": [8, 8], "path": [3, 0],
+                                    "stone": [11, 10], "water": [0, 0],
+                                }
+                            if not hasattr(World, "_test_key"):
+                                World._test_key = "grass"
+                            print("[тест] ВКЛ · G-категория · WASD-двигать · T-выход")
+                        else:
+                            print("[тест] ВЫКЛ")
+                        continue
+                    # В режиме тестера — WASD двигает координаты
+                    if getattr(World, "_test_mode", False):
+                        cats = ["grass", "path", "stone", "water"]
+                        if event.key == pygame.K_g:
+                            i = cats.index(World._test_key)
+                            World._test_key = cats[(i + 1) % len(cats)]
+                            World._real_tiles.clear()
+                            print(f"[тест] категория: {World._test_key}")
+                        elif event.key in (pygame.K_LEFT, pygame.K_a):
+                            World._tile_coords[World._test_key][0] -= 1
+                            World._real_tiles.clear()
+                        elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                            World._tile_coords[World._test_key][0] += 1
+                            World._real_tiles.clear()
+                        elif event.key in (pygame.K_UP, pygame.K_w):
+                            World._tile_coords[World._test_key][1] -= 1
+                            World._real_tiles.clear()
+                        elif event.key in (pygame.K_DOWN, pygame.K_s):
+                            World._tile_coords[World._test_key][1] += 1
+                            World._real_tiles.clear()
+                        continue
+                    # Обычное управление
                     if event.key == pygame.K_m:
                         state = "map"
                     elif event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN):
@@ -397,10 +434,13 @@ def main():
             elif game_menu.result == "exit":
                 running = False
         elif state == "world":
-            player.update(keys, world.can_walk)
-            camera.follow(player.rect, world.w * TILE, world.h * TILE)
-            for v in world.villagers:
-                v.update()
+            if getattr(World, "_test_mode", False):
+                pass  # тестер — игрок стоит
+            else:
+                player.update(keys, world.can_walk)
+                camera.follow(player.rect, world.w * TILE, world.h * TILE)
+                for v in world.villagers:
+                    v.update()
         elif state == "interior" and interior:
             player.update(keys, interior.can_walk)
             interior.update(dt)
@@ -447,6 +487,16 @@ def main():
             world.draw_villagers(screen, camera, font_tiny)
             player.draw(screen, camera.x, camera.y)
             draw_ingame_bar(screen, font_small, (pc.cursor_x, pc.cursor_y))
+            # Тестер координат
+            if getattr(World, "_test_mode", False) and hasattr(World, "_tile_coords"):
+                k = getattr(World, "_test_key", "grass")
+                coord = World._tile_coords[k]
+                txt = f"[{k}: {coord[0]},{coord[1]}]  G-категория  WASD-двигать  T-выход"
+                s = font_small.render(txt, True, (255, 100, 100))
+                bg = pygame.Surface((s.get_width() + 10, s.get_height() + 4), pygame.SRCALPHA)
+                bg.fill((0, 0, 0, 200))
+                screen.blit(bg, (10, 60))
+                screen.blit(s, (15, 62))
         elif state == "interior" and interior:
             interior.draw(screen, camera.x, camera.y, font_tiny)
             player.draw(screen, camera.x, camera.y)

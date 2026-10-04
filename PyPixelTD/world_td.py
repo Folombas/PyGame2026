@@ -1,5 +1,6 @@
 """Top-down мир: тайлы, дома, деревня."""
 import pygame
+import assets
 from settings import *
 
 
@@ -231,17 +232,27 @@ class World:
     # ---- Отрисовка ----
     _real_tiles = {}
 
+    @classmethod
+    def next_grass_candidate(cls):
+        cls._grass_candidate = (getattr(cls, "_grass_candidate", 0) + 1) % 15
+        cls._real_tiles.clear()
+        return cls._grass_candidate    # сбросить кеш при перезапуске
+
     def _get_real_tile(self, t):
         """Возвращает Surface тайла из assets/ или None."""
         if t in World._real_tiles:
             return World._real_tiles[t]
 
         # Карта: тип_тайла → (имя_листа, col, row)
+        # Тестер: World._tile_coords = (gx, gy, px, py) — настраивается снаружи
+        coords_set = getattr(World, "_tile_coords", None)
+        if coords_set is None:
+            coords_set = {"grass": (3, 11), "path": (3, 1), "stone": (11, 10), "water": (0, 0)}
         mapping = {
-            T_GRASS: ("floor", 2, 2),
-            T_PATH:  ("floor", 4, 0),
-            T_STONE: ("floor", 10, 8),
-            T_WATER: ("water", 3, 3),
+            T_GRASS: ("floor", coords_set["grass"][0], coords_set["grass"][1]),
+            T_PATH:  ("floor", coords_set["path"][0],  coords_set["path"][1]),
+            T_STONE: ("floor", coords_set["stone"][0], coords_set["stone"][1]),
+            T_WATER: ("water", coords_set["water"][0], coords_set["water"][1]),
         }
         coords = mapping.get(t)
         if coords is None:
@@ -274,6 +285,14 @@ class World:
                 sx = tx * TILE - cam.x
                 sy = ty * TILE - cam.y
                 r = (sx, sy, TILE, TILE)
+
+                # === Пробуем реальный тайл из assets/ ===
+                real = self._get_real_tile(t)
+                if real is not None:
+                    screen.blit(real, (sx, sy))
+                    continue
+
+                # Fallback — процедурные тайлы
                 if t == T_GRASS:
                     pygame.draw.rect(screen, GRASS, r)
                     # блик
