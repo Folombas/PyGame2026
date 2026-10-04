@@ -229,6 +229,39 @@ class World:
         return True
 
     # ---- Отрисовка ----
+    _real_tiles = {}
+
+    def _get_real_tile(self, t):
+        """Возвращает Surface тайла из assets/ или None."""
+        if t in World._real_tiles:
+            return World._real_tiles[t]
+
+        # Карта: тип_тайла → (имя_листа, col, row)
+        mapping = {
+            T_GRASS: ("floor", 2, 2),
+            T_PATH:  ("floor", 4, 0),
+            T_STONE: ("floor", 10, 8),
+            T_WATER: ("water", 3, 3),
+        }
+        coords = mapping.get(t)
+        if coords is None:
+            World._real_tiles[t] = None
+            return None
+
+        sheet_name, tx, ty = coords
+        cache_key = f"_sheet_{sheet_name}"
+        if not hasattr(World, cache_key):
+            setattr(World, cache_key,
+                    assets.load_image(f"tilesets/{sheet_name}.png"))
+        sheet = getattr(World, cache_key)
+        if sheet is None:
+            World._real_tiles[t] = None
+            return None
+
+        tile = assets.extract_tile(sheet, tx, ty, 16, 16, scale=2)
+        World._real_tiles[t] = tile
+        return tile
+
     def draw(self, screen, cam):
         tx0 = max(0, cam.x // TILE - 1)
         ty0 = max(0, cam.y // TILE - 1)
