@@ -38,15 +38,17 @@ class Animal:
         if self.kind == "chicken":
             files = {"front": "animals/chicken.png", "side": "animals/chicken.png"}
 
-        result = {"front": [None, None], "side": [None, None]}
+        result = {"front": [], "side": []}
         for face, path in files.items():
             sheet = assets.load_image(path)
             if sheet is None:
                 continue
-            for i in range(2):
+            # Автоопределение количества кадров
+            n_frames = sheet.get_width() // 16
+            for i in range(n_frames):
                 sub = pygame.Surface((16, 16), pygame.SRCALPHA)
                 sub.blit(sheet, (0, 0), pygame.Rect(i * 16, 0, 16, 16))
-                result[face][i] = pygame.transform.scale(sub, (48, 48))
+                result[face].append(pygame.transform.scale(sub, (48, 48)))
         return result
 
     def rect(self):
@@ -119,7 +121,11 @@ class Animal:
     def draw(self, screen, cam_x, cam_y, font_small=None):
         # Используем правильный набор кадров
         frames = self.sprites.get(self.facing) or self.sprites.get("front")
-        frame = frames[self.anim_frame]
+        if not frames:
+            return
+        # Защита от выхода за пределы массива
+        frame_idx = self.anim_frame % len(frames)
+        frame = frames[frame_idx]
         if frame is None:
             return
         img = frame
