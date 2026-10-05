@@ -1,15 +1,16 @@
-"""Экран загрузки BunnyOS с логотипом и прогресс-баром."""
+"""Экран загрузки BunnyOS с анимацией."""
 import math
 import pygame
 from settings import WIDTH, HEIGHT
 import os_sounds
+import assets
 
 
 class BootScreen:
-    """Экран загрузки — 4 секунды. Показывает логотип, прогресс."""
+    """Экран загрузки — 4 секунды. Логотип + прогресс + сова-помощник."""
 
-    DURATION = 240       # кадров (~4 сек)
-    LOGO_FADE = 40       # появление логотипа
+    DURATION = 240
+    LOGO_FADE = 40
 
     def __init__(self, font_big, font_small):
         self.font_big = font_big
@@ -17,6 +18,12 @@ class BootScreen:
         self.timer = 0
         self.done = False
         self.started_sound = False
+
+        # Загружаем спрайты (если есть)
+        self.heart = assets.load_image("ui/boot/Heart.png")
+        self.bar_progress = assets.load_image("ui/boot/LifeBarMiniProgress.png")
+        self.bar_under = assets.load_image("ui/boot/LifeBarMiniUnder.png")
+        self.hamster = assets.load_image("ui/boot/hamster.png")
 
     def update(self, dt):
         self.timer += 1
@@ -26,97 +33,134 @@ class BootScreen:
         if self.timer >= self.DURATION:
             self.done = True
             os_sounds.play("login")
-        # можно скипнуть по нажатию
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE] or keys[pygame.K_RETURN] or keys[pygame.K_ESCAPE]:
             if self.timer > 30:
                 self.done = True
 
     def draw(self, screen):
-        # Фон — тёмно-синий градиент (классика XP)
+        # === Фон: градиент от тёмно-синего к чёрному ===
         for y in range(HEIGHT):
             t = y / HEIGHT
-            r = int(8 + 20 * t)
-            g = int(15 + 30 * t)
+            r = int(8 + 30 * t)
+            g = int(15 + 40 * t)
             b = int(40 + 60 * t)
             pygame.draw.line(screen, (r, g, b), (0, y), (WIDTH, y))
 
-        # Логотип — большой круг с зайцем
+        # === Звёзды на фоне ===
+        import random
+        rng = random.Random(42)
+        for _ in range(60):
+            x = rng.randint(0, WIDTH)
+            y = rng.randint(0, HEIGHT // 2)
+            size = rng.choice([1, 1, 2])
+            blink = (self.timer // 20 + x + y) % 20
+            alpha = 255 if blink < 15 else 100
+            col = (alpha // 3, alpha // 3, alpha)
+            pygame.draw.rect(screen, col, (x, y, size, size))
+
+        # === Логотип по центру ===
         cx = WIDTH // 2
         cy = HEIGHT // 2 - 60
 
-        # Появление логотипа (fade + scale)
         prog = min(1.0, self.timer / self.LOGO_FADE)
         scale = 0.5 + 0.5 * prog
-        alpha = int(255 * prog)
 
-        # Свечение вокруг
+        # Свечение
         glow_r = int(130 * scale)
+        pulse = math.sin(self.timer * 0.08) * 0.15 + 1.0
         for i in range(6):
-            r = glow_r + i * 8
-            a = max(0, 60 - i * 10)
+            r = int((glow_r + i * 10) * pulse)
+            a = max(0, 70 - i * 12)
             glow = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
             pygame.draw.circle(glow, (100, 180, 255, a), (r, r), r)
             screen.blit(glow, (cx - r, cy - r))
 
-        # Круг
+        # Круг-логотип
         pygame.draw.circle(screen, (30, 80, 160), (cx, cy), glow_r)
         pygame.draw.circle(screen, (150, 200, 255), (cx, cy), glow_r, 3)
         pygame.draw.circle(screen, (60, 120, 200), (cx, cy), glow_r - 8, 2)
 
-        # Зайка в центре — большой, пиксельный
+        # Зайка в центре
         rabbit_scale = max(2, int(3 * scale))
         self._draw_rabbit(screen, cx, cy, rabbit_scale)
 
-        # Название
+        # === Название ===
         if self.timer > 20:
-            title = self.font_big.render("BunnyOS", True, (255, 255, 255))
-            title_shadow = self.font_big.render("BunnyOS", True, (30, 60, 120))
-            tx = cx - title.get_width() // 2
             ty = cy + glow_r + 25
-            screen.blit(title_shadow, (tx + 2, ty + 2))
-            screen.blit(title, (tx, ty))
+            # Свечение
+            for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
+                sh = self.font_big.render("BunnyOS", True, (30, 70, 130))
+                screen.blit(sh, (cx - sh.get_width() // 2 + dx, ty + dy))
+            title = self.font_big.render("BunnyOS", True, (255, 255, 255))
+            screen.blit(title, (cx - title.get_width() // 2, ty))
 
-            sub = self.font_small.render("Версия 1.0  ·  ядро Carrot-5.15", True, (180, 210, 240))
+            # Подзаголовок
+            sub = self.font_small.render("Версия 1.0  ·  ядро Carrot Linux 5.15",
+                                          True, (180, 210, 240))
             screen.blit(sub, (cx - sub.get_width() // 2, ty + 40))
 
-        # Прогресс-бар внизу
-        bar_w, bar_h = 400, 16
+        # === Прогресс-бар внизу ===
+        bar_w, bar_h = 440, 20
         bar_x = (WIDTH - bar_w) // 2
-        bar_y = HEIGHT - 100
-        pygame.draw.rect(screen, (20, 30, 60), (bar_x - 2, bar_y - 2, bar_w + 4, bar_h + 4))
-        pygame.draw.rect(screen, (100, 140, 200), (bar_x - 2, bar_y - 2, bar_w + 4, bar_h + 4), 2)
-        pygame.draw.rect(screen, (10, 15, 35), (bar_x, bar_y, bar_w, bar_h))
+        bar_y = HEIGHT - 110
 
-        # Прогресс — по времени
+        # Фон бара (из пака если есть, иначе процедурный)
+        if self.bar_under:
+            bar_under = pygame.transform.scale(self.bar_under, (bar_w, bar_h))
+            screen.blit(bar_under, (bar_x, bar_y))
+        else:
+            pygame.draw.rect(screen, (15, 20, 40), (bar_x - 2, bar_y - 2, bar_w + 4, bar_h + 4))
+            pygame.draw.rect(screen, (80, 100, 150), (bar_x - 2, bar_y - 2, bar_w + 4, bar_h + 4), 2)
+
+        # Заполнение
         progress = min(1.0, self.timer / self.DURATION)
         fill_w = int(bar_w * progress)
-        # Сегменты как в XP
-        for i in range(0, fill_w, 12):
-            seg_w = min(10, fill_w - i)
-            if seg_w <= 0:
-                break
-            col = (80, 160 + int(60 * math.sin(self.timer * 0.1 + i)), 240)
-            pygame.draw.rect(screen, col, (bar_x + i + 1, bar_y + 2, seg_w, bar_h - 4))
 
-        # Текст состояния
+        if self.bar_progress and fill_w > 0:
+            bar_fill = pygame.transform.scale(self.bar_progress, (fill_w, bar_h))
+            screen.blit(bar_fill, (bar_x, bar_y))
+        elif fill_w > 0:
+            # Процедурные сегменты
+            for i in range(0, fill_w, 12):
+                seg_w = min(10, fill_w - i)
+                if seg_w <= 0:
+                    break
+                col = (80, 160 + int(60 * math.sin(self.timer * 0.1 + i)), 240)
+                pygame.draw.rect(screen, col, (bar_x + i + 1, bar_y + 3, seg_w, bar_h - 6))
+
+        # === Процент загрузки ===
+        pct = self.font_small.render(f"{int(progress * 100)}%", True, (200, 230, 255))
+        screen.blit(pct, (bar_x + bar_w + 12, bar_y + 2))
+
+        # === Текст состояния ===
         status = self._status_text(progress)
         st = self.font_small.render(status, True, (180, 210, 240))
-        screen.blit(st, (cx - st.get_width() // 2, bar_y + 30))
+        screen.blit(st, (cx - st.get_width() // 2, bar_y + 32))
 
-        # Подсказка снизу
-        hint = self.font_small.render("Нажми Space чтобы пропустить", True, (100, 130, 170))
-        screen.blit(hint, (cx - hint.get_width() // 2, HEIGHT - 30))
+        # === Версия в углу ===
+        version = self.font_small.render("BunnyOS 1.0 LTS · Carrot Linux",
+                                          True, (100, 130, 170))
+        screen.blit(version, (14, HEIGHT - 30))
+
+        # === Подсказка ===
+        hint = self.font_small.render("Нажми Space чтобы пропустить",
+                                       True, (90, 110, 150))
+        screen.blit(hint, (WIDTH - hint.get_width() - 14, HEIGHT - 30))
 
     def _status_text(self, p):
-        if p < 0.2:
+        if p < 0.15:
             return "Загрузка ядра Carrot-5.15..."
-        elif p < 0.4:
+        elif p < 0.30:
             return "Инициализация морковных драйверов..."
-        elif p < 0.6:
+        elif p < 0.45:
             return "Монтирование /home/zayka..."
-        elif p < 0.8:
+        elif p < 0.60:
+            return "Проверка файловой системы..."
+        elif p < 0.75:
             return "Запуск оконного менеджера Lop-Ear..."
+        elif p < 0.90:
+            return "Инициализация нейросети..."
         else:
             return "Загрузка рабочего стола Bunny..."
 
@@ -145,22 +189,16 @@ class BootScreen:
         # Нос
         pygame.draw.circle(screen, (240, 150, 170), (cx, cy + 5 * scale), max(2, scale))
 
-        # Морковка в лапах
+        # Морковка
         carrot_w = 8 * scale
         carrot_h = 12 * scale
         car_x = cx + head_r - 2
         car_y = cy + 4
         pygame.draw.polygon(screen, (240, 130, 50), [
-            (car_x, car_y),
-            (car_x + carrot_w, car_y),
-            (car_x + carrot_w // 2, car_y + carrot_h),
-        ])
+            (car_x, car_y), (car_x + carrot_w, car_y), (car_x + carrot_w // 2, car_y + carrot_h)])
         pygame.draw.polygon(screen, (180, 80, 20), [
-            (car_x, car_y),
-            (car_x + carrot_w, car_y),
-            (car_x + carrot_w // 2, car_y + carrot_h),
-        ], max(1, scale - 1))
-        # Ботва
+            (car_x, car_y), (car_x + carrot_w, car_y), (car_x + carrot_w // 2, car_y + carrot_h)],
+            max(1, scale - 1))
         for dx in (-3, 0, 3):
             pygame.draw.line(screen, (80, 200, 90),
                              (car_x + carrot_w // 2, car_y),
@@ -169,7 +207,7 @@ class BootScreen:
 
 
 class LoginScreen:
-    """Экран приветствия после загрузки — как в XP."""
+    """Экран приветствия после загрузки."""
     DURATION = 90
 
     def __init__(self, font_big, font_small):
@@ -203,42 +241,33 @@ class LoginScreen:
         # Логотип слева
         cx = 180
         cy = HEIGHT // 2
-
-        # Круг с зайцем
         pygame.draw.circle(screen, (255, 245, 235), (cx, cy), 70)
         pygame.draw.circle(screen, (100, 160, 220), (cx, cy), 70, 3)
 
-        # Уши
         for ex in (-14, 14):
             pygame.draw.ellipse(screen, (255, 245, 235), (cx + ex - 8, cy - 90, 16, 44))
             pygame.draw.ellipse(screen, (240, 150, 170), (cx + ex - 5, cy - 86, 10, 36))
 
-        # Мордочка
         pygame.draw.circle(screen, (30, 25, 35), (cx - 14, cy - 6), 6)
         pygame.draw.circle(screen, (30, 25, 35), (cx + 14, cy - 6), 6)
         pygame.draw.circle(screen, (240, 150, 170), (cx, cy + 8), 4)
 
-        # Название ОС
         title = self.font_big.render("BunnyOS", True, (255, 255, 255))
         screen.blit(title, (cx - title.get_width() // 2, cy + 90))
 
-        # Справа — профиль пользователя
+        # Профиль справа
         ux = WIDTH // 2 + 100
         uy = HEIGHT // 2
-
-        # Аватар-кружок
         pygame.draw.circle(screen, (100, 160, 220), (ux, uy - 40), 50)
         pygame.draw.circle(screen, (255, 245, 235), (ux, uy - 40), 46)
         pygame.draw.circle(screen, (30, 25, 35), (ux - 12, uy - 46), 5)
         pygame.draw.circle(screen, (30, 25, 35), (ux + 12, uy - 46), 5)
         pygame.draw.circle(screen, (240, 150, 170), (ux, uy - 32), 4)
 
-        # Имя пользователя
         name = self.font_big.render("Зайка", True, (255, 255, 255))
         screen.blit(name, (ux - name.get_width() // 2, uy + 25))
         sub = self.font_small.render("Нажми Enter, чтобы войти", True, (200, 220, 255))
         screen.blit(sub, (ux - sub.get_width() // 2, uy + 60))
 
-        # Внизу — "Добро пожаловать"
         welcome = self.font_big.render("Добро пожаловать в BunnyOS", True, (255, 255, 255))
         screen.blit(welcome, (WIDTH // 2 - welcome.get_width() // 2, HEIGHT - 50))
