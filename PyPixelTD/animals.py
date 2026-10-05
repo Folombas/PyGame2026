@@ -28,24 +28,26 @@ class Animal:
         self.talk_timer = 0
         self.facing_right = True
         # Размеры на экране — 32×32 (scale 2)
-        self.size = 32
-        self.sprite_frames = self._load_sprites()
+        self.size = 48
+        self.sprites = self._load_sprites()   # {"front": [..], "side": [..]}
+        self.facing = "front"  # front | side
 
     def _load_sprites(self):
-        """Загружает 2 кадра по 16×16, увеличивает до 32×32."""
-        file_map = {
-            "cow": "animals/cow.png",
-            "chicken": "animals/chicken.png",
-        }
-        sheet = assets.load_image(file_map.get(self.kind, "animals/cow.png"))
-        if sheet is None:
-            return [None, None]
-        frames = []
-        for i in range(2):
-            sub = pygame.Surface((16, 16), pygame.SRCALPHA)
-            sub.blit(sheet, (0, 0), pygame.Rect(i * 16, 0, 16, 16))
-            frames.append(pygame.transform.scale(sub, (48, 48)))
-        return frames
+        """Загружает кадры для front и side. Cow — обе, chicken — только front."""
+        files = {"front": "animals/cow.png", "side": "animals/cow_side.png"}
+        if self.kind == "chicken":
+            files = {"front": "animals/chicken.png", "side": "animals/chicken.png"}
+
+        result = {"front": [None, None], "side": [None, None]}
+        for face, path in files.items():
+            sheet = assets.load_image(path)
+            if sheet is None:
+                continue
+            for i in range(2):
+                sub = pygame.Surface((16, 16), pygame.SRCALPHA)
+                sub.blit(sheet, (0, 0), pygame.Rect(i * 16, 0, 16, 16))
+                result[face][i] = pygame.transform.scale(sub, (48, 48))
+        return result
 
     def rect(self):
         return pygame.Rect(int(self.x) - 24, int(self.y) - 24, 48, 48)
@@ -57,6 +59,7 @@ class Animal:
             self.vx = 0.0
             self.vy = 0.0
             self.anim_frame = 0   # стоит — 1-й кадр
+            self.facing = "front"  # разворачиваемся лицом когда стоим
         else:
             # Начинаем новый цикл ходьбы
             if self.walk_timer <= 0:
@@ -67,7 +70,12 @@ class Animal:
                 elif angle == 90: self.vx = 0;    self.vy = 0.3
                 elif angle == 180: self.vx = -0.3; self.vy = 0
                 else:             self.vx = 0;    self.vy = -0.3
-                self.facing_right = self.vx > 0
+                # Сторона видна только при движении влево/вправо
+                if abs(self.vx) > 0.01:
+                    self.facing = "side"
+                    self.facing_right = self.vx > 0
+                else:
+                    self.facing = "front"
 
             self.x += self.vx
             self.y += self.vy
@@ -109,11 +117,14 @@ class Animal:
         self.talk_timer = frames
 
     def draw(self, screen, cam_x, cam_y, font_small=None):
-        frame = self.sprite_frames[self.anim_frame]
+        # Используем правильный набор кадров
+        frames = self.sprites.get(self.facing) or self.sprites.get("front")
+        frame = frames[self.anim_frame]
         if frame is None:
             return
         img = frame
-        if not self.facing_right:
+        # Отражаем только side
+        if self.facing == "side" and not self.facing_right:
             img = pygame.transform.flip(frame, True, False)
         sx = int(self.x) - 24 - cam_x
         sy = int(self.y) - 48 - cam_y
