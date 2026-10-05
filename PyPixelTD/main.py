@@ -11,6 +11,7 @@ from title import TitleScreen
 from game_menu import GameMenu
 from boot import BootScreen, LoginScreen
 import os_sounds
+import system_sounds
 
 
 _FULLSCREEN = False
@@ -339,6 +340,7 @@ def handle_ingame_bar_click(mx, my):
 def main():
     pygame.init()
     os_sounds.init()
+    system_sounds.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("🐰 Зайка — Мир")
     clock = pygame.time.Clock()

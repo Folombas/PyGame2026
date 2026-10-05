@@ -4,6 +4,7 @@ import pygame
 from settings import WIDTH, HEIGHT
 import os_sounds
 import ui_kit
+import system_sounds
 from desktop_icons import DesktopIcons
 from linux_sim import LinuxSim
 
@@ -139,6 +140,7 @@ class MiniPC:
         if wtype == "terminal": w.rect.w, w.rect.h = 640, 420
         self.windows.append(w)
         self.active_idx = len(self.windows) - 1
+        system_sounds.play("restore")
         if wtype == "terminal":
             self.term_active = True
 
@@ -147,6 +149,7 @@ class MiniPC:
             self.windows.remove(w)
             if self.active_idx >= len(self.windows):
                 self.active_idx = len(self.windows) - 1
+            system_sounds.play("minimize")
 
     def handle_key(self, key):
         """Клавиши в PC. Возвращает 'shutdown' или None."""
@@ -270,7 +273,7 @@ class MiniPC:
         if start_rect.collidepoint(mx, my):
             self.start_open = not self.start_open
             self.start_pressed = 10
-            os_sounds.play("click")
+            system_sounds.play("menu")
             return
 
         # Меню Пуск
@@ -330,7 +333,7 @@ class MiniPC:
                 else:
                     w.rect = w._saved_rect
                     w._saved_rect = None
-                os_sounds.play("click")
+                system_sounds.play("restore")
                 return
 
             if w.on_close(mx, my):

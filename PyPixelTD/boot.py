@@ -3,6 +3,7 @@ import math
 import pygame
 from settings import WIDTH, HEIGHT
 import os_sounds
+import system_sounds
 import assets
 
 
@@ -28,11 +29,11 @@ class BootScreen:
     def update(self, dt):
         self.timer += 1
         if not self.started_sound:
-            os_sounds.play("start")
+            system_sounds.play("start")
             self.started_sound = True
         if self.timer >= self.DURATION:
             self.done = True
-            os_sounds.play("login")
+            system_sounds.play("logon")
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE] or keys[pygame.K_RETURN] or keys[pygame.K_ESCAPE]:
             if self.timer > 30:
