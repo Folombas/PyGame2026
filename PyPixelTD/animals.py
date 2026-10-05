@@ -30,7 +30,11 @@ class Animal:
         # Размеры на экране — 32×32 (scale 2)
         self.size = 48
         self.sprites = self._load_sprites()   # {"front": [..], "side": [..]}
-        self.facing = "front"  # front | side
+        # Корова — ВСЕГДА боком, курица — ВСЕГДА спереди (бокового нет)
+        if self.kind == "cow" and self.sprites.get("side"):
+            self.facing = "side"
+        else:
+            self.facing = "front"
 
     def _load_sprites(self):
         """Загружает кадры для front и side. Cow — обе, chicken — только front."""
@@ -61,7 +65,6 @@ class Animal:
             self.vx = 0.0
             self.vy = 0.0
             self.anim_frame = 0   # стоит — 1-й кадр
-            self.facing = "front"  # разворачиваемся лицом когда стоим
         else:
             # Начинаем новый цикл ходьбы
             if self.walk_timer <= 0:
@@ -72,12 +75,9 @@ class Animal:
                 elif angle == 90: self.vx = 0;    self.vy = 0.3
                 elif angle == 180: self.vx = -0.3; self.vy = 0
                 else:             self.vx = 0;    self.vy = -0.3
-                # Сторона видна только при движении влево/вправо
+                # Направление движения (для отражения)
                 if abs(self.vx) > 0.01:
-                    self.facing = "side"
                     self.facing_right = self.vx > 0
-                else:
-                    self.facing = "front"
 
             self.x += self.vx
             self.y += self.vy
@@ -91,11 +91,13 @@ class Animal:
                 self.y = self.base_y + (self.walk_range if self.y > self.base_y else -self.walk_range)
                 self.walk_timer = 0
 
-            # Анимация ходьбы
+            # Анимация ходьбы — циклится по всем кадрам
             self.anim_timer += 1
             if self.anim_timer >= 12:
                 self.anim_timer = 0
-                self.anim_frame = (self.anim_frame + 1) % 2
+                frames = self.sprites.get(self.facing, [])
+                if frames:
+                    self.anim_frame = (self.anim_frame + 1) % len(frames)
 
             # Закончили ходьбу → пасёмся
             if self.walk_timer <= 0:
@@ -135,9 +137,9 @@ class Animal:
         sx = int(self.x) - 24 - cam_x
         sy = int(self.y) - 48 - cam_y
         # Тень
-        shadow = pygame.Surface((32, 8), pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow, (0, 0, 0, 80), (0, 0, 32, 8))
-        screen.blit(shadow, (sx, int(self.y) - 4 - cam_y))
+        shadow = pygame.Surface((44, 10), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (0, 0, 0, 80), (0, 0, 44, 10))
+        screen.blit(shadow, (sx + 2, int(self.y) - 5 - cam_y))
         # Спрайт
         screen.blit(img, (sx, sy))
 
