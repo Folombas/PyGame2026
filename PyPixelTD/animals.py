@@ -28,9 +28,12 @@ class Animal:
         self.talk_timer = 0
         self.facing_right = True
         # Размеры на экране — 32×32 (scale 2)
-        self.size = 48
-        self.sprites = self._load_sprites()   # {"front": [..], "side": [..]}
-        # Корова — ВСЕГДА боком, курица — ВСЕГДА спереди (бокового нет)
+        # Размеры: корова крупная, курица мелкая
+        self.scale = 4 if self.kind == "cow" else 2.5
+        self.hitbox_w = 56 if self.kind == "cow" else 32
+        self.hitbox_h = 40 if self.kind == "cow" else 28
+        self.sprites = self._load_sprites()
+        # Корова — ВСЕГДА боком, курица — ВСЕГДА спереди
         if self.kind == "cow" and self.sprites.get("side"):
             self.facing = "side"
         else:
@@ -43,20 +46,23 @@ class Animal:
             files = {"front": "animals/chicken.png", "side": "animals/chicken.png"}
 
         result = {"front": [], "side": []}
+        size = int(16 * self.scale)
         for face, path in files.items():
             sheet = assets.load_image(path)
             if sheet is None:
                 continue
-            # Автоопределение количества кадров
             n_frames = sheet.get_width() // 16
             for i in range(n_frames):
                 sub = pygame.Surface((16, 16), pygame.SRCALPHA)
                 sub.blit(sheet, (0, 0), pygame.Rect(i * 16, 0, 16, 16))
-                result[face].append(pygame.transform.scale(sub, (48, 48)))
+                result[face].append(pygame.transform.scale(sub, (size, size)))
         return result
 
     def rect(self):
-        return pygame.Rect(int(self.x) - 24, int(self.y) - 24, 48, 48)
+        return pygame.Rect(
+            int(self.x) - self.hitbox_w // 2,
+            int(self.y) - self.hitbox_h,
+            self.hitbox_w, self.hitbox_h)
 
     def update(self):
         # Паттерн: пасётся → идёт немного → снова пасётся
@@ -68,28 +74,19 @@ class Animal:
         else:
             # Начинаем новый цикл ходьбы
             if self.walk_timer <= 0:
-                self.walk_timer = random.randint(30, 90)
-                # Случайное направление движения
-                angle = random.choice([0, 90, 180, 270])
-                if angle == 0:    self.vx = 0.3;  self.vy = 0
-                elif angle == 90: self.vx = 0;    self.vy = 0.3
-                elif angle == 180: self.vx = -0.3; self.vy = 0
-                else:             self.vx = 0;    self.vy = -0.3
-                # Направление движения (для отражения)
-                if abs(self.vx) > 0.01:
-                    self.facing_right = self.vx > 0
+                self.walk_timer = random.randint(40, 100)
+                # Только влево или вправо — корова боком не идёт вверх/вниз
+                self.vx = random.choice([-0.35, 0.35])
+                self.vy = 0
+                self.facing_right = self.vx > 0
 
             self.x += self.vx
-            self.y += self.vy
             self.walk_timer -= 1
 
-            # Если далеко от базы — возвращаемся (просто стоп)
+            # Если далеко от базы — разворачиваемся
             if abs(self.x - self.base_x) > self.walk_range:
-                self.x = self.base_x + (self.walk_range if self.x > self.base_x else -self.walk_range)
-                self.walk_timer = 0
-            if abs(self.y - self.base_y) > self.walk_range:
-                self.y = self.base_y + (self.walk_range if self.y > self.base_y else -self.walk_range)
-                self.walk_timer = 0
+                self.vx = -self.vx
+                self.facing_right = self.vx > 0
 
             # Анимация ходьбы — циклится по всем кадрам
             self.anim_timer += 1
@@ -121,11 +118,9 @@ class Animal:
         self.talk_timer = frames
 
     def draw(self, screen, cam_x, cam_y, font_small=None):
-        # Используем правильный набор кадров
         frames = self.sprites.get(self.facing) or self.sprites.get("front")
         if not frames:
             return
-        # Защита от выхода за пределы массива
         frame_idx = self.anim_frame % len(frames)
         frame = frames[frame_idx]
         if frame is None:
@@ -134,12 +129,20 @@ class Animal:
         # Отражаем только side
         if self.facing == "side" and not self.facing_right:
             img = pygame.transform.flip(frame, True, False)
-        sx = int(self.x) - 24 - cam_x
-        sy = int(self.y) - 48 - cam_y
+
+        img_w = img.get_width()
+        img_h = img.get_height()
+        # Спрайт стоит на ногах — прижаты к нижней границе "клетки"
+        sx = int(self.x) - img_w // 2 - cam_x
+        sy = int(self.y) - img_h - cam_y
+
         # Тень
-        shadow = pygame.Surface((44, 10), pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow, (0, 0, 0, 80), (0, 0, 44, 10))
-        screen.blit(shadow, (sx + 2, int(self.y) - 5 - cam_y))
+        shadow_w = int(img_w * 0.85)
+        shadow_h = max(6, int(img_h * 0.15))
+        shadow = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (0, 0, 0, 90), (0, 0, shadow_w, shadow_h))
+        screen.blit(shadow, (sx + (img_w - shadow_w) // 2, int(self.y) - shadow_h // 2 - cam_y))
+
         # Спрайт
         screen.blit(img, (sx, sy))
 
@@ -148,7 +151,7 @@ class Animal:
             txt = font_small.render(self.talk_text, True, (255, 255, 255))
             bg = pygame.Surface((txt.get_width() + 8, txt.get_height() + 4), pygame.SRCALPHA)
             bg.fill((30, 25, 50, 220))
-            bx = sx + 16 - bg.get_width() // 2
+            bx = sx + img_w // 2 - bg.get_width() // 2
             by = sy - bg.get_height() - 4
             screen.blit(bg, (bx, by))
             screen.blit(txt, (bx + 4, by + 2))
