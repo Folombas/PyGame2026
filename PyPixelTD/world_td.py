@@ -199,6 +199,13 @@ class World:
 
         # Жители — только парочка (прохожие)
 
+
+        # Животные на лугу — коровы и куры
+        self.animals.append(Animal(9, 19, "cow"))
+        self.animals.append(Animal(13, 20, "cow"))
+        self.animals.append(Animal(11, 21, "chicken"))
+        self.animals.append(Animal(6, 21, "chicken"))
+
     # ---- Доступ ----
     def tile_at(self, tx, ty):
         if tx < 0 or tx >= self.w or ty < 0 or ty >= self.h:
