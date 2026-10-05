@@ -829,30 +829,127 @@ class MiniPC:
         elif w.wtype == "terminal": self._draw_terminal(screen, cr, w)
 
     def _draw_browser(self, screen, r):
-        nav = pygame.Rect(r.x, r.y, r.w, 30)
-        pygame.draw.rect(screen, (240, 240, 240), nav)
+        """Браузер с красивой навигацией."""
+        # === Навигационная панель сверху ===
+        nav = pygame.Rect(r.x, r.y, r.w, 36)
+        nav_surf = pygame.Surface((nav.w, nav.h), pygame.SRCALPHA)
+        nav_surf.fill((220, 210, 195, 240))
+        screen.blit(nav_surf, nav.topleft)
+        pygame.draw.line(screen, (150, 130, 110), (nav.x, nav.bottom), (nav.right, nav.bottom), 1)
+
+        # Кнопки навигации — стрелки из темы
+        arrow_l = ui_kit.get("arrow_left", scale=1)
+        arrow_r = ui_kit.get("arrow_right", scale=1)
+
+        # ← Назад
+        back_r = pygame.Rect(nav.x + 6, nav.y + 8, 22, 22)
+        hover_back = back_r.collidepoint(int(self.cursor_x), int(self.cursor_y))
+        pygame.draw.rect(screen, (235, 225, 210) if hover_back else (215, 205, 190), back_r, border_radius=4)
+        pygame.draw.rect(screen, (150, 130, 110), back_r, 1, border_radius=4)
+        if arrow_l:
+            scaled = pygame.transform.scale(arrow_l, (16, 16))
+            screen.blit(scaled, (back_r.centerx - 8, back_r.centery - 8))
+        else:
+            pygame.draw.polygon(screen, (80, 60, 40),
+                                [(back_r.x + 14, back_r.y + 6),
+                                 (back_r.x + 6, back_r.centery),
+                                 (back_r.x + 14, back_r.bottom - 6)])
+
+        # → Вперёд
+        fwd_r = pygame.Rect(nav.x + 32, nav.y + 8, 22, 22)
+        hover_fwd = fwd_r.collidepoint(int(self.cursor_x), int(self.cursor_y))
+        pygame.draw.rect(screen, (235, 225, 210) if hover_fwd else (215, 205, 190), fwd_r, border_radius=4)
+        pygame.draw.rect(screen, (150, 130, 110), fwd_r, 1, border_radius=4)
+        if arrow_r:
+            scaled = pygame.transform.scale(arrow_r, (16, 16))
+            screen.blit(scaled, (fwd_r.centerx - 8, fwd_r.centery - 8))
+        else:
+            pygame.draw.polygon(screen, (80, 60, 40),
+                                [(fwd_r.x + 8, fwd_r.y + 6),
+                                 (fwd_r.x + 16, fwd_r.centery),
+                                 (fwd_r.x + 8, fwd_r.bottom - 6)])
+
+        # ⟳ Обновить
+        ref_r = pygame.Rect(nav.x + 58, nav.y + 8, 22, 22)
+        hover_ref = ref_r.collidepoint(int(self.cursor_x), int(self.cursor_y))
+        pygame.draw.rect(screen, (235, 225, 210) if hover_ref else (215, 205, 190), ref_r, border_radius=4)
+        pygame.draw.rect(screen, (150, 130, 110), ref_r, 1, border_radius=4)
+        # круглая стрелка
+        pygame.draw.arc(screen, (80, 60, 40),
+                        (ref_r.x + 4, ref_r.y + 4, 14, 14), 0.5, 5.5, 2)
+        pygame.draw.polygon(screen, (80, 60, 40),
+                            [(ref_r.x + 14, ref_r.y + 4),
+                             (ref_r.x + 18, ref_r.y + 8),
+                             (ref_r.x + 13, ref_r.y + 9)])
+
+        # 🏠 Домой
+        home_r = pygame.Rect(nav.x + 84, nav.y + 8, 22, 22)
+        hover_home = home_r.collidepoint(int(self.cursor_x), int(self.cursor_y))
+        pygame.draw.rect(screen, (235, 225, 210) if hover_home else (215, 205, 190), home_r, border_radius=4)
+        pygame.draw.rect(screen, (150, 130, 110), home_r, 1, border_radius=4)
+        # домик
+        cx_ = home_r.centerx
+        cy_ = home_r.centery
+        pygame.draw.polygon(screen, (80, 60, 40),
+                            [(cx_ - 8, cy_), (cx_, cy_ - 8), (cx_ + 8, cy_)])
+        pygame.draw.rect(screen, (80, 60, 40), (cx_ - 6, cy_, 12, 7))
+        pygame.draw.rect(screen, (220, 200, 160), (cx_ - 2, cy_ + 3, 4, 4))
+
+        # Адресная строка
+        url_x = nav.x + 115
+        url_w = nav.right - url_x - 40
+        url_r = pygame.Rect(url_x, nav.y + 8, url_w, 22)
+        pygame.draw.rect(screen, (250, 245, 235), url_r, border_radius=4)
+        pygame.draw.rect(screen, (150, 130, 110), url_r, 1, border_radius=4)
+        url_txt = self.font_small.render(self.browser_url, True, (60, 40, 30))
+        screen.blit(url_txt, (url_r.x + 8, url_r.y + 4))
+
+        # ⭐ Закладка
+        star_r = pygame.Rect(nav.right - 32, nav.y + 8, 22, 22)
+        hover_star = star_r.collidepoint(int(self.cursor_x), int(self.cursor_y))
+        if hover_star:
+            pygame.draw.rect(screen, (255, 240, 180), star_r, border_radius=4)
+        # звезда
+        import math as _m
+        cx_s = star_r.centerx
+        cy_s = star_r.centery
+        pts = []
+        for i in range(10):
+            ang = -_m.pi / 2 + i * _m.pi / 5
+            r_ = 8 if i % 2 == 0 else 4
+            pts.append((cx_s + _m.cos(ang) * r_, cy_s + _m.sin(ang) * r_))
+        pygame.draw.polygon(screen, (220, 180, 60), pts)
+        pygame.draw.polygon(screen, (120, 90, 20), pts, 1)
+
+        # === Вкладки сайтов ===
+        tabs_y = nav.bottom
+        tabs_h = 28
         pages = [("Дом", "home"), ("Новости", "news"), ("Игра", "game"),
                  ("Магазин", "shop"), ("Карта", "map")]
+        tab_w = (r.w) // len(pages)
         for i, (name, pid) in enumerate(pages):
-            bx = nav.x + 10 + i * 94
-            br = pygame.Rect(bx, nav.y + 4, 90, 22)
-            active = self.browser_page == pid
-            bg = (200, 220, 240) if active else (250, 250, 250)
-            pygame.draw.rect(screen, bg, br)
-            pygame.draw.rect(screen, (180, 180, 180), br, 1)
-            t = self.font_small.render(name, True, (30, 30, 30))
-            screen.blit(t, (br.centerx - t.get_width() // 2, br.y + 3))
+            tx = r.x + i * tab_w
+            tr = pygame.Rect(tx, tabs_y, tab_w, tabs_h)
+            active = (self.browser_page == pid)
+            # фон вкладки
+            if active:
+                bg = (250, 245, 230)
+            else:
+                bg = (200, 185, 165)
+            pygame.draw.rect(screen, bg, tr)
+            pygame.draw.line(screen, (150, 130, 110), (tx, tabs_y), (tx, tabs_y + tabs_h), 1)
+            pygame.draw.line(screen, (150, 130, 110), (tx, tr.bottom), (tx + tab_w, tr.bottom), 1)
 
-        url_r = pygame.Rect(r.x + 4, nav.bottom + 4, r.w - 8, 24)
-        pygame.draw.rect(screen, (255, 255, 255), url_r)
-        pygame.draw.rect(screen, (200, 200, 200), url_r, 1)
-        t = self.font_small.render(self.browser_url, True, (40, 40, 70))
-        screen.blit(t, (url_r.x + 6, url_r.y + 5))
+            # текст
+            txt_col = (60, 40, 30) if active else (100, 80, 60)
+            t = self.font_small.render(name, True, txt_col)
+            screen.blit(t, (tr.centerx - t.get_width() // 2,
+                            tr.centery - t.get_height() // 2))
 
-        cont = pygame.Rect(r.x + 4, url_r.bottom + 4, r.w - 8,
-                           r.h - (url_r.bottom - r.y) - 6)
-        pygame.draw.rect(screen, (255, 255, 255), cont)
-        pygame.draw.rect(screen, (200, 200, 200), cont, 1)
+        # === Контент ===
+        cont = pygame.Rect(r.x, tabs_y + tabs_h + 1, r.w, r.h - (tabs_y - r.y) - tabs_h - 1)
+        pygame.draw.rect(screen, (255, 252, 245), cont)
+        pygame.draw.rect(screen, (150, 130, 110), cont, 1)
         self._browser_content(screen, cont)
 
     def _browser_content(self, screen, r):
