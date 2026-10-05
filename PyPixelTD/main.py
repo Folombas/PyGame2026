@@ -598,6 +598,7 @@ def main():
                 camera.follow(player.rect, world.w * TILE, world.h * TILE)
                 for v in world.villagers:
                     v.update()
+                world.update_animals()
         elif state == "interior" and interior:
             player.update(keys, interior.can_walk)
             interior.update(dt)
@@ -641,6 +642,7 @@ def main():
             draw_big_map(screen, world, player, font_big, font_small)
         elif state == "world":
             world.draw(screen, camera)
+            world.draw_animals(screen, camera, font_tiny)
             world.draw_villagers(screen, camera, font_tiny)
             player.draw(screen, camera.x, camera.y)
             draw_ingame_bar(screen, font_small, (pc.cursor_x, pc.cursor_y))

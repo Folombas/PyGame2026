@@ -1,6 +1,7 @@
 """Top-down мир: тайлы, дома, деревня."""
 import pygame
 import assets
+from animals import Animal
 from settings import *
 
 
@@ -134,6 +135,7 @@ class World:
         self.tiles = [[T_GRASS for _ in range(self.w)] for _ in range(self.h)]
         self.houses = []
         self.villagers = []
+        self.animals = []
         self._build()
 
     def _build(self):
@@ -294,6 +296,14 @@ class World:
         tile = assets.extract_tile(sheet, tx, ty, 16, 16, scale=2)
         World._real_tiles[t] = tile
         return tile
+
+    def update_animals(self):
+        for a in self.animals:
+            a.update()
+
+    def draw_animals(self, screen, cam, font_small=None):
+        for a in self.animals:
+            a.draw(screen, cam.x, cam.y, font_small)
 
     def draw(self, screen, cam):
         tx0 = max(0, cam.x // TILE - 1)
