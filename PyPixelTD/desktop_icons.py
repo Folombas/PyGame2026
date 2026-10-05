@@ -126,10 +126,87 @@ class DesktopIcons:
                     pygame.draw.line(screen, (90, 90, 100),
                                      (lx, by + 16), (lx, by + 42), 1)
 
+            elif ic["id"] == "mycomputer":
+                # Монитор: рама + экран + подставка
+                bx = r.centerx - 26
+                by = r.y + 14
+                pygame.draw.rect(screen, (70, 70, 80), (bx, by, 52, 38), border_radius=4)
+                pygame.draw.rect(screen, (30, 60, 100), (bx + 3, by + 3, 46, 32))
+                # блик
+                pygame.draw.line(screen, (90, 140, 200),
+                                 (bx + 6, by + 6), (bx + 20, by + 6), 2)
+                # подставка
+                pygame.draw.rect(screen, (70, 70, 80), (bx + 18, by + 38, 16, 6))
+                pygame.draw.rect(screen, (70, 70, 80), (bx + 8, by + 44, 36, 4))
+
+            elif ic["id"] == "browser":
+                # Глобус: круг + меридианы
+                cx_ = r.centerx
+                cy_ = r.y + 38
+                rad = 24
+                pygame.draw.circle(screen, (60, 130, 200), (cx_, cy_), rad)
+                pygame.draw.circle(screen, (200, 230, 255), (cx_, cy_), rad, 2)
+                # меридианы
+                pygame.draw.ellipse(screen, (200, 230, 255),
+                                    (cx_ - rad, cy_ - rad, rad, rad * 2), 1)
+                pygame.draw.ellipse(screen, (200, 230, 255),
+                                    (cx_ - rad, cy_ - rad, rad * 2, rad), 1)
+                # горизонт
+                pygame.draw.line(screen, (200, 230, 255),
+                                 (cx_ - rad, cy_), (cx_ + rad, cy_), 1)
+
+            elif ic["id"] == "map":
+                # Сложенная карта — 3 изогнутых прямоугольника
+                bx = r.centerx - 26
+                by = r.y + 14
+                pygame.draw.polygon(screen, (200, 180, 130), [
+                    (bx, by + 8), (bx + 14, by), (bx + 14, by + 36), (bx, by + 44)])
+                pygame.draw.polygon(screen, (170, 200, 130), [
+                    (bx + 14, by), (bx + 32, by + 8), (bx + 32, by + 44), (bx + 14, by + 36)])
+                pygame.draw.polygon(screen, (140, 200, 130), [
+                    (bx + 32, by + 8), (bx + 52, by + 0), (bx + 52, by + 36), (bx + 32, by + 44)])
+                # контуры
+                for pts in [
+                    [(bx, by + 8), (bx + 14, by), (bx + 14, by + 36), (bx, by + 44)],
+                    [(bx + 14, by), (bx + 32, by + 8), (bx + 32, by + 44), (bx + 14, by + 36)],
+                    [(bx + 32, by + 8), (bx + 52, by + 0), (bx + 52, by + 36), (bx + 32, by + 44)],
+                ]:
+                    pygame.draw.polygon(screen, (90, 70, 50), pts, 2)
+
+            elif ic["id"] == "notes":
+                # Блокнот — прямоугольник с линиями
+                bx = r.centerx - 22
+                by = r.y + 12
+                pygame.draw.rect(screen, (250, 240, 190), (bx, by, 44, 52), border_radius=3)
+                pygame.draw.rect(screen, (120, 80, 50), (bx, by, 44, 52), 2, border_radius=3)
+                # корешок
+                pygame.draw.rect(screen, (120, 80, 50), (bx, by, 6, 52))
+                # строчки
+                for i in range(4):
+                    ly = by + 10 + i * 10
+                    pygame.draw.line(screen, (120, 80, 50),
+                                     (bx + 10, ly), (bx + 38, ly), 1)
+
+            elif ic["id"] == "calc":
+                # Калькулятор — серый прямоугольник с экраном и кнопками
+                bx = r.centerx - 22
+                by = r.y + 12
+                pygame.draw.rect(screen, (70, 70, 80), (bx, by, 44, 52), border_radius=4)
+                pygame.draw.rect(screen, (70, 70, 80), (bx, by, 44, 52), 2, border_radius=4)
+                # экран
+                pygame.draw.rect(screen, (180, 220, 180), (bx + 4, by + 4, 36, 12))
+                pygame.draw.rect(screen, (30, 50, 30), (bx + 4, by + 4, 36, 12), 1)
+                # кнопки 4x3
+                for r_i in range(3):
+                    for c_i in range(4):
+                        kx = bx + 5 + c_i * 9
+                        ky = by + 20 + r_i * 10
+                        pygame.draw.rect(screen, (240, 240, 250), (kx, ky, 7, 7))
+                        pygame.draw.rect(screen, (120, 120, 140), (kx, ky, 7, 7), 1)
+
             else:
-                # Обычный эмодзи
-                icon_surf = self.font.render(ic["emoji"], True, (255, 255, 255))
-                icon_surf = pygame.transform.scale_by(icon_surf, 2)
+                # Fallback — эмодзи (может не отобразиться)
+                icon_surf = self.font.render(ic.get("emoji", "?"), True, (255, 255, 255))
                 screen.blit(icon_surf, (r.centerx - icon_surf.get_width() // 2, r.y + 12))
 
             # Подпись (с тенью для читаемости)
