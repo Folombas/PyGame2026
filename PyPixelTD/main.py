@@ -311,10 +311,12 @@ def draw_ingame_bar(screen, font_small, cursor):
         elif bid == "fullscreen":
             draw_icon_fullscreen(screen, r.centerx, r.centery, (240, 220, 180))
 
-    # === Подсказка ===
-    hint = font_small.render("WASD — ходьба   E — действие   M — карта   Esc — выход",
-                              True, (200, 180, 150))
-    screen.blit(hint, (WIDTH - hint.get_width() - PAD - 120, HEIGHT - INGAME_BAR_H + 48))
+    # === Подсказка — по центру панели ===
+    hint = font_small.render("WASD · E · M · Esc",
+                              True, (170, 150, 120))
+    hx = WIDTH // 2 - hint.get_width() // 2
+    hy = HEIGHT - INGAME_BAR_H // 2 - hint.get_height() // 2
+    screen.blit(hint, (hx, hy))
 
 
 def handle_ingame_bar_click(mx, my):
