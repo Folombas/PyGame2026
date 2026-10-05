@@ -3,55 +3,18 @@ import math
 import os
 import pygame
 from settings import WIDTH, HEIGHT
+from radio_player import RadioPlayer
+from radio_stations import load_stations
 
 
-# ==================== СТАНЦИИ ПО ДИАПАЗОНАМ ====================
-# (частота, название, файл-звук, громкость)
-BANDS = [
-    {
-        "name": "FM",
-        "unit": "MHz",
-        "min": 87.5, "max": 108.0,
-        "step": 0.1,
-        "stations": [
-            (91.5,  "Carrot FM",     "station_magic.wav",   0.35),
-            (98.7,  "Bunny News",    "station_birds.wav",   0.30),
-            (104.2, "Neon Wave",     "station_strange.wav", 0.35),
-        ],
-    },
-    {
-        "name": "УКВ",
-        "unit": "MHz",
-        "min": 65.0, "max": 74.0,
-        "step": 0.1,
-        "stations": [
-            (66.8, "Радио Маяк",     "station_rain.wav",  0.35),
-            (70.5, "Классика",       "station_river.wav", 0.40),
-        ],
-    },
-    {
-        "name": "SW",
-        "unit": "MHz",
-        "min": 6.0, "max": 18.0,
-        "step": 0.1,
-        "stations": [
-            (9.5,  "Voice of Bunny", "station_river.wav",  0.35),
-            (12.3, "Pirate Radio",   "station_storm.wav",  0.40),
-            (16.7, "Bunny Jazz",     "station_dog.wav",    0.35),
-        ],
-    },
-    {
-        "name": "MW",
-        "unit": "kHz",
-        "min": 520.0, "max": 1610.0,
-        "step": 10.0,
-        "stations": [
-            (700,  "Old Timer",      "station_storm.wav",  0.40),
-            (1200, "Sport",          "station_birds.wav",  0.35),
-        ],
-    },
+# ==================== ДИАПАЗОНЫ ====================
+# Реальные станции подтянутся при старте RadioUI из radio_stations.load_stations()
+BAND_TEMPLATES = [
+    {"name": "FM",  "unit": "MHz", "min": 87.5, "max": 108.0, "step": 0.1},
+    {"name": "УКВ", "unit": "MHz", "min": 65.0, "max": 74.0,  "step": 0.1},
+    {"name": "SW",  "unit": "MHz", "min": 6.0,  "max": 18.0,  "step": 0.1},
+    {"name": "MW",  "unit": "kHz", "min": 520.0,"max": 1610.0,"step": 10.0},
 ]
-
 
 # ==================== ОБЪЕКТ ПРИЁМНИКА В КОМНАТЕ ====================
 class Radio:
@@ -123,62 +86,87 @@ class RadioUI:
         self.on = True
         self.tick = 0
         self.current_station = None
-        self.current_sound = None
-        self.target_volume = 0.5
-        # Кеш звуков
-        self._sounds = {}
-        # Анимация крутилки
         self.knob_angle = 0.0
+        self.status = ""
+
+        # VLC-плеер
+        self.player = RadioPlayer()
+
+        # Загружаем станции и строим BANDS
+        self.bands = self._build_bands()
+
+    def _build_bands(self):
+        """Строит список диапазонов с реальными станциями."""
+        stations = load_stations()
+        bands = []
+        for tmpl in BAND_TEMPLATES:
+            band = dict(tmpl)
+            raw = stations.get(tmpl["name"], [])
+            band["stations"] = self._place_stations(raw, band)
+            bands.append(band)
+        return bands
+
+    @staticmethod
+    def _place_stations(raw_stations, band):
+        """Раскидывает URL-станции по частотам внутри диапазона.
+        Возвращает [(freq, name, url, vol), ...]."""
+        if not raw_stations:
+            return []
+        lo, hi = band["min"], band["max"]
+        n = len(raw_stations)
+        # равномерно по диапазону, с отступом от краёв
+        span = (hi - lo) * 0.85
+        start = lo + (hi - lo) * 0.075
+        out = []
+        for i, st in enumerate(raw_stations):
+            freq = start + (span * i / max(1, n - 1)) if n > 1 else (lo + hi) / 2
+            freq = round(freq / band["step"]) * band["step"]
+            out.append((freq, st["name"], st["url"], 0.7))
+        return out
+
+    @property
+    def band(self):
+        return self.bands[self.band_idx]
 
     # ---------- СИСТЕМА ----------
     @property
     def band(self):
         return BANDS[self.band_idx]
 
-    def _load_sound(self, filename):
-        if filename in self._sounds:
-            return self._sounds[filename]
-        path = os.path.join(os.path.dirname(__file__), "assets", "radio", filename)
-        if not os.path.exists(path):
-            self._sounds[filename] = None
-            return None
-        try:
-            snd = pygame.mixer.Sound(path)
-            self._sounds[filename] = snd
-            return snd
-        except pygame.error as e:
-            print(f"[radio] не загрузил {filename}: {e}")
-            self._sounds[filename] = None
-            return None
-
     def _stop_current(self):
-        if self.current_sound:
-            self.current_sound.stop()
-        self.current_sound = None
+        self.player.stop()
         self.current_station = None
 
     def _tune(self):
-        """Проверяет, есть ли станция на текущей частоте."""
-        self._stop_current()
+        """Ищет станцию рядом с текущей частотой и играет её через VLC."""
         if not self.on:
+            self._stop_current()
+            self.status = "выкл"
             return
-        # Ищем ближайшую станцию
+        b = self.band
         best = None
         best_dist = 999
-        for freq, name, snd_file, vol in self.band["stations"]:
+        for freq, name, url, vol in b["stations"]:
             d = abs(freq - self.frequency)
             if d < best_dist:
                 best_dist = d
-                best = (freq, name, snd_file, vol)
-        # Порог захвата — 0.8 от шага или 1.5% диапазона
-        threshold = max(self.band["step"] * 2, (self.band["max"] - self.band["min"]) * 0.015)
+                best = (freq, name, url, vol)
+
+        threshold = max(b["step"] * 5, (b["max"] - b["min"]) * 0.02)
         if best and best_dist <= threshold:
-            snd = self._load_sound(best[2])
-            if snd:
-                snd.set_volume(self.volume * best[3])
-                snd.play(-1)  # цикл
-                self.current_sound = snd
+            if self.current_station and self.current_station[1] == best[1]:
+                return  # уже играет
+            ok = self.player.play(best[2], best[1])
+            self.player.set_volume(self.volume)
+            if ok:
                 self.current_station = (best[0], best[1])
+                self.status = "играет"
+            else:
+                self.current_station = None
+                self.status = "ошибка потока"
+        else:
+            self._stop_current()
+            self.status = "поиск..."
 
     def handle_event(self, event):
         if not self.open:
@@ -208,12 +196,10 @@ class RadioUI:
             self._tune()
         elif event.key in (pygame.K_UP, pygame.K_w):
             self.volume = min(1.0, self.volume + 0.05)
-            if self.current_sound:
-                self.current_sound.set_volume(self.volume)
+            self.player.set_volume(self.volume)
         elif event.key in (pygame.K_DOWN, pygame.K_s):
             self.volume = max(0.0, self.volume - 0.05)
-            if self.current_sound:
-                self.current_sound.set_volume(self.volume)
+            self.player.set_volume(self.volume)
 
     def update(self, dt):
         self.tick += 1
@@ -222,13 +208,14 @@ class RadioUI:
     def open_ui(self):
         self.open = True
         self.on = True
-        self.frequency = 98.7
         self.band_idx = 0
+        st = self.band["stations"]
+        self.frequency = st[0][0] if st else (self.band["min"] + self.band["max"]) / 2
         self._tune()
 
     def close(self):
         self.open = False
-        self._stop_current()
+        self.player.stop()
 
     # ---------- ОТРИСОВКА ----------
     def draw(self, screen):
@@ -300,7 +287,7 @@ class RadioUI:
                          (ptr_x, scale_y - 18), (ptr_x, scale_y + 18), 2)
 
         # метки станций на шкале
-        for freq, name, _, _ in b["stations"]:
+        for freq, name, _url, _vol in b["stations"]:
             if b["min"] <= freq <= b["max"]:
                 r_ = (freq - b["min"]) / span
                 mx = scale_x + 12 + r_ * (scale_w - 24)
@@ -326,7 +313,7 @@ class RadioUI:
             pygame.draw.rect(screen, (30, 60, 30), sig)
             # Определяем силу сигнала
             band = self.band
-            best_d = min(abs(s[0] - self.frequency) for s in band["stations"])
+            best_d = min((abs(s[0] - self.frequency) for s in band["stations"]), default=999)
             thresh = max(band["step"] * 2, (band["max"] - band["min"]) * 0.015)
             strength = max(0.0, 1.0 - best_d / thresh)
             fill = int(sig.w * strength)

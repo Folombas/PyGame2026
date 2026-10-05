@@ -1,0 +1,46 @@
+{
+  "FM": [
+    {
+      "name": "SomaFM Groove Salad",
+      "url": "https://ice1.somafm.com/groovesalad-128-mp3"
+    },
+    {
+      "name": "SomaFM Drone Zone",
+      "url": "https://ice1.somafm.com/dronezone-128-mp3"
+    },
+    {
+      "name": "Radio Paradise",
+      "url": "https://stream.radioparadise.com/mp3-128"
+    }
+  ],
+  "УКВ": [
+    {
+      "name": "SomaFM Indie Pop",
+      "url": "https://ice1.somafm.com/indiepop-128-mp3"
+    },
+    {
+      "name": "SomaFM Underground",
+      "url": "https://ice1.somafm.com/u80s-128-mp3"
+    }
+  ],
+  "SW": [
+    {
+      "name": "SomaFM Space",
+      "url": "https://ice1.somafm.com/spacestation-128-mp3"
+    },
+    {
+      "name": "SomaFM Deep Space",
+      "url": "https://ice1.somafm.com/deepspaceone-128-mp3"
+    }
+  ],
+  "MW": [
+    {
+      "name": "SomaFM Mission Control",
+      "url": "https://ice1.somafm.com/missioncontrol-128-mp3"
+    },
+    {
+      "name": "SomaFM Folk Forward",
+      "url": "https://ice1.somafm.com/folkfwd-128-mp3"
+    }
+  ]
+}
