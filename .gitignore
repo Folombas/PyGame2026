@@ -8,3 +8,4 @@ env/
 *.log
 PyPixel/records.json
 PyPixel/sound_settings.json
+PyPixelTD/assets/radio_cache.json
