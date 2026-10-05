@@ -201,10 +201,12 @@ class World:
 
 
         # Животные на лугу — коровы и куры
-        self.animals.append(Animal(9, 19, "cow"))
-        self.animals.append(Animal(13, 20, "cow"))
-        self.animals.append(Animal(11, 21, "chicken"))
-        self.animals.append(Animal(6, 21, "chicken"))
+        self.animals.append(Animal(7, 18, "cow"))
+        self.animals.append(Animal(13, 22, "cow"))
+        self.animals.append(Animal(5, 20, "cow"))
+        self.animals.append(Animal(10, 19, "chicken"))
+        self.animals.append(Animal(15, 20, "chicken"))
+        self.animals.append(Animal(4, 22, "chicken"))
 
     # ---- Доступ ----
     def tile_at(self, tx, ty):

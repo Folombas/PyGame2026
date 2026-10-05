@@ -40,11 +40,11 @@ class Animal:
         for i in range(2):
             sub = pygame.Surface((16, 16), pygame.SRCALPHA)
             sub.blit(sheet, (0, 0), pygame.Rect(i * 16, 0, 16, 16))
-            frames.append(pygame.transform.scale(sub, (32, 32)))
+            frames.append(pygame.transform.scale(sub, (48, 48)))
         return frames
 
     def rect(self):
-        return pygame.Rect(int(self.x) - 16, int(self.y) - 16, 32, 32)
+        return pygame.Rect(int(self.x) - 24, int(self.y) - 24, 48, 48)
 
     def update(self):
         # Ходим туда-сюда
@@ -83,8 +83,8 @@ class Animal:
         img = frame
         if not self.facing_right:
             img = pygame.transform.flip(frame, True, False)
-        sx = int(self.x) - 16 - cam_x
-        sy = int(self.y) - 32 - cam_y
+        sx = int(self.x) - 24 - cam_x
+        sy = int(self.y) - 48 - cam_y
         # Тень
         shadow = pygame.Surface((32, 8), pygame.SRCALPHA)
         pygame.draw.ellipse(shadow, (0, 0, 0, 80), (0, 0, 32, 8))
