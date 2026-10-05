@@ -94,6 +94,7 @@ class MiniPC:
         self.desk_anim = 0.0
         self.start_open = False
         self.start_pressed = 0        # таймер нажатия
+        self.start_hover_item = -1    # подсветка пункта меню
         self.active_idx = -1
         # Калькулятор — единый дисплей с полной строкой
         self.calc_expr = ""           # "2 - 1 = 1"
@@ -630,52 +631,128 @@ class MiniPC:
         screen.blit(date, (WIDTH - 100, HEIGHT - 16))
 
     def _draw_start_menu(self, screen):
+        """Меню Пуск в стиле BunnyOS."""
         menu = pygame.Rect(6, HEIGHT - 400, 260, 356)
+
+        # Тень
         shadow = pygame.Surface((menu.w + 8, menu.h + 8), pygame.SRCALPHA)
-        shadow.fill((0, 0, 0, 100))
+        shadow.fill((0, 0, 0, 120))
         screen.blit(shadow, (menu.x + 4, menu.y + 4))
-        pygame.draw.rect(screen, WIN_BG, menu)
-        pygame.draw.rect(screen, WIN_BORDER, menu, 1)
 
-        # Заголовок с аватаром
-        head = pygame.Rect(menu.x, menu.y, menu.w, 52)
-        pygame.draw.rect(screen, ACCENT, head)
-        pygame.draw.circle(screen, (255, 245, 235), (menu.x + 28, menu.y + 26), 18)
-        pygame.draw.circle(screen, (30, 25, 35), (menu.x + 22, menu.y + 22), 3)
-        pygame.draw.circle(screen, (30, 25, 35), (menu.x + 34, menu.y + 22), 3)
-        pygame.draw.circle(screen, (240, 150, 170), (menu.x + 28, menu.y + 30), 3)
+        # Рамка — 9-patch панель
+        ui_kit.draw_window(screen, menu)
+
+        # Заголовок — голубая полоса с аватаром
+        head = pygame.Rect(menu.x + 4, menu.y + 4, menu.w - 8, 52)
+        head_surf = pygame.Surface((head.w, head.h), pygame.SRCALPHA)
+        head_surf.fill((40, 80, 140, 220))
+        screen.blit(head_surf, head.topleft)
+
+        # Аватар-зайка
+        av_cx = head.x + 28
+        av_cy = head.y + 26
+        pygame.draw.circle(screen, (255, 245, 235), (av_cx, av_cy), 18)
+        pygame.draw.circle(screen, (30, 25, 35), (av_cx, av_cy), 18, 2)
+        # уши
+        pygame.draw.ellipse(screen, (255, 245, 235), (av_cx - 8, av_cy - 30, 6, 16))
+        pygame.draw.ellipse(screen, (240, 150, 170), (av_cx - 7, av_cy - 28, 4, 12))
+        pygame.draw.ellipse(screen, (255, 245, 235), (av_cx + 2, av_cy - 30, 6, 16))
+        pygame.draw.ellipse(screen, (240, 150, 170), (av_cx + 3, av_cy - 28, 4, 12))
+        # глаза
+        pygame.draw.circle(screen, (30, 25, 35), (av_cx - 5, av_cy - 2), 2)
+        pygame.draw.circle(screen, (30, 25, 35), (av_cx + 5, av_cy - 2), 2)
+        # нос
+        pygame.draw.circle(screen, (240, 150, 170), (av_cx, av_cy + 5), 2)
+
+        # Имя
         name = self.font_big.render("Зайка", True, (255, 255, 255))
-        screen.blit(name, (menu.x + 60, menu.y + 16))
+        screen.blit(name, (head.x + 60, head.y + 16))
 
-        items = [("Мой кролик", "mycomputer"),
-                 ("Интернет", "browser"),
-                 ("Карта", "map"),
-                 ("Заметки", "notes"),
-                 ("Калькулятор", "calc")]
-        mx, my = self.cursor_x, self.cursor_y
-        for i, (name, wid) in enumerate(items):
-            iy = menu.y + 58 + i * 40
-            r = pygame.Rect(menu.x + 4, iy, menu.w - 8, 36)
-            if r.collidepoint(mx, my):
-                pygame.draw.rect(screen, BTN_HOVER, r)
-            icon = DESKTOP_ICONS[i]["icon"]
-            ic = self.font_small.render(icon, True, (30, 30, 30))
-            screen.blit(ic, (r.x + 8, r.y + 8))
-            t = self.font_small.render(name, True, (30, 30, 30))
-            screen.blit(t, (r.x + 36, r.y + 10))
+        # Пункты меню — с иконками
+        items = [
+            ("mycomputer", "Мой кролик"),
+            ("browser",    "Интернет"),
+            ("map",        "Карта"),
+            ("notes",      "Заметки"),
+            ("calc",       "Калькулятор"),
+            ("terminal",   "Терминал"),
+        ]
+        for i, (app_id, label) in enumerate(items):
+            iy = menu.y + 62 + i * 34
+            r = pygame.Rect(menu.x + 6, iy, menu.w - 12, 30)
+            hovered = (i == self.start_hover_item)
+            if hovered:
+                pygame.draw.rect(screen, (80, 130, 200), r)
+                pygame.draw.rect(screen, (140, 190, 255), r, 1)
 
-        # Разделитель + Выключение
-        div_y = menu.y + 58 + len(items) * 40 + 6
-        pygame.draw.line(screen, (200, 200, 200), (menu.x + 8, div_y),
-                         (menu.right - 8, div_y), 1)
-        sr = pygame.Rect(menu.x + 4, div_y + 6, menu.w - 8, 36)
+            # Мини-иконка
+            self._draw_menu_icon(screen, app_id, r.x + 16, r.centery)
+
+            # Текст
+            txt_col = (255, 255, 255) if hovered else (30, 30, 40)
+            txt = self.font_small.render(label, True, txt_col)
+            screen.blit(txt, (r.x + 38, r.centery - txt.get_height() // 2))
+
+        # Разделитель
+        div_y = menu.y + 62 + len(items) * 34 + 8
+        pygame.draw.line(screen, (100, 80, 60),
+                         (menu.x + 10, div_y), (menu.right - 10, div_y), 1)
+
+        # Кнопка Выключить
+        sr = pygame.Rect(menu.x + 6, div_y + 6, menu.w - 12, 32)
+        mx, my = int(self.cursor_x), int(self.cursor_y)
         hov = sr.collidepoint(mx, my)
         if hov:
-            pygame.draw.rect(screen, (240, 220, 220), sr)
-        ic = self.font_small.render("⏻", True, (180, 40, 40))
-        screen.blit(ic, (sr.x + 8, sr.y + 8))
-        t = self.font_small.render("Выключить ПК", True, (180, 40, 40))
-        screen.blit(t, (sr.x + 36, sr.y + 10))
+            pygame.draw.rect(screen, (180, 60, 60), sr)
+            pygame.draw.rect(screen, (240, 100, 100), sr, 1)
+
+        # Иконка питания
+        px = sr.x + 16
+        py = sr.centery
+        pygame.draw.circle(screen, (240, 220, 180), (px, py), 8, 2)
+        pygame.draw.line(screen, (240, 220, 180), (px, py - 8), (px, py - 3), 2)
+        # надпись
+        txt_col = (255, 255, 255) if hov else (200, 80, 80)
+        off = self.font_small.render("Выключить ПК", True, txt_col)
+        screen.blit(off, (sr.x + 38, sr.centery - off.get_height() // 2))
+
+    def _draw_menu_icon(self, screen, app_id, cx, cy):
+        """Рисует мини-иконку 16×16 для меню Пуск."""
+        if app_id == "terminal":
+            pygame.draw.rect(screen, (15, 15, 20), (cx - 9, cy - 9, 18, 18), border_radius=3)
+            pygame.draw.rect(screen, (40, 200, 120), (cx - 9, cy - 9, 18, 18), 1, border_radius=3)
+            txt = self.font_small.render(">_", True, (40, 200, 120))
+            screen.blit(txt, (cx - txt.get_width() // 2, cy - txt.get_height() // 2))
+        elif app_id == "mycomputer":
+            pygame.draw.rect(screen, (70, 70, 80), (cx - 10, cy - 8, 20, 14), border_radius=2)
+            pygame.draw.rect(screen, (30, 60, 100), (cx - 9, cy - 7, 18, 12))
+            pygame.draw.rect(screen, (70, 70, 80), (cx - 3, cy + 6, 6, 2))
+        elif app_id == "browser":
+            pygame.draw.circle(screen, (60, 130, 200), (cx, cy), 9)
+            pygame.draw.circle(screen, (200, 230, 255), (cx, cy), 9, 1)
+            pygame.draw.ellipse(screen, (200, 230, 255), (cx - 9, cy - 9, 9, 18), 1)
+            pygame.draw.ellipse(screen, (200, 230, 255), (cx - 9, cy - 9, 18, 9), 1)
+        elif app_id == "map":
+            pygame.draw.polygon(screen, (200, 180, 130), [
+                (cx - 9, cy - 5), (cx - 3, cy - 9), (cx - 3, cy + 5), (cx - 9, cy + 9)])
+            pygame.draw.polygon(screen, (170, 200, 130), [
+                (cx - 3, cy - 9), (cx + 3, cy - 5), (cx + 3, cy + 9), (cx - 3, cy + 5)])
+            pygame.draw.polygon(screen, (140, 200, 130), [
+                (cx + 3, cy - 5), (cx + 9, cy - 9), (cx + 9, cy + 5), (cx + 3, cy + 9)])
+        elif app_id == "notes":
+            pygame.draw.rect(screen, (250, 240, 190), (cx - 8, cy - 9, 16, 18), border_radius=2)
+            pygame.draw.rect(screen, (120, 80, 50), (cx - 8, cy - 9, 16, 18), 1, border_radius=2)
+            for i in range(3):
+                ly = cy - 4 + i * 4
+                pygame.draw.line(screen, (120, 80, 50), (cx - 5, ly), (cx + 5, ly), 1)
+        elif app_id == "calc":
+            pygame.draw.rect(screen, (70, 70, 80), (cx - 8, cy - 9, 16, 18), border_radius=2)
+            pygame.draw.rect(screen, (180, 220, 180), (cx - 6, cy - 7, 12, 5))
+            for r_i in range(2):
+                for c_i in range(3):
+                    kx = cx - 6 + c_i * 5
+                    ky = cy + r_i * 5
+                    pygame.draw.rect(screen, (240, 240, 250), (kx, ky, 4, 4))
 
     def _draw_cursor(self, screen):
         x, y = int(self.cursor_x), int(self.cursor_y)
