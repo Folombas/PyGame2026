@@ -102,7 +102,7 @@ def _try_enter_house(world, player, return_state):
         dy = p_rect.centery - (h.door_ty * TILE + TILE // 2)
         dist = (dx * dx + dy * dy) ** 0.5
         # print(f"[door] {dist:.0f}px")
-        dr = h.door_rect_px().inflate(90, 90)
+        dr = h.door_rect_px().inflate(160, 160)
         if dr.colliderect(p_rect):
             interior = Interior(house_index=world.houses.index(h))
             # Зайти внутрь — зайка появляется у двери изнутри
@@ -382,6 +382,13 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                continue
+
+            # ----- Радио -----
+            if state == "radio":
+                radio_ui.handle_event(event)
+                if not radio_ui.open:
+                    state = "interior"
                 continue
 
             # ----- Меню — своя обработка -----

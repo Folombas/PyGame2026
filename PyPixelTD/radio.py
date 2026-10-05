@@ -128,11 +128,6 @@ class RadioUI:
     def band(self):
         return self.bands[self.band_idx]
 
-    # ---------- СИСТЕМА ----------
-    @property
-    def band(self):
-        return BANDS[self.band_idx]
-
     def _stop_current(self):
         self.player.stop()
         self.current_station = None
@@ -171,8 +166,85 @@ class RadioUI:
     def handle_event(self, event):
         if not self.open:
             return
+
+        import math as _m
+
+        def angle_of(mx, my, cx, cy):
+            return _m.atan2(my - cy, mx - cx)
+
+        # --- МЫШЬ: нажатие ---
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mx, my = event.pos
+
+            # POWER
+            if self._power_rect().collidepoint(mx, my):
+                self.on = not self.on
+                self._tune()
+                return
+
+            # Диапазоны
+            for i in range(len(self.bands)):
+                if self._band_btn(i).collidepoint(mx, my):
+                    self.band_idx = i
+                    b = self.band
+                    self.frequency = (b["min"] + b["max"]) / 2
+                    self._tune()
+                    return
+
+            # Крутилка TUNE — крутим как ручку
+            tx, ty, tr = self._tune_knob()
+            if (mx - tx) ** 2 + (my - ty) ** 2 <= (tr + 20) ** 2:
+                self._dragging = "tune"
+                self._drag_prev_angle = angle_of(mx, my, tx, ty)
+                return
+
+            # Крутилка VOL
+            vx, vy, vr = self._vol_knob()
+            if (mx - vx) ** 2 + (my - vy) ** 2 <= (vr + 20) ** 2:
+                self._dragging = "vol"
+                self._drag_prev_angle = angle_of(mx, my, vx, vy)
+                return
+            return
+
+        # --- МЫШЬ: отпустили ---
+        if event.type == pygame.MOUSEBUTTONUP:
+            self._dragging = None
+            return
+
+        # --- МЫШЬ: движение (крутим ручку) ---
+        if event.type == pygame.MOUSEMOTION and self._dragging:
+            mx, my = event.pos
+            if self._dragging == "tune":
+                tx, ty, tr = self._tune_knob()
+                cur = angle_of(mx, my, tx, ty)
+                delta = cur - self._drag_prev_angle
+                # нормализуем в [-π, π] — чтобы не было скачков через ±π
+                if delta > _m.pi:   delta -= 2 * _m.pi
+                if delta < -_m.pi:  delta += 2 * _m.pi
+                self._drag_prev_angle = cur
+
+                b = self.band
+                # -delta: по часовой = увеличение частоты
+                self.frequency += delta * b["step"] * 2.0
+                self.frequency = max(b["min"], min(b["max"], self.frequency))
+                self.knob_angle -= delta * 2.0
+                self._tune()
+            elif self._dragging == "vol":
+                vx, vy, vr = self._vol_knob()
+                cur = angle_of(mx, my, vx, vy)
+                delta = cur - self._drag_prev_angle
+                if delta > _m.pi:   delta -= 2 * _m.pi
+                if delta < -_m.pi:  delta += 2 * _m.pi
+                self._drag_prev_angle = cur
+
+                self.volume = max(0.0, min(1.0, self.volume + delta * 0.5))
+                self.player.set_volume(self.volume)
+            return
+
+        # --- КЛАВИАТУРА ---
         if event.type != pygame.KEYDOWN:
             return
+
         b = self.band
         step = b["step"]
         if event.key == pygame.K_ESCAPE:
@@ -181,17 +253,16 @@ class RadioUI:
             self.on = not self.on
             self._tune()
         elif event.key in (pygame.K_TAB, pygame.K_b):
-            self.band_idx = (self.band_idx + 1) % len(BANDS)
-            self.frequency = (b["min"] + b["max"]) / 2  # сброс на середину
+            self.band_idx = (self.band_idx + 1) % len(self.bands)
+            self.frequency = (b["min"] + b["max"]) / 2
+            self.knob_angle = 0
             self._tune()
         elif event.key in (pygame.K_LEFT, pygame.K_a):
-            self.frequency -= step
-            self.frequency = max(b["min"], self.frequency)
+            self.frequency = max(b["min"], self.frequency - step)
             self.knob_angle -= 0.15
             self._tune()
         elif event.key in (pygame.K_RIGHT, pygame.K_d):
-            self.frequency += step
-            self.frequency = min(b["max"], self.frequency)
+            self.frequency = min(b["max"], self.frequency + step)
             self.knob_angle += 0.15
             self._tune()
         elif event.key in (pygame.K_UP, pygame.K_w):
@@ -203,7 +274,8 @@ class RadioUI:
 
     def update(self, dt):
         self.tick += 1
-        self.knob_angle *= 0.92  # плавное возвращение
+        if not self._dragging:
+            self.knob_angle *= 0.92  # плавный возврат стрелки
 
     def open_ui(self):
         self.open = True
@@ -211,7 +283,25 @@ class RadioUI:
         self.band_idx = 0
         st = self.band["stations"]
         self.frequency = st[0][0] if st else (self.band["min"] + self.band["max"]) / 2
+        self._dragging = None           # "tune" | "vol" | None
+        self._drag_prev_angle = 0.0     # предыдущий угол мыши
         self._tune()
+
+    # ---------- ГЕОМЕТРИЯ (общая для draw и mouse) ----------
+    def _vol_knob(self):
+        return (WIDTH // 2 - 220, HEIGHT - 155, 55)
+
+    def _tune_knob(self):
+        return (WIDTH // 2 + 90, HEIGHT - 155, 70)
+
+    def _band_btn(self, i):
+        bw, gap = 110, 10
+        total = len(self.bands) * bw + (len(self.bands) - 1) * gap
+        x0 = (WIDTH - total) // 2 - 60
+        return pygame.Rect(x0 + i * (bw + gap), HEIGHT - 60, bw, 36)
+
+    def _power_rect(self):
+        return pygame.Rect(WIDTH - 200, HEIGHT - 60, 130, 36)
 
     def close(self):
         self.open = False
@@ -326,15 +416,14 @@ class RadioUI:
             screen.blit(nt, (info.centerx - nt.get_width() // 2, info.y + 80))
 
         # === КРУТИЛКА ГРОМКОСТИ ===
-        vol_cx = 380
-        vol_cy = 520
-        pygame.draw.circle(screen, (40, 25, 15), (vol_cx, vol_cy), 55)
-        pygame.draw.circle(screen, (200, 180, 150), (vol_cx, vol_cy), 50)
-        pygame.draw.circle(screen, (60, 40, 25), (vol_cx, vol_cy), 50, 2)
+        vol_cx, vol_cy, vol_r = self._vol_knob()
+        pygame.draw.circle(screen, (40, 25, 15), (vol_cx, vol_cy), vol_r)
+        pygame.draw.circle(screen, (200, 180, 150), (vol_cx, vol_cy), vol_r - 5)
+        pygame.draw.circle(screen, (60, 40, 25), (vol_cx, vol_cy), vol_r - 5, 2)
         # риска-указатель
         ang = -math.pi * 0.75 + self.volume * math.pi * 1.5
-        ex = vol_cx + int(math.cos(ang) * 38)
-        ey = vol_cy + int(math.sin(ang) * 38)
+        ex = vol_cx + int(math.cos(ang) * (vol_r - 15))
+        ey = vol_cy + int(math.sin(ang) * (vol_r - 15))
         pygame.draw.line(screen, (60, 40, 25), (vol_cx, vol_cy), (ex, ey), 4)
         pygame.draw.circle(screen, (60, 40, 25), (vol_cx, vol_cy), 6)
         # подпись
@@ -342,18 +431,17 @@ class RadioUI:
         screen.blit(vt, (vol_cx - vt.get_width() // 2, vol_cy + 65))
 
         # === КРУТИЛКА ЧАСТОТЫ ===
-        tun_cx = 700
-        tun_cy = 520
-        pygame.draw.circle(screen, (40, 25, 15), (tun_cx, tun_cy), 70)
-        pygame.draw.circle(screen, (200, 180, 150), (tun_cx, tun_cy), 64)
-        pygame.draw.circle(screen, (60, 40, 25), (tun_cx, tun_cy), 64, 3)
+        tun_cx, tun_cy, tun_r = self._tune_knob()
+        pygame.draw.circle(screen, (40, 25, 15), (tun_cx, tun_cy), tun_r)
+        pygame.draw.circle(screen, (200, 180, 150), (tun_cx, tun_cy), tun_r - 6)
+        pygame.draw.circle(screen, (60, 40, 25), (tun_cx, tun_cy), tun_r - 6, 3)
         # рифление по краю
         for i in range(24):
             a = i * math.tau / 24
-            x1 = tun_cx + int(math.cos(a) * 58)
-            y1 = tun_cy + int(math.sin(a) * 58)
-            x2 = tun_cx + int(math.cos(a) * 64)
-            y2 = tun_cy + int(math.sin(a) * 64)
+            x1 = tun_cx + int(math.cos(a) * (tun_r - 12))
+            y1 = tun_cy + int(math.sin(a) * (tun_r - 12))
+            x2 = tun_cx + int(math.cos(a) * (tun_r - 6))
+            y2 = tun_cy + int(math.sin(a) * (tun_r - 6))
             pygame.draw.line(screen, (80, 50, 30), (x1, y1), (x2, y2), 2)
         # центральный индикатор
         pygame.draw.circle(screen, (240, 220, 180), (tun_cx, tun_cy), 26)
@@ -368,12 +456,8 @@ class RadioUI:
         screen.blit(tt, (tun_cx - tt.get_width() // 2, tun_cy + 82))
 
         # === КНОПКИ ДИАПАЗОНОВ ===
-        btn_y = 640
-        btn_start = 200
-        for i, band_data in enumerate(BANDS):
-            bw = 110
-            bx = btn_start + i * (bw + 10)
-            r_ = pygame.Rect(bx, btn_y, bw, 36)
+        for i, band_data in enumerate(self.bands):
+            r_ = self._band_btn(i)
             active = (i == self.band_idx)
             base = (200, 120, 60) if active else (160, 110, 70)
             pygame.draw.rect(screen, base, r_, border_radius=6)
@@ -386,7 +470,7 @@ class RadioUI:
                             r_.centery - t.get_height() // 2))
 
         # === ИНДИКАТОР ВКЛ/ВЫКЛ ===
-        pwr_r = pygame.Rect(720, 640, 110, 36)
+        pwr_r = self._power_rect()
         pygame.draw.rect(screen, (80, 50, 30), pwr_r, border_radius=6)
         pygame.draw.rect(screen, (60, 40, 25), pwr_r, 2, border_radius=6)
         col = (240, 60, 60) if self.on else (60, 30, 30)
@@ -399,6 +483,6 @@ class RadioUI:
 
         # === ПОДСКАЗКА ВНИЗУ ===
         hint = self.font_small.render(
-            "←→ — частота   ↑↓ — громкость   B — диапазон   Space — вкл/выкл   Esc — выход",
+            "Мышь: тяни крутилки · Клик: кнопки · Клавиши: ←→ ↑↓ B Space Esc",
             True, (220, 200, 170))
         screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 30))
