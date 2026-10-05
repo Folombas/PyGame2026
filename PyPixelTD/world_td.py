@@ -250,13 +250,11 @@ class World:
             World._big_tree_cache = None
             return None
 
-        # Из превью видно: деревья в строках 0-1, колонки 0-2
-        # Каждое дерево — 2×2 блока (32×32 исходных пикселя)
-        # Возьмём дерево из (0, 0) — 2×2
-        # Соберём один Surface 32×32 и увеличим в 3 раза → 96×96
-        big = pygame.Surface((32, 32), pygame.SRCALPHA)
-        big.blit(sheet, (0, 0), pygame.Rect(0, 0, 32, 32))
-        tree = pygame.transform.scale(big, (96, 96))
+        # Дерево в nature.png — типично 3×4 тайла (48×64)
+        # Попробуем взять область в левом верхнем углу
+        big = pygame.Surface((48, 64), pygame.SRCALPHA)
+        big.blit(sheet, (0, 0), pygame.Rect(0, 0, 48, 64))
+        tree = pygame.transform.scale(big, (96, 128))
         World._big_tree_cache = tree
         return tree
 
