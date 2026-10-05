@@ -15,11 +15,15 @@ class Animal:
         self.base_y = ty * 32 + 32
         self.x = float(self.base_x)
         self.y = float(self.base_y)
-        self.vx = random.choice([-0.3, -0.2, 0.2, 0.3])
-        self.walk_range = random.randint(40, 100)
+        self.vx = 0.0
+        self.vy = 0.0
+        self.walk_range = random.randint(30, 70)
         self.anim_frame = 0
         self.anim_timer = 0
         self.moo_timer = random.randint(300, 800)
+        # Паттерн: пасётся N кадров, потом идёт M кадров
+        self.idle_timer = random.randint(120, 300)  # стоим
+        self.walk_timer = 0                          # идём
         self.talk_text = None
         self.talk_timer = 0
         self.facing_right = True
@@ -47,17 +51,45 @@ class Animal:
         return pygame.Rect(int(self.x) - 24, int(self.y) - 24, 48, 48)
 
     def update(self):
-        # Ходим туда-сюда
-        self.x += self.vx
-        if abs(self.x - self.base_x) > self.walk_range:
-            self.vx = -self.vx
-        self.facing_right = self.vx > 0
+        # Паттерн: пасётся → идёт немного → снова пасётся
+        if self.idle_timer > 0:
+            self.idle_timer -= 1
+            self.vx = 0.0
+            self.vy = 0.0
+            self.anim_frame = 0   # стоит — 1-й кадр
+        else:
+            # Начинаем новый цикл ходьбы
+            if self.walk_timer <= 0:
+                self.walk_timer = random.randint(30, 90)
+                # Случайное направление движения
+                angle = random.choice([0, 90, 180, 270])
+                if angle == 0:    self.vx = 0.3;  self.vy = 0
+                elif angle == 90: self.vx = 0;    self.vy = 0.3
+                elif angle == 180: self.vx = -0.3; self.vy = 0
+                else:             self.vx = 0;    self.vy = -0.3
+                self.facing_right = self.vx > 0
 
-        # Анимация
-        self.anim_timer += 1
-        if self.anim_timer >= 20:
-            self.anim_timer = 0
-            self.anim_frame = (self.anim_frame + 1) % 2
+            self.x += self.vx
+            self.y += self.vy
+            self.walk_timer -= 1
+
+            # Если далеко от базы — возвращаемся (просто стоп)
+            if abs(self.x - self.base_x) > self.walk_range:
+                self.x = self.base_x + (self.walk_range if self.x > self.base_x else -self.walk_range)
+                self.walk_timer = 0
+            if abs(self.y - self.base_y) > self.walk_range:
+                self.y = self.base_y + (self.walk_range if self.y > self.base_y else -self.walk_range)
+                self.walk_timer = 0
+
+            # Анимация ходьбы
+            self.anim_timer += 1
+            if self.anim_timer >= 12:
+                self.anim_timer = 0
+                self.anim_frame = (self.anim_frame + 1) % 2
+
+            # Закончили ходьбу → пасёмся
+            if self.walk_timer <= 0:
+                self.idle_timer = random.randint(150, 400)
 
         # Разговоры
         if self.talk_timer > 0:
