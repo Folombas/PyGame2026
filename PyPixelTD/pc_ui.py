@@ -4,6 +4,7 @@ import pygame
 from settings import WIDTH, HEIGHT
 import os_sounds
 import ui_kit
+from desktop_icons import DesktopIcons
 from linux_sim import LinuxSim
 
 
@@ -74,6 +75,7 @@ class MiniPC:
         self.world_map_surface = world_map_surface
         self.cursor_x = float(WIDTH // 2)
         self.cursor_y = float(HEIGHT // 2)
+        self.desktop = DesktopIcons(font_small)
         self.cursor_speed = 15.0
         self._mouse_active = True
         self.windows = []
@@ -249,6 +251,19 @@ class MiniPC:
 
     # ============= КЛИКИ =============
     def handle_click(self, mx, my, button=1):
+        # Ярлыки рабочего стола
+        now_ms = pygame.time.get_ticks()
+        action = self.desktop.handle_click((mx, my), now_ms)
+        if action:
+            if action.startswith("open:"):
+                app_id = action.split(":")[1]
+                if app_id == "trash":
+                    self.toast = "Корзина пуста"
+                    self.toast_timer = 90
+                else:
+                    self.toggle_window(app_id)
+            return
+
         # Кнопка Пуск
         start_rect = pygame.Rect(6, HEIGHT - 44, 56, 44)
         if start_rect.collidepoint(mx, my):
