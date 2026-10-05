@@ -238,6 +238,28 @@ class World:
         cls._real_tiles.clear()
         return cls._grass_candidate    # сбросить кеш при перезапуске
 
+    _big_tree_cache = None
+
+    def _get_big_tree(self):
+        """Возвращает большое дерево (собранное из 2×2 блока nature.png)."""
+        if World._big_tree_cache is not None:
+            return World._big_tree_cache
+
+        sheet = assets.load_image("tilesets/nature.png")
+        if sheet is None:
+            World._big_tree_cache = None
+            return None
+
+        # Из превью видно: деревья в строках 0-1, колонки 0-2
+        # Каждое дерево — 2×2 блока (32×32 исходных пикселя)
+        # Возьмём дерево из (0, 0) — 2×2
+        # Соберём один Surface 32×32 и увеличим в 3 раза → 96×96
+        big = pygame.Surface((32, 32), pygame.SRCALPHA)
+        big.blit(sheet, (0, 0), pygame.Rect(0, 0, 32, 32))
+        tree = pygame.transform.scale(big, (96, 96))
+        World._big_tree_cache = tree
+        return tree
+
     def _get_real_tile(self, t):
         """Возвращает Surface тайла из assets/ или None."""
         if t in World._real_tiles:
@@ -248,13 +270,12 @@ class World:
         coords_set = {
             "grass": (3, 11),   # зелёная трава
             "path":  (3, 1),    # песчаная тропинка
-            "stone": (3, 16),   # серый камень
             "water": (18, 4),   # чистая вода из water.png
+            "tree":  (2, 2),    # дерево из nature.png (кандидат)
         }
         mapping = {
             T_GRASS: ("floor", coords_set["grass"][0], coords_set["grass"][1]),
             T_PATH:  ("floor", coords_set["path"][0],  coords_set["path"][1]),
-            # T_STONE — убираем, рисуем процедурно (в паке нет серого камня)
             T_WATER: ("water", coords_set["water"][0], coords_set["water"][1]),
         }
         coords = mapping.get(t)

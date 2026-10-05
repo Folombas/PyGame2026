@@ -438,8 +438,8 @@ def main():
                         if World._test_mode:
                             if not hasattr(World, "_tile_coords"):
                                 World._tile_coords = {
-                                    "grass": [8, 8], "path": [3, 0],
-                                    "stone": [11, 10], "water": [0, 0],
+                                    "grass": [3, 11], "path": [3, 1],
+                                    "water": [18, 4], "tree": [2, 2],
                                 }
                             if not hasattr(World, "_test_key"):
                                 World._test_key = "grass"
@@ -449,7 +449,7 @@ def main():
                         continue
                     # В режиме тестера — WASD двигает координаты
                     if getattr(World, "_test_mode", False):
-                        cats = ["grass", "path", "stone", "water"]
+                        cats = ["grass", "path", "water", "tree"]
                         if event.key == pygame.K_g:
                             i = cats.index(World._test_key)
                             World._test_key = cats[(i + 1) % len(cats)]
