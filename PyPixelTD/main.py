@@ -95,7 +95,12 @@ def _try_enter_house(world, player, return_state):
     """Проверяет стоит ли игрок у двери дома. Возвращает Interior или None."""
     p_rect = player.rect
     for h in world.houses:
-        dr = h.door_rect_px().inflate(45, 45)
+        # Отладка: расстояние от центра игрока до центра двери
+        dx = p_rect.centerx - (h.door_tx * TILE + TILE // 2)
+        dy = p_rect.centery - (h.door_ty * TILE + TILE // 2)
+        dist = (dx * dx + dy * dy) ** 0.5
+        # print(f"[door] {dist:.0f}px")
+        dr = h.door_rect_px().inflate(90, 90)
         if dr.colliderect(p_rect):
             interior = Interior(house_index=world.houses.index(h))
             # Зайти внутрь — зайка появляется у двери изнутри
