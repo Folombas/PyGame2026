@@ -522,6 +522,49 @@ def main():
                         state = "interior"
                         os_sounds.play("shutdown")
 
+            # === Клики по игровой панели (в мире и в доме) ===
+            if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                    and state in ("world", "interior")):
+                mx, my = pygame.mouse.get_pos()
+                action = handle_ingame_bar_click(mx, my)
+                if action == "menu":
+                    prev_ingame_state = state
+                    game_menu.overlay = False
+                    game_menu.return_to_game = True
+                    game_menu.in_settings = False
+                    game_menu.selected = 0
+                    state = "menu"
+                    continue
+                elif action == "map":
+                    prev_ingame_state = state
+                    state = "map"
+                    continue
+                elif action == "settings":
+                    prev_ingame_state = state
+                    game_menu.open_from_game()
+                    state = "ingame_settings"
+                    continue
+                elif action == "window_mode":
+                    from settings import WIDTH as _W, HEIGHT as _H
+                    _FULLSCREEN = False
+                    try:
+                        screen = pygame.display.set_mode((_W, _H), pygame.RESIZABLE)
+                    except pygame.error:
+                        pass
+                    continue
+                elif action == "fullscreen":
+                    from settings import WIDTH as _W, HEIGHT as _H
+                    _FULLSCREEN = not _FULLSCREEN
+                    try:
+                        if _FULLSCREEN:
+                            screen = pygame.display.set_mode((_W, _H),
+                                    pygame.FULLSCREEN | pygame.SCALED)
+                        else:
+                            screen = pygame.display.set_mode((_W, _H))
+                    except pygame.error:
+                        pass
+                    continue
+
             elif state == "pc":
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     r = pc.handle_click(*pygame.mouse.get_pos(), button=1)
