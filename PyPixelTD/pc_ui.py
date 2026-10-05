@@ -3,6 +3,7 @@ import math
 import pygame
 from settings import WIDTH, HEIGHT
 import os_sounds
+import ui_kit
 from linux_sim import LinuxSim
 
 
@@ -670,57 +671,61 @@ class MiniPC:
         pygame.draw.polygon(screen, (255, 255, 255), [(x+dx, y+dy) for dx, dy in pts_i])
 
     def _draw_window(self, screen, w, active):
-        sh = pygame.Surface((w.rect.w + 8, w.rect.h + 8), pygame.SRCALPHA)
-        sh.fill((0, 0, 0, 90))
-        screen.blit(sh, (w.rect.x + 4, w.rect.y + 4))
-        pygame.draw.rect(screen, WIN_BG, w.rect)
-        border = ACCENT if active else WIN_BORDER
-        pygame.draw.rect(screen, border, w.rect, 1)
+        """Окно в стиле Wood (9-patch)."""
+        # Тень
+        sh = pygame.Surface((w.rect.w + 6, w.rect.h + 6), pygame.SRCALPHA)
+        sh.fill((0, 0, 0, 80))
+        screen.blit(sh, (w.rect.x + 3, w.rect.y + 3))
 
-        # Title bar — Win10 светлая полоса
-        tb = pygame.Rect(w.rect.x, w.rect.y, w.rect.w, w.TITLE_H)
-        pygame.draw.rect(screen, WIN_TITLE, tb)
-        pygame.draw.line(screen, WIN_BORDER, (tb.x, tb.bottom), (tb.right, tb.bottom), 1)
-        title = self.font_small.render(w.title, True, WIN_TITLE_TEXT)
-        screen.blit(title, (tb.x + 12, tb.y + 8))
+        # Рамка окна — 9-patch
+        ui_kit.draw_window(screen, w.rect)
 
-        # Кнопка close (Win10 стиль)
+        # Title bar — полупрозрачная полоса поверх
+        tb = pygame.Rect(w.rect.x + 4, w.rect.y + 4, w.rect.w - 8, w.TITLE_H - 4)
+        title_surf = pygame.Surface((tb.w, tb.h), pygame.SRCALPHA)
+        title_surf.fill((60, 40, 30, 160))
+        screen.blit(title_surf, tb.topleft)
+
+        # Название
+        title = self.font_small.render(w.title, True, (240, 220, 180))
+        screen.blit(title, (tb.x + 10, tb.y + 6))
+
+        # Кнопка закрытия — круглая красная
         cx = w.rect.right - 22
         cy = w.rect.y + 16
         hov = w.on_close(self.cursor_x, self.cursor_y)
-        if hov:
-            pygame.draw.rect(screen, CLOSE_HOVER, (cx - 22, w.rect.y, 22, w.TITLE_H))
-            col = (255, 255, 255)
-        else:
-            col = (30, 30, 30)
-        pygame.draw.line(screen, col, (cx - 5, cy - 5), (cx + 5, cy + 5), 2)
-        pygame.draw.line(screen, col, (cx - 5, cy + 5), (cx + 5, cy - 5), 2)
+        col = (240, 90, 90) if hov else (180, 60, 60)
+        pygame.draw.circle(screen, col, (cx, cy), 10)
+        pygame.draw.circle(screen, (60, 20, 20), (cx, cy), 10, 2)
+        pygame.draw.line(screen, (255, 230, 230), (cx - 4, cy - 4), (cx + 4, cy + 4), 2)
+        pygame.draw.line(screen, (255, 230, 230), (cx - 4, cy + 4), (cx + 4, cy - 4), 2)
 
-        # Maximize (в центре между close и minimize)
-        mx2 = w.rect.right - 68
-        my2 = w.rect.y + 16
-        hov_x = w.on_maximize(self.cursor_x, self.cursor_y)
-        if hov_x:
-            pygame.draw.rect(screen, (230, 230, 230), (mx2 - 22, w.rect.y, 22, w.TITLE_H))
-        # квадратик или восстановление
-        if hasattr(w, "_saved_rect"):
-            # две наложенные рамки — restore
-            pygame.draw.rect(screen, (30, 30, 30), (mx2 - 7, my2 - 5, 10, 8), 1)
-            pygame.draw.rect(screen, (30, 30, 30), (mx2 - 5, my2 - 7, 10, 8), 1)
-        else:
-            pygame.draw.rect(screen, (30, 30, 30), (mx2 - 5, my2 - 5, 10, 10), 1)
-
-        # Minimize (левее maximize)
-        mx_ = w.rect.right - 114
+        # Кнопка minimize — жёлтая
+        mx_ = w.rect.right - 50
         my_ = w.rect.y + 16
         hov_m = w.on_minimize(self.cursor_x, self.cursor_y)
-        if hov_m:
-            pygame.draw.rect(screen, (230, 230, 230), (mx_ - 22, w.rect.y, 22, w.TITLE_H))
-        pygame.draw.line(screen, (30, 30, 30), (mx_ - 5, my_ + 4), (mx_ + 5, my_ + 4), 2)
+        col_m = (240, 200, 80) if hov_m else (180, 150, 60)
+        pygame.draw.circle(screen, col_m, (mx_, my_), 10)
+        pygame.draw.circle(screen, (60, 50, 20), (mx_, my_), 10, 2)
+        pygame.draw.line(screen, (40, 30, 20), (mx_ - 4, my_ + 3), (mx_ + 4, my_ + 3), 2)
 
-        # Содержимое
-        cr = pygame.Rect(w.rect.x + 4, w.rect.y + w.TITLE_H + 2,
-                          w.rect.w - 8, w.rect.h - w.TITLE_H - 6)
+        # Кнопка maximize — зелёная
+        xx = w.rect.right - 78
+        xy = w.rect.y + 16
+        hov_x = w.on_maximize(self.cursor_x, self.cursor_y)
+        col_x = (100, 220, 120) if hov_x else (60, 160, 80)
+        pygame.draw.circle(screen, col_x, (xx, xy), 10)
+        pygame.draw.circle(screen, (20, 60, 30), (xx, xy), 10, 2)
+        # Квадратик
+        if hasattr(w, "_saved_rect"):
+            pygame.draw.rect(screen, (255, 255, 255), (xx - 4, xy - 2, 6, 6), 1)
+            pygame.draw.rect(screen, (255, 255, 255), (xx - 2, xy - 4, 6, 6), 1)
+        else:
+            pygame.draw.rect(screen, (255, 255, 255), (xx - 4, xy - 4, 8, 8), 1)
+
+        # Контент
+        cr = pygame.Rect(w.rect.x + 8, w.rect.y + w.TITLE_H + 4,
+                          w.rect.w - 16, w.rect.h - w.TITLE_H - 12)
         if w.wtype == "browser": self._draw_browser(screen, cr)
         elif w.wtype == "map": self._draw_map_content(screen, cr)
         elif w.wtype == "notes": self._draw_notes(screen, cr)
