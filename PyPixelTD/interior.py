@@ -1,5 +1,6 @@
 """Интерьер дома зайки: кровать, диван, стол с ПК, стул, цветок."""
 import pygame
+from radio import Radio
 from settings import *
 
 
@@ -38,6 +39,12 @@ class Interior:
         self.rug = pygame.Rect(10 * TILE, 5 * TILE, 10 * TILE, 5 * TILE)
         # Второй коврик поменьше
         self.rug2 = pygame.Rect(2 * TILE, 11 * TILE, 5 * TILE, 3 * TILE)
+
+        # Тумбочка рядом с диваном (диван = 22-27 по X, 2 по Y)
+        self.nightstand = pygame.Rect(20 * TILE, 2 * TILE, 2 * TILE, TILE + 8)
+
+        # Радиоприёмник на тумбочке
+        self.radio = Radio(21 * TILE, 3 * TILE + 8)
 
         self.pc_on = False
         self.sitting = False  # сидит ли зайка на стуле
@@ -79,6 +86,8 @@ class Interior:
     def update(self, dt):
         if self.pc_boot_timer > 0:
             self.pc_boot_timer -= dt * 60
+        if hasattr(self, "radio"):
+            self.radio.update()
 
     def draw(self, screen, cam_x, cam_y, font_small=None):
         # ---- Тайлы ----
@@ -148,6 +157,33 @@ class Interior:
             px = s.x - cam_x + 6 + i * (s.w // 2)
             pygame.draw.rect(screen, (200, 120, 110), (px, s.y - cam_y + 4, s.w // 2 - 10, 12))
             pygame.draw.rect(screen, (80, 40, 35), (px, s.y - cam_y + 4, s.w // 2 - 10, 12), 1)
+
+        # ---- Тумбочка ----
+        ns = self.nightstand
+        # Тень
+        pygame.draw.ellipse(screen, (0, 0, 0, 80),
+                            (ns.x - cam_x + 4, ns.bottom - cam_y - 4, ns.w - 8, 6))
+        # Корпус
+        pygame.draw.rect(screen, (130, 85, 50),
+                         (ns.x - cam_x, ns.y - cam_y, ns.w, ns.h))
+        pygame.draw.rect(screen, (60, 40, 25),
+                         (ns.x - cam_x, ns.y - cam_y, ns.w, ns.h), 2)
+        # Верхняя крышка
+        pygame.draw.rect(screen, (170, 120, 75),
+                         (ns.x - cam_x, ns.y - cam_y, ns.w, 6))
+        pygame.draw.rect(screen, (60, 40, 25),
+                         (ns.x - cam_x, ns.y - cam_y, ns.w, 6), 1)
+        # Ручка
+        pygame.draw.rect(screen, (200, 180, 120),
+                         (ns.centerx - cam_x - 6, ns.centery - cam_y + 4, 12, 3))
+        # Ящик
+        pygame.draw.rect(screen, (100, 60, 35),
+                         (ns.x - cam_x + 4, ns.y - cam_y + 16, ns.w - 8, ns.h - 26))
+        pygame.draw.rect(screen, (60, 40, 25),
+                         (ns.x - cam_x + 4, ns.y - cam_y + 16, ns.w - 8, ns.h - 26), 1)
+
+        # ---- Радиоприёмник ----
+        self.radio.draw(screen, cam_x, cam_y)
 
         # ---- Стол ----
         d = self.desk

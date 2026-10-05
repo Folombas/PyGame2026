@@ -6,6 +6,7 @@ from settings import WIDTH, HEIGHT, FPS, TILE
 from world_td import World, Camera
 from player_td import PlayerTD
 from interior import Interior
+from radio import RadioUI
 from pc_ui import MiniPC
 from title import TitleScreen
 from game_menu import GameMenu
@@ -358,6 +359,7 @@ def main():
     # ---- Screens ----
     title_screen = TitleScreen(font_big, font_small)
     game_menu = GameMenu(font_big, font_small)
+    radio_ui = RadioUI(font_big, font_small)
     boot_screen = None
     login_screen = None
 
@@ -498,6 +500,11 @@ def main():
                             if interior_return:
                                 player.x, player.y = interior_return
                             interior = None
+                        # Радио рядом?
+                        elif (hasattr(interior, "radio") and
+                              interior.radio.interact_rect().colliderect(player.rect)):
+                            radio_ui.open_ui()
+                            state = "radio"
                         else:
                             res = _try_enter_pc(interior, player)
                             if res == "pc_on":
@@ -586,7 +593,9 @@ def main():
                     pc.mouse_motion(*pygame.mouse.get_pos())
 
         # ============ UPDATE ============
-        if state == "title":
+        if state == "radio":
+            radio_ui.update(dt)
+        elif state == "title":
             title_screen.update(dt)
             if title_screen.done:
                 state = "menu"
@@ -635,7 +644,9 @@ def main():
         # Показываем системный курсор во всех режимах (быстрее чем свой)
         pygame.mouse.set_visible(True)
 
-        if state == "title":
+        if state == "radio":
+            radio_ui.draw(screen)
+        elif state == "title":
             title_screen.draw(screen)
         elif state == "menu":
             game_menu.draw(screen)
