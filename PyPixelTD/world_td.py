@@ -244,14 +244,17 @@ class World:
             return World._real_tiles[t]
 
         # Карта: тип_тайла → (имя_листа, col, row)
-        # Тестер: World._tile_coords = (gx, gy, px, py) — настраивается снаружи
-        coords_set = getattr(World, "_tile_coords", None)
-        if coords_set is None:
-            coords_set = {"grass": (3, 11), "path": (3, 1), "stone": (11, 10), "water": (0, 0)}
+        # Фиксированные координаты (из превью)
+        coords_set = {
+            "grass": (3, 11),   # зелёная трава
+            "path":  (3, 1),    # песчаная тропинка
+            "stone": (3, 16),   # серый камень
+            "water": (18, 4),   # чистая вода из water.png
+        }
         mapping = {
             T_GRASS: ("floor", coords_set["grass"][0], coords_set["grass"][1]),
             T_PATH:  ("floor", coords_set["path"][0],  coords_set["path"][1]),
-            T_STONE: ("floor", coords_set["stone"][0], coords_set["stone"][1]),
+            # T_STONE — убираем, рисуем процедурно (в паке нет серого камня)
             T_WATER: ("water", coords_set["water"][0], coords_set["water"][1]),
         }
         coords = mapping.get(t)
