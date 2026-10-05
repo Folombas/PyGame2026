@@ -157,60 +157,172 @@ def _try_talk_villager(world, player):
     return False
 
 
-# =============== ИГРОВАЯ ПАНЕЛЬ ===============
-INGAME_BAR_H = 44
+# =============== ИГРОВАЯ ПАНЕЛЬ (Stardew-style) ===============
+INGAME_BAR_H = 72       # высота панели
+PAD = 12                # отступ от краёв
+
 
 def get_ingame_bar_buttons():
-    """Возвращает список (label, id, rect)."""
+    """Возвращает список (label, id, rect) для главных кнопок."""
     labels = [
-        ("☰  МЕНЮ", "menu"),
-        ("🗺  КАРТА", "map"),
-        ("⚙  НАСТРОЙКИ", "settings"),
+        ("МЕНЮ", "menu", 130),
+        ("КАРТА", "map", 130),
+        ("НАСТРОЙКИ", "settings", 170),
     ]
     rects = []
-    x = 10
-    for label, bid in labels:
-        w = 160 if bid != "map" else 130
-        rects.append((label, bid, pygame.Rect(x, HEIGHT - INGAME_BAR_H + 6, w, INGAME_BAR_H - 12)))
+    x = PAD
+    for label, bid, w in labels:
+        rects.append((label, bid, pygame.Rect(x, HEIGHT - INGAME_BAR_H + 12, w, INGAME_BAR_H - 24)))
         x += w + 8
-    # Две кнопки справа — ASCII иконки для надёжности
-    rects.append(("[ ]", "window_mode",
-                  pygame.Rect(WIDTH - 130, HEIGHT - INGAME_BAR_H + 6, 56, INGAME_BAR_H - 12)))
-    rects.append(("[=]", "fullscreen",
-                  pygame.Rect(WIDTH - 66, HEIGHT - INGAME_BAR_H + 6, 56, INGAME_BAR_H - 12)))
     return rects
 
 
+def get_ingame_bar_icons():
+    """Правые кнопки — оконный/полный экран."""
+    y = HEIGHT - INGAME_BAR_H + 12
+    h = INGAME_BAR_H - 24
+    return [
+        ("window", "window_mode", pygame.Rect(WIDTH - PAD - 100, y, 44, h)),
+        ("full", "fullscreen", pygame.Rect(WIDTH - PAD - 50, y, 44, h)),
+    ]
+
+
+def draw_rounded_panel(surface, rect, color, radius=12, alpha=200):
+    """Полупрозрачная скруглённая панель."""
+    surf = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+    pygame.draw.rect(surf, (*color, alpha), (0, 0, rect.w, rect.h), border_radius=radius)
+    surface.blit(surf, (rect.x, rect.y))
+
+
+def draw_rounded_button(surface, rect, hovered=False, active=False, base_color=(70, 55, 45)):
+    """Скруглённая кнопка с градиентом и рамкой."""
+    r = 10
+    # Фон
+    if active:
+        top = tuple(min(255, c + 30) for c in base_color)
+        bot = tuple(max(0, c - 10) for c in base_color)
+    elif hovered:
+        top = tuple(min(255, c + 40) for c in base_color)
+        bot = tuple(min(255, c + 10) for c in base_color)
+    else:
+        top = base_color
+        bot = tuple(max(0, c - 20) for c in base_color)
+    # Градиент
+    btn = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+    for i in range(rect.h):
+        t = i / rect.h
+        col = tuple(int(top[j] * (1 - t) + bot[j] * t) for j in range(3))
+        pygame.draw.rect(btn, (*col, 230), (0, i, rect.w, 1))
+    # Маска скругления — рисуем поверх прозрачным
+    mask = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+    pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, rect.w, rect.h), border_radius=r)
+    btn.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+    surface.blit(btn, (rect.x, rect.y))
+    # Рамка
+    pygame.draw.rect(surface, (200, 170, 120), rect, 2, border_radius=r)
+    # Верхний блик
+    pygame.draw.line(surface, (255, 240, 200),
+                     (rect.x + 6, rect.y + 3), (rect.right - 6, rect.y + 3), 1)
+
+
+def draw_icon_menu(surface, cx, cy, color):
+    """Иконка меню — три линии."""
+    for dy in (-6, 0, 6):
+        pygame.draw.line(surface, color, (cx - 12, cy + dy), (cx + 12, cy + dy), 3)
+
+
+def draw_icon_map(surface, cx, cy, color):
+    """Иконка карты — квадрат с сеткой."""
+    pygame.draw.rect(surface, color, (cx - 12, cy - 12, 24, 24), 2)
+    pygame.draw.line(surface, color, (cx, cy - 12), (cx, cy + 12), 1)
+    pygame.draw.line(surface, color, (cx - 12, cy), (cx + 12, cy), 1)
+
+
+def draw_icon_settings(surface, cx, cy, color):
+    """Иконка настроек — шестерёнка (упрощённая)."""
+    pygame.draw.circle(surface, color, (cx, cy), 10, 2)
+    pygame.draw.circle(surface, color, (cx, cy), 4, 2)
+    for ang in range(0, 360, 45):
+        import math
+        r1 = math.radians(ang)
+        x1 = cx + int(math.cos(r1) * 10)
+        y1 = cy + int(math.sin(r1) * 10)
+        x2 = cx + int(math.cos(r1) * 14)
+        y2 = cy + int(math.sin(r1) * 14)
+        pygame.draw.line(surface, color, (x1, y1), (x2, y2), 3)
+
+
+def draw_icon_window(surface, cx, cy, color):
+    """Иконка оконного режима."""
+    pygame.draw.rect(surface, color, (cx - 11, cy - 9, 22, 18), 2)
+
+
+def draw_icon_fullscreen(surface, cx, cy, color):
+    """Иконка полного экрана — уголки."""
+    s = 11
+    # 4 уголка
+    pygame.draw.line(surface, color, (cx - s, cy - s), (cx - s + 6, cy - s), 3)
+    pygame.draw.line(surface, color, (cx - s, cy - s), (cx - s, cy - s + 6), 3)
+    pygame.draw.line(surface, color, (cx + s, cy - s), (cx + s - 6, cy - s), 3)
+    pygame.draw.line(surface, color, (cx + s, cy - s), (cx + s, cy - s + 6), 3)
+    pygame.draw.line(surface, color, (cx - s, cy + s), (cx - s + 6, cy + s), 3)
+    pygame.draw.line(surface, color, (cx - s, cy + s), (cx - s, cy + s - 6), 3)
+    pygame.draw.line(surface, color, (cx + s, cy + s), (cx + s - 6, cy + s), 3)
+    pygame.draw.line(surface, color, (cx + s, cy + s), (cx + s, cy + s - 6), 3)
+
+
 def draw_ingame_bar(screen, font_small, cursor):
-    """Нижняя панель в игре."""
+    """Нижняя панель в стиле Stardew Valley."""
+    # === Подложка — полупрозрачная тёмная, скругление сверху ===
     bar = pygame.Rect(0, HEIGHT - INGAME_BAR_H, WIDTH, INGAME_BAR_H)
-    # полупрозрачный фон
     surf = pygame.Surface((WIDTH, INGAME_BAR_H), pygame.SRCALPHA)
-    surf.fill((15, 18, 30, 230))
+    surf.fill((30, 20, 15, 210))
+    # Верхняя золотая линия
+    pygame.draw.line(surf, (180, 140, 80, 255), (0, 0), (WIDTH, 0), 3)
+    pygame.draw.line(surf, (240, 210, 150, 200), (0, 2), (WIDTH, 2), 1)
     screen.blit(surf, (0, HEIGHT - INGAME_BAR_H))
-    pygame.draw.line(screen, (60, 90, 140), (0, bar.y), (WIDTH, bar.y), 2)
 
     mx, my = cursor
+
+    # === Левая группа — главные кнопки ===
     for label, bid, r in get_ingame_bar_buttons():
         hover = r.collidepoint(mx, my)
-        # фон
-        if hover:
-            pygame.draw.rect(screen, (40, 80, 130), r)
-        else:
-            pygame.draw.rect(screen, (25, 40, 65), r)
-        pygame.draw.rect(screen, (80, 120, 180), r, 1)
-        t = font_small.render(label, True, (230, 240, 255))
-        screen.blit(t, (r.centerx - t.get_width() // 2,
-                        r.centery - t.get_height() // 2))
+        draw_rounded_button(screen, r, hovered=hover)
 
-    # Подсказка справа
-    hint = font_small.render("Esc — выход   M — карта", True, (140, 160, 190))
-    screen.blit(hint, (WIDTH - hint.get_width() - 16, HEIGHT - INGAME_BAR_H + 16))
+        # Иконка + текст
+        cy_icon = r.centery
+        cx_icon = r.x + 24
+        if bid == "menu":
+            draw_icon_menu(screen, cx_icon, cy_icon, (240, 220, 180))
+        elif bid == "map":
+            draw_icon_map(screen, cx_icon, cy_icon, (240, 220, 180))
+        elif bid == "settings":
+            draw_icon_settings(screen, cx_icon, cy_icon, (240, 220, 180))
+
+        txt = font_small.render(label, True, (255, 245, 220))
+        screen.blit(txt, (cx_icon + 22, r.centery - txt.get_height() // 2))
+
+    # === Правая группа — оконный/полный режим ===
+    for icon, bid, r in get_ingame_bar_icons():
+        hover = r.collidepoint(mx, my)
+        draw_rounded_button(screen, r, hovered=hover)
+        if bid == "window_mode":
+            draw_icon_window(screen, r.centerx, r.centery, (240, 220, 180))
+        elif bid == "fullscreen":
+            draw_icon_fullscreen(screen, r.centerx, r.centery, (240, 220, 180))
+
+    # === Подсказка ===
+    hint = font_small.render("WASD — ходьба   E — действие   M — карта   Esc — выход",
+                              True, (200, 180, 150))
+    screen.blit(hint, (WIDTH - hint.get_width() - PAD - 120, HEIGHT - INGAME_BAR_H + 48))
 
 
 def handle_ingame_bar_click(mx, my):
-    """Возвращает 'menu' / 'map' / 'settings' / None."""
+    """Возвращает 'menu'/'map'/'settings'/'window_mode'/'fullscreen'/None."""
     for label, bid, r in get_ingame_bar_buttons():
+        if r.collidepoint(mx, my):
+            return bid
+    for icon, bid, r in get_ingame_bar_icons():
         if r.collidepoint(mx, my):
             return bid
     return None
