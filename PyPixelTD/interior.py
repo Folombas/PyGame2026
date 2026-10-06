@@ -1,6 +1,5 @@
 """Интерьер дома зайки: кровать, диван, стол с ПК, стул, цветок."""
 import pygame
-from radio import Radio
 from settings import *
 
 
@@ -29,8 +28,6 @@ class Interior:
         self.sofa = pygame.Rect(11 * TILE, 1 * TILE, 4 * TILE, TILE + 8)
         # Тумбочка рядом с диваном (слева от дивана)
         self.nightstand = pygame.Rect(9 * TILE, 1 * TILE, 2 * TILE, TILE + 8)
-        # Радио на тумбочке
-        self.radio = Radio(10 * TILE, 2 * TILE + 8)
         # Стол с ПК — центр-низ
         self.desk = pygame.Rect(7 * TILE, 8 * TILE, 3 * TILE, TILE + 8)
         # Стул перед столом
@@ -85,8 +82,6 @@ class Interior:
     def update(self, dt):
         if self.pc_boot_timer > 0:
             self.pc_boot_timer -= dt * 60
-        if hasattr(self, "radio"):
-            self.radio.update()
 
     def draw(self, screen, cam_x, cam_y, font_small=None):
         # ---- Тайлы ----
@@ -180,9 +175,6 @@ class Interior:
                          (ns.x - cam_x + 4, ns.y - cam_y + 16, ns.w - 8, ns.h - 26))
         pygame.draw.rect(screen, (60, 40, 25),
                          (ns.x - cam_x + 4, ns.y - cam_y + 16, ns.w - 8, ns.h - 26), 1)
-
-        # ---- Радиоприёмник ----
-        self.radio.draw(screen, cam_x, cam_y)
 
         # ---- Стол ----
         d = self.desk
