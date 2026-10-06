@@ -1,0 +1,33 @@
+"""BunnyOS — константы."""
+
+WIDTH, HEIGHT = 1280, 720
+FPS = 60
+
+# Цвета — Windows 10
+C_DESKTOP_BG      = (0, 120, 215)
+C_DESKTOP_BG2     = (10, 90, 170)
+C_TASKBAR         = (28, 28, 28)
+C_TASKBAR_HOVER   = (50, 50, 50)
+C_TASKBAR_ACTIVE  = (60, 60, 60)
+C_ACCENT          = (0, 120, 215)
+
+C_WINDOW_BG       = (243, 243, 243)
+C_WINDOW_BORDER   = (190, 190, 190)
+C_TITLEBAR        = (243, 243, 243)
+C_TITLEBAR_ACTIVE = (255, 255, 255)
+C_TITLE_TEXT      = (32, 32, 32)
+C_TITLE_TEXT_DIM  = (120, 120, 120)
+
+C_CLOSE_BTN       = (232, 17, 35)
+C_CLOSE_BTN_HOVER = (241, 112, 122)
+C_BTN_HOVER       = (210, 210, 210)
+
+C_TEXT            = (32, 32, 32)
+C_TEXT_DIM        = (120, 120, 120)
+
+C_TERMINAL_BG     = (12, 12, 12)
+C_TERMINAL_TEXT   = (204, 204, 204)
+C_TERMINAL_PROMPT = (100, 255, 100)
+
+TASKBAR_H  = 40
+TITLEBAR_H = 32
