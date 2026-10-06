@@ -164,13 +164,24 @@ class RadioUI:
         self.spr["speaker"]   = L("hifi/speaker_open.png")
         self.spr["hifi_all"]  = L("hifi/hifi_system_0.png")
 
-        # Audio Knobs — ручки (ищем любые PNG в папке)
+        # Audio Knobs — нарезанные ручки knob_rNcM.png
         knobs_dir = os.path.join(base, "knobs")
         if os.path.isdir(knobs_dir):
             for f in sorted(os.listdir(knobs_dir)):
-                if f.lower().endswith(".png"):
-                    key = "knob_" + f.replace(".png", "").replace(" ", "_").lower()
+                if f.lower().endswith(".png") and f.startswith("knob_r"):
+                    key = f.replace(".png", "").lower()  # knob_r0c1
                     self.spr[key] = L(f"knobs/{f}")
+            # Псевдонимы для удобства: большая / средняя / маленькая ручка
+            # (подберём после просмотра превью)
+
+        # Автообрезка прозрачных краёв у ручек
+        for key in list(self.spr.keys()):
+            if key.startswith("knob_r") and self.spr[key]:
+                self.spr[key] = self._trim(self.spr[key])
+
+        # Псевдонимы: TUNE — большая, VOL — серебристая
+        self.spr["knob_tune"] = self.spr.get("knob_r1c0") or self.spr.get("knob_r2c0")
+        self.spr["knob_vol"]  = self.spr.get("knob_r1c2") or self.spr.get("knob_r0c0")
 
         # Логируем что загрузилось
         loaded = [k for k, v in self.spr.items() if v]
@@ -178,6 +189,16 @@ class RadioUI:
             print(f"[radio] спрайтов загружено: {len(loaded)} ({', '.join(loaded[:5])}...)")
         else:
             print("[radio] спрайтов нет — рисуем процедурно")
+
+    @staticmethod
+    def _trim(surface):
+        """Обрезает прозрачные края у Surface."""
+        rect = surface.get_bounding_rect(min_alpha=20)
+        if rect.w == 0 or rect.h == 0:
+            return surface
+        trimmed = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+        trimmed.blit(surface, (0, 0), rect)
+        return trimmed
 
     def _load_ui_sound(self, filename):
         """Загружает WAV для UI-звуков (крутилки, кнопки)."""
