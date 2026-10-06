@@ -590,6 +590,13 @@ class RadioUI:
             nt = self.font_small.render("— нет сигнала —", True, (120, 100, 80))
             screen.blit(nt, (info.centerx - nt.get_width() // 2, info.y + 80))
 
+        # === КРУТИЛКА ЧАСТОТЫ (TUNE) ===
+        tun_cx, tun_cy, tun_r = self._tune_knob()
+        _band = self.band
+        _ratio = (self.frequency - _band["min"]) / max(0.001, (_band["max"] - _band["min"]))
+        _ang = -math.pi * 0.75 + _ratio * math.pi * 1.5
+        self._draw_knob(screen, tun_cx, tun_cy, tun_r, _ang, "TUNE")
+
         # === КРУТИЛКА ГРОМКОСТИ (VOL) — процедурная, красивая ===
         vol_cx, vol_cy, vol_r = self._vol_knob()
         ang_rad = -math.pi * 0.75 + self.volume * math.pi * 1.5
@@ -600,13 +607,47 @@ class RadioUI:
         for i, band_data in enumerate(self.bands):
             r_ = self._band_btn(i)
             active = (i == self.band_idx)
-            base = (200, 120, 60) if active else (160, 110, 70)
-            pygame.draw.rect(screen, base, r_, border_radius=6)
-            pygame.draw.rect(screen, (60, 40, 25), r_, 2, border_radius=6)
-            # блик
-            pygame.draw.line(screen, (240, 200, 140),
-                             (r_.x + 4, r_.y + 2), (r_.right - 4, r_.y + 2), 1)
-            t = self.font_small.render(band_data["name"], True, (255, 240, 210))
+
+            # Тень
+            shadow = pygame.Surface((r_.w, r_.h + 4), pygame.SRCALPHA)
+            pygame.draw.rect(shadow, (0, 0, 0, 90), (2, 4, r_.w - 2, r_.h - 2), border_radius=6)
+            screen.blit(shadow, (r_.x, r_.y))
+
+            # Градиент сверху вниз
+            top = (245, 200, 130) if active else (200, 155, 105)
+            bot = (180, 120, 60) if active else (140, 100, 60)
+            for yy in range(r_.h):
+                t = yy / r_.h
+                col = tuple(int(top[k] * (1 - t) + bot[k] * t) for k in range(3))
+                pygame.draw.line(screen, col, (r_.x, r_.y + yy), (r_.right, r_.y + yy))
+
+            # Скруглённая маска
+            mask = pygame.Surface((r_.w, r_.h), pygame.SRCALPHA)
+            pygame.draw.rect(mask, (255, 255, 255, 255), (0, 0, r_.w, r_.h), border_radius=6)
+            # Хитрость: перерисуем градиент через маску
+            grad = pygame.Surface((r_.w, r_.h), pygame.SRCALPHA)
+            for yy in range(r_.h):
+                t = yy / r_.h
+                col = tuple(int(top[k] * (1 - t) + bot[k] * t) for k in range(3))
+                pygame.draw.line(grad, col, (0, yy), (r_.w, yy))
+            grad.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+            screen.blit(grad, r_.topleft)
+
+            # Рамка
+            frame_col = (60, 40, 25) if not active else (255, 220, 160)
+            pygame.draw.rect(screen, frame_col, r_, 2, border_radius=6)
+
+            # Верхний блик (глянец)
+            pygame.draw.line(screen, (255, 245, 210),
+                             (r_.x + 6, r_.y + 3), (r_.right - 6, r_.y + 3), 1)
+            pygame.draw.line(screen, (255, 230, 180),
+                             (r_.x + 4, r_.y + 4), (r_.right - 4, r_.y + 4), 1)
+
+            # Текст с тенью
+            shadow_t = self.font_small.render(band_data["name"], True, (0, 0, 0))
+            screen.blit(shadow_t, (r_.centerx - shadow_t.get_width() // 2 + 1,
+                                    r_.centery - shadow_t.get_height() // 2 + 1))
+            t = self.font_small.render(band_data["name"], True, (255, 245, 220))
             screen.blit(t, (r_.centerx - t.get_width() // 2,
                             r_.centery - t.get_height() // 2))
 
