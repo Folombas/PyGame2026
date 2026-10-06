@@ -92,6 +92,10 @@ class RadioUI:
         # VLC-плеер
         self.player = RadioPlayer()
 
+        # Спрайты из паков (HiFi System + Audio Knobs + Kenney)
+        self.spr = {}
+        self._load_sprites()
+
         # Звуки интерфейса (через pygame.mixer, не через VLC)
         self.snd_dial = self._load_ui_sound("dial_click.wav")
         self.snd_band = self._load_ui_sound("band_switch.wav")
@@ -139,6 +143,41 @@ class RadioUI:
     @property
     def band(self):
         return self.bands[self.band_idx]
+
+    def _load_sprites(self):
+        """Загружает спрайты из паков. Если нет — None (fallback на процедурные)."""
+        import os
+        base = os.path.join(os.path.dirname(__file__), "assets", "radio")
+        def L(rel):
+            p = os.path.join(base, rel)
+            if not os.path.exists(p):
+                return None
+            try:
+                return pygame.image.load(p).convert_alpha()
+            except Exception:
+                return None
+
+        # HiFi System — компоненты
+        self.spr["receiver"]  = L("hifi/receiver.png")
+        self.spr["equalizer"] = L("hifi/equalizer.png")
+        self.spr["turntable"] = L("hifi/turntable.png")
+        self.spr["speaker"]   = L("hifi/speaker_open.png")
+        self.spr["hifi_all"]  = L("hifi/hifi_system_0.png")
+
+        # Audio Knobs — ручки (ищем любые PNG в папке)
+        knobs_dir = os.path.join(base, "knobs")
+        if os.path.isdir(knobs_dir):
+            for f in sorted(os.listdir(knobs_dir)):
+                if f.lower().endswith(".png"):
+                    key = "knob_" + f.replace(".png", "").replace(" ", "_").lower()
+                    self.spr[key] = L(f"knobs/{f}")
+
+        # Логируем что загрузилось
+        loaded = [k for k, v in self.spr.items() if v]
+        if loaded:
+            print(f"[radio] спрайтов загружено: {len(loaded)} ({', '.join(loaded[:5])}...)")
+        else:
+            print("[radio] спрайтов нет — рисуем процедурно")
 
     def _load_ui_sound(self, filename):
         """Загружает WAV для UI-звуков (крутилки, кнопки)."""
@@ -490,28 +529,36 @@ class RadioUI:
 
         # === КРУТИЛКА ЧАСТОТЫ ===
         tun_cx, tun_cy, tun_r = self._tune_knob()
-        pygame.draw.circle(screen, (40, 25, 15), (tun_cx, tun_cy), tun_r)
-        pygame.draw.circle(screen, (200, 180, 150), (tun_cx, tun_cy), tun_r - 6)
-        pygame.draw.circle(screen, (60, 40, 25), (tun_cx, tun_cy), tun_r - 6, 3)
-        # рифление по краю
-        for i in range(24):
-            a = i * math.tau / 24
-            x1 = tun_cx + int(math.cos(a) * (tun_r - 12))
-            y1 = tun_cy + int(math.sin(a) * (tun_r - 12))
-            x2 = tun_cx + int(math.cos(a) * (tun_r - 6))
-            y2 = tun_cy + int(math.sin(a) * (tun_r - 6))
-            pygame.draw.line(screen, (80, 50, 30), (x1, y1), (x2, y2), 2)
-        # центральный индикатор
-        pygame.draw.circle(screen, (240, 220, 180), (tun_cx, tun_cy), 26)
-        pygame.draw.circle(screen, (60, 40, 25), (tun_cx, tun_cy), 26, 2)
-        # стрелка
-        ang2 = self.knob_angle + (self.frequency - b["min"]) / span * math.pi * 1.5 - math.pi * 0.75
-        ex2 = tun_cx + int(math.cos(ang2) * 22)
-        ey2 = tun_cy + int(math.sin(ang2) * 22)
-        pygame.draw.line(screen, (60, 40, 25), (tun_cx, tun_cy), (ex2, ey2), 4)
-        # подпись
+        knob_img = self.spr.get("knob_knob_large") or self.spr.get("knob_knob")
+        if knob_img:
+            # Масштабируем под наш радиус
+            target = tun_r * 2
+            scaled = pygame.transform.smoothscale(knob_img, (target, target))
+            # Поворачиваем по углу
+            ang_deg = -math.degrees(self.knob_angle + (self.frequency - b["min"]) / span * math.pi * 1.5 - math.pi * 0.75)
+            rotated = pygame.transform.rotate(scaled, ang_deg)
+            rr = rotated.get_rect(center=(tun_cx, tun_cy))
+            screen.blit(rotated, rr.topleft)
+        else:
+            # Fallback — процедурная
+            pygame.draw.circle(screen, (40, 25, 15), (tun_cx, tun_cy), tun_r)
+            pygame.draw.circle(screen, (200, 180, 150), (tun_cx, tun_cy), tun_r - 6)
+            pygame.draw.circle(screen, (60, 40, 25), (tun_cx, tun_cy), tun_r - 6, 3)
+            for i in range(24):
+                a = i * math.tau / 24
+                x1 = tun_cx + int(math.cos(a) * (tun_r - 12))
+                y1 = tun_cy + int(math.sin(a) * (tun_r - 12))
+                x2 = tun_cx + int(math.cos(a) * (tun_r - 6))
+                y2 = tun_cy + int(math.sin(a) * (tun_r - 6))
+                pygame.draw.line(screen, (80, 50, 30), (x1, y1), (x2, y2), 2)
+            pygame.draw.circle(screen, (240, 220, 180), (tun_cx, tun_cy), 26)
+            pygame.draw.circle(screen, (60, 40, 25), (tun_cx, tun_cy), 26, 2)
+            ang2 = self.knob_angle + (self.frequency - b["min"]) / span * math.pi * 1.5 - math.pi * 0.75
+            ex2 = tun_cx + int(math.cos(ang2) * 22)
+            ey2 = tun_cy + int(math.sin(ang2) * 22)
+            pygame.draw.line(screen, (60, 40, 25), (tun_cx, tun_cy), (ex2, ey2), 4)
         tt = self.font_small.render("TUNE", True, (240, 220, 180))
-        screen.blit(tt, (tun_cx - tt.get_width() // 2, tun_cy + 82))
+        screen.blit(tt, (tun_cx - tt.get_width() // 2, tun_cy + tun_r + 8))
 
         # === КНОПКИ ДИАПАЗОНОВ ===
         for i, band_data in enumerate(self.bands):
