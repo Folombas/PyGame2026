@@ -108,18 +108,15 @@ def _draw_hint(screen, font_small, text):
 def _try_enter_house(world, player, return_state):
     """Проверяет стоит ли игрок у двери дома. Возвращает Interior или None."""
     p_rect = player.rect
-    print(f"[door] игрок: ({p_rect.centerx}, {p_rect.centery})  домов: {len(world.houses)}")
     for h in world.houses:
         # Центр двери дома
         door_cx = (h.tx + h.w // 2) * TILE + TILE // 2
         door_cy = (h.ty + h.h - 1) * TILE + TILE // 2
         dx = abs(p_rect.centerx - door_cx)
         dy = p_rect.centery - door_cy  # + = игрок ниже двери
-        print(f"[door]   центр двери ({door_cx}, {door_cy}), dx={dx}, dy={dy}")
 
         # Широкая зона: 80px по X, от -30 до +140 по Y (игрок может быть и выше, и ниже)
         if dx < 80 and -30 <= dy <= 140:
-            print(f"[door]   ✓ ВХОД!")
             interior = Interior(house_index=world.houses.index(h))
             player.x = interior.exit_tx * TILE + (TILE - player.w) // 2
             player.y = (interior.exit_ty - 1) * TILE + (TILE - player.h)
@@ -464,7 +461,6 @@ def main():
                         title_screen.done = True
 
                 elif state == "world":
-                    print(f"[E] state=world, key={event.key} ({pygame.key.name(event.key)})")
                     # Toggle режима тестера
                     if event.key == pygame.K_t:
                         World._test_mode = not getattr(World, "_test_mode", False)

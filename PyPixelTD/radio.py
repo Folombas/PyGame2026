@@ -209,6 +209,54 @@ class RadioUI:
         trimmed.blit(surface, (0, 0), rect)
         return trimmed
 
+    def _draw_knob(self, screen, cx, cy, r, angle_rad, label, label_color=(240, 220, 180)):
+        """Красивая металлическая крутилка с насечками, бликами и тенью."""
+        import math as _m
+
+        # Тень
+        shadow = pygame.Surface((r * 2 + 12, r * 2 + 12), pygame.SRCALPHA)
+        pygame.draw.circle(shadow, (0, 0, 0, 90), (r + 6, r + 8), r)
+        screen.blit(shadow, (cx - r - 6, cy - r - 6))
+
+        # Внешний тёмный корпус
+        pygame.draw.circle(screen, (25, 20, 15), (cx, cy), r)
+        # Тёмное кольцо
+        pygame.draw.circle(screen, (55, 40, 30), (cx, cy), r - 2)
+
+        # Насечки по краю (24 шт)
+        for i in range(24):
+            a = i * _m.tau / 24
+            x1 = cx + _m.cos(a) * (r - 12)
+            y1 = cy + _m.sin(a) * (r - 12)
+            x2 = cx + _m.cos(a) * (r - 3)
+            y2 = cy + _m.sin(a) * (r - 3)
+            pygame.draw.line(screen, (15, 12, 10), (x1, y1), (x2, y2), 2)
+
+        # Внутренний металл — радиальный градиент
+        for rad in range(r - 12, 2, -1):
+            # От светлого центра к тёмному краю
+            t = (r - 12 - rad) / max(1, r - 12)
+            base = 200 - int(t * 90)
+            col = (base, base - 15, base - 30)
+            pygame.draw.circle(screen, col, (cx, cy), rad)
+
+        # Блик сверху
+        hl = pygame.Surface((r - 16, (r - 16) // 2), pygame.SRCALPHA)
+        pygame.draw.ellipse(hl, (255, 255, 255, 70), (0, 0, r - 16, (r - 16) // 2))
+        screen.blit(hl, (cx - (r - 16) // 2, cy - r + 10))
+
+        # Стрелка-указатель
+        ex = cx + _m.cos(angle_rad - _m.pi / 2) * (r - 22)
+        ey = cy + _m.sin(angle_rad - _m.pi / 2) * (r - 22)
+        pygame.draw.line(screen, (30, 20, 15), (cx, cy), (ex, ey), 5)
+        pygame.draw.circle(screen, (40, 30, 20), (cx, cy), 6)
+        pygame.draw.circle(screen, (200, 180, 150), (cx, cy), 3)
+
+        # Подпись
+        if label:
+            tt = self.font_small.render(label, True, label_color)
+            screen.blit(tt, (cx - tt.get_width() // 2, cy + r + 8))
+
     def _load_ui_sound(self, filename):
         """Загружает WAV для UI-звуков (крутилки, кнопки)."""
         import os
@@ -542,53 +590,11 @@ class RadioUI:
             nt = self.font_small.render("— нет сигнала —", True, (120, 100, 80))
             screen.blit(nt, (info.centerx - nt.get_width() // 2, info.y + 80))
 
-        # === КРУТИЛКА ГРОМКОСТИ ===
+        # === КРУТИЛКА ГРОМКОСТИ (VOL) — процедурная, красивая ===
         vol_cx, vol_cy, vol_r = self._vol_knob()
-        pygame.draw.circle(screen, (40, 25, 15), (vol_cx, vol_cy), vol_r)
-        pygame.draw.circle(screen, (200, 180, 150), (vol_cx, vol_cy), vol_r - 5)
-        pygame.draw.circle(screen, (60, 40, 25), (vol_cx, vol_cy), vol_r - 5, 2)
-        # риска-указатель
-        ang = -math.pi * 0.75 + self.volume * math.pi * 1.5
-        ex = vol_cx + int(math.cos(ang) * (vol_r - 15))
-        ey = vol_cy + int(math.sin(ang) * (vol_r - 15))
-        pygame.draw.line(screen, (60, 40, 25), (vol_cx, vol_cy), (ex, ey), 4)
-        pygame.draw.circle(screen, (60, 40, 25), (vol_cx, vol_cy), 6)
-        # подпись
-        vt = self.font_small.render(f"VOL  {int(self.volume*100)}%", True, (240, 220, 180))
-        screen.blit(vt, (vol_cx - vt.get_width() // 2, vol_cy + 65))
-
-        # === КРУТИЛКА ЧАСТОТЫ ===
-        tun_cx, tun_cy, tun_r = self._tune_knob()
-        knob_img = self.spr.get("knob_knob_large") or self.spr.get("knob_knob")
-        if knob_img:
-            # Масштабируем под наш радиус
-            target = tun_r * 2
-            scaled = pygame.transform.smoothscale(knob_img, (target, target))
-            # Поворачиваем по углу
-            ang_deg = -math.degrees(self.knob_angle + (self.frequency - b["min"]) / span * math.pi * 1.5 - math.pi * 0.75)
-            rotated = pygame.transform.rotate(scaled, ang_deg)
-            rr = rotated.get_rect(center=(tun_cx, tun_cy))
-            screen.blit(rotated, rr.topleft)
-        else:
-            # Fallback — процедурная
-            pygame.draw.circle(screen, (40, 25, 15), (tun_cx, tun_cy), tun_r)
-            pygame.draw.circle(screen, (200, 180, 150), (tun_cx, tun_cy), tun_r - 6)
-            pygame.draw.circle(screen, (60, 40, 25), (tun_cx, tun_cy), tun_r - 6, 3)
-            for i in range(24):
-                a = i * math.tau / 24
-                x1 = tun_cx + int(math.cos(a) * (tun_r - 12))
-                y1 = tun_cy + int(math.sin(a) * (tun_r - 12))
-                x2 = tun_cx + int(math.cos(a) * (tun_r - 6))
-                y2 = tun_cy + int(math.sin(a) * (tun_r - 6))
-                pygame.draw.line(screen, (80, 50, 30), (x1, y1), (x2, y2), 2)
-            pygame.draw.circle(screen, (240, 220, 180), (tun_cx, tun_cy), 26)
-            pygame.draw.circle(screen, (60, 40, 25), (tun_cx, tun_cy), 26, 2)
-            ang2 = self.knob_angle + (self.frequency - b["min"]) / span * math.pi * 1.5 - math.pi * 0.75
-            ex2 = tun_cx + int(math.cos(ang2) * 22)
-            ey2 = tun_cy + int(math.sin(ang2) * 22)
-            pygame.draw.line(screen, (60, 40, 25), (tun_cx, tun_cy), (ex2, ey2), 4)
-        tt = self.font_small.render("TUNE", True, (240, 220, 180))
-        screen.blit(tt, (tun_cx - tt.get_width() // 2, tun_cy + tun_r + 8))
+        ang_rad = -math.pi * 0.75 + self.volume * math.pi * 1.5
+        self._draw_knob(screen, vol_cx, vol_cy, vol_r, ang_rad,
+                        f"VOL  {int(self.volume*100)}%")
 
         # === КНОПКИ ДИАПАЗОНОВ ===
         for i, band_data in enumerate(self.bands):
