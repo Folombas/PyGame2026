@@ -92,6 +92,18 @@ class RadioUI:
         # VLC-плеер
         self.player = RadioPlayer()
 
+        # Звуки интерфейса (через pygame.mixer, не через VLC)
+        self.snd_dial = self._load_ui_sound("dial_click.wav")
+        self.snd_band = self._load_ui_sound("band_switch.wav")
+        self.snd_power = self._load_ui_sound("power_click.wav")
+        self.snd_noise = self._load_ui_sound("search_noise.wav")
+        if self.snd_noise:
+            self.snd_noise.set_volume(0.15)
+
+        # Таймер для треска крутилки (чтоб не спамить каждый пиксель)
+        self._dial_sound_cooldown = 0
+        self._noise_channel = None
+
         # Загружаем станции и строим BANDS
         self.bands = self._build_bands()
 
@@ -128,6 +140,17 @@ class RadioUI:
     def band(self):
         return self.bands[self.band_idx]
 
+    def _load_ui_sound(self, filename):
+        """Загружает WAV для UI-звуков (крутилки, кнопки)."""
+        import os
+        path = os.path.join(os.path.dirname(__file__), "assets", "radio", filename)
+        if not os.path.exists(path):
+            return None
+        try:
+            return pygame.mixer.Sound(path)
+        except Exception:
+            return None
+
     def _stop_current(self):
         self.player.stop()
         self.current_station = None
@@ -136,6 +159,7 @@ class RadioUI:
         """Ищет станцию рядом с текущей частотой и играет её через VLC."""
         if not self.on:
             self._stop_current()
+            self._stop_noise()
             self.status = "выкл"
             return
         b = self.band
@@ -149,8 +173,9 @@ class RadioUI:
 
         threshold = max(b["step"] * 5, (b["max"] - b["min"]) * 0.02)
         if best and best_dist <= threshold:
+            self._stop_noise()
             if self.current_station and self.current_station[1] == best[1]:
-                return  # уже играет
+                return
             ok = self.player.play(best[2], best[1])
             self.player.set_volume(self.volume)
             if ok:
@@ -162,6 +187,26 @@ class RadioUI:
         else:
             self._stop_current()
             self.status = "поиск..."
+            # Включаем белый шум (если ещё не играет)
+            self._start_noise()
+
+    def _start_noise(self):
+        if not self.snd_noise:
+            return
+        if self._noise_channel and self._noise_channel.get_busy():
+            return
+        try:
+            self._noise_channel = self.snd_noise.play(-1)  # цикл
+        except Exception:
+            self._noise_channel = None
+
+    def _stop_noise(self):
+        if self._noise_channel:
+            try:
+                self._noise_channel.stop()
+            except Exception:
+                pass
+            self._noise_channel = None
 
     def handle_event(self, event):
         if not self.open:
@@ -179,6 +224,9 @@ class RadioUI:
             # POWER
             if self._power_rect().collidepoint(mx, my):
                 self.on = not self.on
+                if self.snd_power:
+                    self.snd_power.set_volume(0.5)
+                    self.snd_power.play()
                 self._tune()
                 return
 
@@ -188,6 +236,9 @@ class RadioUI:
                     self.band_idx = i
                     b = self.band
                     self.frequency = (b["min"] + b["max"]) / 2
+                    if self.snd_band:
+                        self.snd_band.set_volume(0.5)
+                        self.snd_band.play()
                     self._tune()
                     return
 
@@ -218,16 +269,20 @@ class RadioUI:
                 tx, ty, tr = self._tune_knob()
                 cur = angle_of(mx, my, tx, ty)
                 delta = cur - self._drag_prev_angle
-                # нормализуем в [-π, π] — чтобы не было скачков через ±π
                 if delta > _m.pi:   delta -= 2 * _m.pi
                 if delta < -_m.pi:  delta += 2 * _m.pi
                 self._drag_prev_angle = cur
 
                 b = self.band
-                # -delta: по часовой = увеличение частоты
                 self.frequency += delta * b["step"] * 2.0
                 self.frequency = max(b["min"], min(b["max"], self.frequency))
                 self.knob_angle -= delta * 2.0
+                # Треск крутилки — не чаще 1 раза в 4 кадра
+                if abs(delta) > 0.02 and self._dial_sound_cooldown <= 0:
+                    if self.snd_dial:
+                        self.snd_dial.set_volume(0.25)
+                        self.snd_dial.play()
+                    self._dial_sound_cooldown = 4
                 self._tune()
             elif self._dragging == "vol":
                 vx, vy, vr = self._vol_knob()
@@ -274,6 +329,8 @@ class RadioUI:
 
     def update(self, dt):
         self.tick += 1
+        if self._dial_sound_cooldown > 0:
+            self._dial_sound_cooldown -= 1
         if not self._dragging:
             self.knob_angle *= 0.92  # плавный возврат стрелки
 
@@ -306,6 +363,7 @@ class RadioUI:
     def close(self):
         self.open = False
         self.player.stop()
+        self._stop_noise()
 
     # ---------- ОТРИСОВКА ----------
     def draw(self, screen):

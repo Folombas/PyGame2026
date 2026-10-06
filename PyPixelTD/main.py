@@ -97,15 +97,14 @@ def _try_enter_house(world, player, return_state):
     """Проверяет стоит ли игрок у двери дома. Возвращает Interior или None."""
     p_rect = player.rect
     for h in world.houses:
-        # Отладка: расстояние от центра игрока до центра двери
-        dx = p_rect.centerx - (h.door_tx * TILE + TILE // 2)
-        dy = p_rect.centery - (h.door_ty * TILE + TILE // 2)
-        dist = (dx * dx + dy * dy) ** 0.5
-        # print(f"[door] {dist:.0f}px")
-        dr = h.door_rect_px().inflate(160, 160)
-        if dr.colliderect(p_rect):
+        # Центр двери в пикселях
+        door_cx = h.door_tx * TILE + TILE // 2
+        door_cy = h.door_ty * TILE + TILE // 2
+        # Игрок должен быть ниже двери и не дальше 60px по X, 90px по Y
+        dx = abs(p_rect.centerx - door_cx)
+        dy = p_rect.centery - door_cy  # + вниз (дверь сверху)
+        if dx < 60 and 0 <= dy < 90:
             interior = Interior(house_index=world.houses.index(h))
-            # Зайти внутрь — зайка появляется у двери изнутри
             player.x = interior.exit_tx * TILE + (TILE - player.w) // 2
             player.y = (interior.exit_ty - 1) * TILE + (TILE - player.h)
             player.direction = "up"
@@ -494,7 +493,7 @@ def main():
                             interior_return = (player.x, player.y)
                             interior = new_int
                             state = "interior"
-                            toast = f"Дом #{world.houses.index(new_int.house_index.__class__) if False else ''}"
+                            toast = "Вошёл в дом"
                             toast_timer = 60
                         else:
                             _try_talk_villager(world, player)
