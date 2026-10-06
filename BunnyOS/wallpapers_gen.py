@@ -93,6 +93,8 @@ def wp_forest():
 
 def wp_space():
     """4. Космос."""
+    import random as _r
+    rng = _r.Random(99)
     s = pygame.Surface((WIDTH, HEIGHT))
     _gradient(s, (5, 5, 20), (30, 10, 50))
     _stars(s, 250, 3)
@@ -144,24 +146,23 @@ def wp_retrowave():
     return s
 
 
-GENERATORS = {
-    "Ночное небо": wp_night,
-    "Закат":       wp_sunset,
-    "Лес":         wp_forest,
-    "Космос":      wp_space,
-    "Океан":       wp_ocean,
-    "Ретро-волна": wp_retrowave,
-}
+GENERATORS = [
+    ("Ночное небо", "night",     wp_night),
+    ("Закат",       "sunset",    wp_sunset),
+    ("Лес",         "forest",    wp_forest),
+    ("Космос",      "space",     wp_space),
+    ("Океан",       "ocean",     wp_ocean),
+    ("Ретро-волна", "retrowave", wp_retrowave),
+]
 
 
 def generate_all(out_dir="assets/wallpapers"):
     """Генерирует все обои и сохраняет в out_dir."""
     import os
     os.makedirs(out_dir, exist_ok=True)
-    for name, fn in GENERATORS.items():
+    for name, fname, fn in GENERATORS:
         surf = fn()
-        safe = name.lower().replace(" ", "_").replace("-", "_")
-        path = os.path.join(out_dir, f"gen_{safe}.png")
+        path = os.path.join(out_dir, f"gen_{fname}.png")
         pygame.image.save(surf, path)
         print(f"  ✓ {path}")
     return len(GENERATORS)
