@@ -9,3 +9,8 @@ env/
 PyPixel/records.json
 PyPixel/sound_settings.json
 PyPixelTD/assets/radio_cache.json
+PyPixelTD/assets/radio/knobs/*.zip
+PyPixelTD/assets/radio/ui/*.zip
+PyPixelTD/assets/radio/knobs/*.zip
+PyPixelTD/assets/radio/ui/*.zip
+PyPixelTD/assets/radio/knobs/readme-license.txt
