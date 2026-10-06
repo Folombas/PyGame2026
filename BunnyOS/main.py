@@ -157,6 +157,29 @@ class BunnyOS:
             self.windows.remove(w)
             self.windows.append(w)
 
+    def _load_wallpaper(self):
+        """Загружает первый доступный wallpaper из папки."""
+        import os as _os
+        d = "assets/wallpapers"
+        if not _os.path.exists(d):
+            return
+        files = sorted([f for f in _os.listdir(d)
+                        if f.lower().endswith((".jpg", ".jpeg", ".png"))])
+        if not files:
+            return
+        self.set_wallpaper(_os.path.join(d, files[0]))
+
+    def set_wallpaper(self, path):
+        """Устанавливает обои и кэширует отмасштабированную версию."""
+        self.wallpaper = path
+        try:
+            img = pygame.image.load(path).convert()
+            self.wallpaper_surf = pygame.transform.smoothscale(img, (WIDTH, HEIGHT))
+            
+        except Exception as e:
+            print(f"[wallpaper] ошибка: {e}")
+            self.wallpaper_surf = None
+
     def open_app(self, app_id):
         if app_id not in APPS:
             return
