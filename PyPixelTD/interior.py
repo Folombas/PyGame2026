@@ -6,8 +6,8 @@ from settings import *
 
 class Interior:
     def __init__(self, house_index=0):
-        self.w = 30
-        self.h = 18
+        self.w = 16
+        self.h = 12
         self.house_index = house_index
         self.tiles = [[0 for _ in range(self.w)] for _ in range(self.h)]
         # Стены по краям
@@ -17,38 +17,34 @@ class Interior:
         for y in range(self.h):
             self.tiles[y][0] = 1
             self.tiles[y][self.w - 1] = 1
-        # Дверь
+        # Дверь снизу по центру
         self.exit_tx = self.w // 2
         self.exit_ty = self.h - 1
         self.tiles[self.exit_ty][self.exit_tx] = 2
 
-        # ---- МЕБЕЛЬ (просторно) ----
+        # ---- МЕБЕЛЬ (компактно) ----
         # Кровать — левый верх
-        self.bed = pygame.Rect(3 * TILE, 2 * TILE, 3 * TILE, 2 * TILE)
+        self.bed = pygame.Rect(1 * TILE, 1 * TILE, 3 * TILE, 2 * TILE)
         # Диван — правый верх
-        self.sofa = pygame.Rect(22 * TILE, 2 * TILE, 5 * TILE, TILE + 8)
-        # Стол с ПК — центр
-        self.desk = pygame.Rect(13 * TILE, 11 * TILE, 4 * TILE, TILE + 8)
+        self.sofa = pygame.Rect(11 * TILE, 1 * TILE, 4 * TILE, TILE + 8)
+        # Тумбочка рядом с диваном (слева от дивана)
+        self.nightstand = pygame.Rect(9 * TILE, 1 * TILE, 2 * TILE, TILE + 8)
+        # Радио на тумбочке
+        self.radio = Radio(10 * TILE, 2 * TILE + 8)
+        # Стол с ПК — центр-низ
+        self.desk = pygame.Rect(7 * TILE, 8 * TILE, 3 * TILE, TILE + 8)
         # Стул перед столом
-        self.chair = pygame.Rect(14 * TILE, 13 * TILE + 4, TILE, TILE - 4)
+        self.chair = pygame.Rect(8 * TILE, 10 * TILE + 4, TILE, TILE - 4)
         # Монитор на столе
-        self.monitor = pygame.Rect(14 * TILE - 4, self.desk.y - 26, TILE + 12, 28)
+        self.monitor = pygame.Rect(7 * TILE - 4, self.desk.y - 26, TILE + 12, 28)
         # Цветок — правый низ
-        self.flower_pos = (25 * TILE, 13 * TILE + 16)
+        self.flower_pos = (14 * TILE, 9 * TILE + 16)
         # Ковёр — центр
-        self.rug = pygame.Rect(10 * TILE, 5 * TILE, 10 * TILE, 5 * TILE)
-        # Второй коврик поменьше
-        self.rug2 = pygame.Rect(2 * TILE, 11 * TILE, 5 * TILE, 3 * TILE)
-
-        # Тумбочка рядом с диваном (диван = 22-27 по X, 2 по Y)
-        self.nightstand = pygame.Rect(20 * TILE, 2 * TILE, 2 * TILE, TILE + 8)
-
-        # Радиоприёмник на тумбочке
-        self.radio = Radio(21 * TILE, 3 * TILE + 8)
+        self.rug = pygame.Rect(5 * TILE, 4 * TILE, 6 * TILE, 3 * TILE)
 
         self.pc_on = False
-        self.sitting = False  # сидит ли зайка на стуле
-        self.pc_boot_timer = 0  # анимация включения
+        self.sitting = False
+
 
     def is_solid(self, tx, ty):
         if tx < 0 or tx >= self.w or ty < 0 or ty >= self.h:

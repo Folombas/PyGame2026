@@ -139,74 +139,52 @@ class World:
         self._build()
 
     def _build(self):
-        # Тропинка от спавна через деревню
-        for x in range(15, 45):
-            self.tiles[22][x] = T_PATH
-            self.tiles[23][x] = T_PATH
-        # Поперечная тропа к домам
-        for y in range(18, 24):
-            for x in [18, 24, 30, 36]:
-                self.tiles[y][x] = T_PATH
-
-        # Немного цветов и разнообразия
         import random
         random.seed(42)
-        for _ in range(60):
-            x = random.randint(2, self.w - 3)
-            y = random.randint(2, self.h - 3)
+
+        # Тропинка от дома вниз
+        for y in range(8, self.h):
+            self.tiles[y][self.w // 2] = T_PATH
+
+        # Пруд слева-снизу
+        for y in range(12, 16):
+            for x in range(1, 5):
+                self.tiles[y][x] = T_WATER
+
+        # Немного цветов
+        for _ in range(12):
+            x = random.randint(1, self.w - 2)
+            y = random.randint(1, self.h - 2)
             if self.tiles[y][x] == T_GRASS:
                 self.tiles[y][x] = T_FLOWER
 
-        # Деревья вокруг
-        for _ in range(120):
+        # Деревья по краям (не в центре, не на тропе)
+        for _ in range(30):
             x = random.randint(1, self.w - 2)
             y = random.randint(1, self.h - 2)
-            # не рядом со спавном, не на тропе
-            if abs(x - 15) < 4 and abs(y - 22) < 4: continue
-            if self.tiles[y][x] in (T_PATH, T_FLOWER):
+            if abs(x - self.w // 2) < 3 and y > 8:
                 continue
-            self.tiles[y][x] = T_TREE
-
-        # Вода — пруд слева
-        for y in range(10, 18):
-            for x in range(3, 10):
-                self.tiles[y][x] = T_WATER
-
-        # Вода — озеро справа от деревни
-        for y in range(25, 33):
-            for x in range(42, 52):
-                self.tiles[y][x] = T_WATER
-
-        # Камень — немного
-        for _ in range(30):
-            x = random.randint(2, self.w - 3)
-            y = random.randint(2, self.h - 3)
             if self.tiles[y][x] == T_GRASS:
-                self.tiles[y][x] = T_STONE
+                self.tiles[y][x] = T_TREE
 
-        # ОДИН домик Зайки
-        self.houses.append(House(16, 18, 4, 3))
+        # ДОМ Зайки — по центру
+        self.houses.append(House(10, 5, 4, 3))
 
-        # Грядки рядом (слева от дома, компактный огород)
-        # Морковь — верхний блок
-        for gy in range(17, 19):
-            for gx in range(10, 14):
+        # Грядки слева от дома (морковь + капуста)
+        for gy in range(5, 7):
+            for gx in range(4, 8):
                 self.tiles[gy][gx] = T_GARDEN_CARROT
-        # Капуста — прямо под морковью
-        for gy in range(19, 21):
-            for gx in range(10, 14):
+        for gy in range(7, 9):
+            for gx in range(4, 8):
                 self.tiles[gy][gx] = T_GARDEN_CABBAGE
 
-        # Жители — только парочка (прохожие)
+        # Животные рядом с домом
+        self.animals.append(Animal(6, 12, "cow"))
+        self.animals.append(Animal(10, 14, "cow"))
+        self.animals.append(Animal(14, 12, "chicken"))
+        self.animals.append(Animal(17, 14, "chicken"))
+        self.animals.append(Animal(8, 16, "chicken"))
 
-
-        # Животные на лугу — коровы и куры
-        self.animals.append(Animal(6, 22, "cow"))
-        self.animals.append(Animal(9, 24, "cow"))
-        self.animals.append(Animal(3, 25, "cow"))
-        self.animals.append(Animal(11, 22, "chicken"))
-        self.animals.append(Animal(13, 24, "chicken"))
-        self.animals.append(Animal(7, 26, "chicken"))
 
     # ---- Доступ ----
     def tile_at(self, tx, ty):
