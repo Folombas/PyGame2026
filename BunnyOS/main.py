@@ -5,7 +5,7 @@ import pygame
 from settings import *
 from fs import VirtualFS, Shell
 from ui import (Window, TerminalApp, FilesApp, NotepadApp,
-                CalculatorApp, AboutApp, load_icon)
+                CalculatorApp, AboutApp, WallpapersApp, load_icon)
 from browser import BrowserApp
 
 
@@ -16,6 +16,7 @@ APPS = {
     "notepad":  (NotepadApp,  "Блокнот",                   (260, 110, 640, 480)),
     "calc":     (CalculatorApp, "Калькулятор",             (400, 180, 300, 400)),
     "about":    (AboutApp,    "О BunnyOS",                 (350, 170, 480, 300)),
+    "wallpapers": (WallpapersApp, "Персонализация",        (200, 100, 740, 520)),
 }
 
 
@@ -38,6 +39,11 @@ class BunnyOS:
         self.windows = []
         self.active_win = None
         self.start_open = False
+
+        # Обои
+        self.wallpaper = None
+        self.wallpaper_surf = None
+        self._load_wallpaper()
 
     # ---------- EVENTS ----------
     def handle_event(self, e):
@@ -237,11 +243,14 @@ class BunnyOS:
         self.screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 100))
 
     def draw_desktop(self):
-        # Обои
-        for y in range(HEIGHT):
-            t = y / HEIGHT
-            col = (int(0 + 25 * t), int(70 + 70 * t), int(160 + 60 * t))
-            pygame.draw.line(self.screen, col, (0, y), (WIDTH, y))
+        # Обои — картинка или градиент
+        if self.wallpaper_surf:
+            self.screen.blit(self.wallpaper_surf, (0, 0))
+        else:
+            for y in range(HEIGHT):
+                t = y / HEIGHT
+                col = (int(0 + 25 * t), int(70 + 70 * t), int(160 + 60 * t))
+                pygame.draw.line(self.screen, col, (0, y), (WIDTH, y))
         # Лёгкое затемнение внизу для taskbar
         self._draw_desktop_icons()
         # Окна
@@ -260,6 +269,7 @@ class BunnyOS:
             ("notepad",  "Блокнот",     "notepad"),
             ("calc",     "Калькулятор", "calculator"),
             ("about",    "О системе",   "info"),
+            ("wallpapers", "Персонализация", "computer"),
         ]
         mx, my = pygame.mouse.get_pos()
         x0, y0 = 20, 20
@@ -343,6 +353,7 @@ class BunnyOS:
             "notepad":  "#   Блокнот",
             "calc":     "+-  Калькулятор",
             "about":    "i   О системе",
+            "wallpapers": "[]  Персонализация",
         }
         menu_h = 40 + len(items) * 36
         menu_y = HEIGHT - TASKBAR_H - menu_h

@@ -444,3 +444,123 @@ class AboutApp:
             tt = font.render(line, True, (40, 40, 40))
             scr.blit(tt, (rect.x + 20, y))
             y += 24
+
+# ===================== WALLPAPERS APP =====================
+class WallpapersApp:
+    """Персонализация — выбор обоев из assets/wallpapers/."""
+    app_id = "wallpapers"
+
+    def __init__(self, os_ref):
+        self.os = os_ref
+        self.wallpapers = []       # список путей
+        self.thumbs = {}           # path → маленькая версия
+        self.selected = None
+        self.status = ""
+        self._load_list()
+
+    def _load_list(self):
+        d = "assets/wallpapers"
+        self.wallpapers = []
+        if os.path.exists(d):
+            for f in sorted(os.listdir(d)):
+                if f.lower().endswith((".jpg", ".jpeg", ".png")):
+                    self.wallpapers.append(os.path.join(d, f))
+        # Создаём превью
+        for p in self.wallpapers:
+            try:
+                img = pygame.image.load(p).convert()
+                # Уменьшаем до 240×135
+                thumb = pygame.transform.smoothscale(img, (240, 135))
+                self.thumbs[p] = thumb
+            except Exception:
+                pass
+
+    def handle_event(self, event, rect):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            mx, my = event.pos
+            # Кнопка "Обновить из интернета"
+            upd = pygame.Rect(rect.right - 220, rect.y + 12, 200, 32)
+            if upd.collidepoint(mx, my):
+                self._download_new()
+                return
+            # Клик по обоям (сетка 3 колонки)
+            cols = 3
+            cell_w = (rect.w - 40) // cols
+            cell_h = 135 + 30
+            for i, p in enumerate(self.wallpapers):
+                r = i // cols
+                c = i % cols
+                x = rect.x + 12 + c * cell_w
+                y = rect.y + 60 + r * cell_h
+                if pygame.Rect(x, y, cell_w - 12, cell_h - 12).collidepoint(mx, my):
+                    self.os.set_wallpaper(p)
+                    self.selected = p
+                    self.status = f"Применено: {os.path.basename(p)}"
+                    return
+
+    def _download_new(self):
+        try:
+            import requests
+            import random as _r
+            self.status = "Загрузка из интернета..."
+            seed = _r.randint(1, 999999)
+            url = f"https://picsum.photos/seed/bunny{seed}/1280/720"
+            r = requests.get(url, timeout=10, allow_redirects=True)
+            if r.status_code == 200 and len(r.content) > 5000:
+                fname = f"assets/wallpapers/wallpaper_dl_{seed}.jpg"
+                with open(fname, "wb") as f:
+                    f.write(r.content)
+                self._load_list()
+                self.status = f"✓ Скачано: {os.path.basename(fname)}"
+            else:
+                self.status = f"✗ HTTP {r.status_code}"
+        except Exception as e:
+            self.status = f"✗ {type(e).__name__}: {str(e)[:50]}"
+
+    def draw(self, scr, rect, font):
+        pygame.draw.rect(scr, (250, 250, 252), rect)
+        # Заголовок
+        title = pygame.font.Font(None, 28).render("Персонализация — Обои", True, (30, 30, 40))
+        scr.blit(title, (rect.x + 16, rect.y + 12))
+        # Кнопка скачать
+        mx, my = pygame.mouse.get_pos()
+        upd = pygame.Rect(rect.right - 220, rect.y + 12, 200, 32)
+        hover = upd.collidepoint(mx, my)
+        col = (0, 130, 220) if hover else (0, 110, 200)
+        pygame.draw.rect(scr, col, upd, border_radius=6)
+        tt = font.render("Загрузить из интернета", True, (255, 255, 255))
+        scr.blit(tt, (upd.centerx - tt.get_width() // 2, upd.centery - tt.get_height() // 2))
+
+        # Галерея
+        cols = 3
+        cell_w = (rect.w - 40) // cols
+        cell_h = 135 + 30
+        y_start = rect.y + 60
+        for i, p in enumerate(self.wallpapers):
+            r = i // cols
+            c = i % cols
+            x = rect.x + 12 + c * cell_w
+            y = y_start + r * cell_h
+            box = pygame.Rect(x, y, cell_w - 12, cell_h - 12)
+            # Подсветка выбранного
+            is_sel = (p == self.os.wallpaper)
+            hov = box.collidepoint(mx, my)
+            if is_sel:
+                pygame.draw.rect(scr, (0, 120, 215), box, 3)
+            elif hov:
+                pygame.draw.rect(scr, (100, 160, 220), box, 2)
+            else:
+                pygame.draw.rect(scr, (200, 200, 200), box, 1)
+            # Превью
+            thumb = self.thumbs.get(p)
+            if thumb:
+                scr.blit(thumb, (box.x + 2, box.y + 2))
+            # Имя файла
+            name = os.path.basename(p)
+            nt = pygame.font.Font(None, 14).render(name[:28], True, (60, 60, 60))
+            scr.blit(nt, (box.x + 4, box.bottom - 18))
+
+        # Статус
+        if self.status:
+            st = font.render(self.status, True, (0, 100, 0))
+            scr.blit(st, (rect.x + 16, rect.bottom - 24))
