@@ -43,6 +43,7 @@ class Interior:
         self.rug = pygame.Rect(5 * TILE, 4 * TILE, 6 * TILE, 3 * TILE)
 
         self.pc_on = False
+        self.pc_boot_timer = 0
         self.sitting = False
 
 
