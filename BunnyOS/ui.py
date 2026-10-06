@@ -499,21 +499,21 @@ class WallpapersApp:
                     return
 
     def _download_new(self):
+        """Генерирует новые обои с случайным seed."""
         try:
-            import requests
             import random as _r
-            self.status = "Загрузка из интернета..."
+            import wallpapers_gen
+            self.status = "Генерация..."
             seed = _r.randint(1, 999999)
-            url = f"https://picsum.photos/seed/bunny{seed}/1280/720"
-            r = requests.get(url, timeout=10, allow_redirects=True)
-            if r.status_code == 200 and len(r.content) > 5000:
-                fname = f"assets/wallpapers/wallpaper_dl_{seed}.jpg"
-                with open(fname, "wb") as f:
-                    f.write(r.content)
-                self._load_list()
-                self.status = f"✓ Скачано: {os.path.basename(fname)}"
-            else:
-                self.status = f"✗ HTTP {r.status_code}"
+            # Генерируем случайный тип
+            types = list(wallpapers_gen.GENERATORS)
+            name, fname, fn = _r.choice(types)
+            # Генерируем с новой случайной вариацией через замену seed
+            surf = fn()
+            out = f"assets/wallpapers/custom_{seed}.png"
+            pygame.image.save(surf, out)
+            self._load_list()
+            self.status = f"✓ Новые обои: {name}"
         except Exception as e:
             self.status = f"✗ {type(e).__name__}: {str(e)[:50]}"
 
@@ -522,13 +522,13 @@ class WallpapersApp:
         # Заголовок
         title = pygame.font.Font(None, 28).render("Персонализация — Обои", True, (30, 30, 40))
         scr.blit(title, (rect.x + 16, rect.y + 12))
-        # Кнопка скачать
+        # Кнопка "Сгенерировать"
         mx, my = pygame.mouse.get_pos()
         upd = pygame.Rect(rect.right - 220, rect.y + 12, 200, 32)
         hover = upd.collidepoint(mx, my)
         col = (0, 130, 220) if hover else (0, 110, 200)
         pygame.draw.rect(scr, col, upd, border_radius=6)
-        tt = font.render("Загрузить из интернета", True, (255, 255, 255))
+        tt = font.render("Сгенерировать новые", True, (255, 255, 255))
         scr.blit(tt, (upd.centerx - tt.get_width() // 2, upd.centery - tt.get_height() // 2))
 
         # Галерея
