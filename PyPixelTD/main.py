@@ -514,11 +514,8 @@ def main():
                         else:
                             res = _try_enter_pc(interior, player)
                             if res == "pc_on":
-                                print("[dbg] ДО BootScreen()")
-                                boot_screen = BootScreen(font_big, font_small)
-                                print("[dbg] BootScreen() создан OK")
                                 login_screen = None
-                                state = "pc_boot"
+                                state = "pc"
 
                 elif state == "map":
                     if event.key == pygame.K_m:
@@ -526,7 +523,7 @@ def main():
                     elif event.key == pygame.K_ESCAPE:
                         state = prev_ingame_state
 
-                elif state == "pc_boot" and boot_screen:
+                elif state == "pc_boot_unused" and False:
                     if event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE):
                         boot_screen.done = True
 
