@@ -171,6 +171,15 @@ class RadioUI:
                 if f.lower().endswith(".png") and f.startswith("knob_r"):
                     key = f.replace(".png", "").lower()  # knob_r0c1
                     self.spr[key] = L(f"knobs/{f}")
+
+        # Обрезка прозрачных краёв у всех knob_r*.png
+        for key in list(self.spr.keys()):
+            if key.startswith("knob_r") and self.spr[key]:
+                self.spr[key] = self._trim(self.spr[key])
+
+        # Подбираем ручки под TUNE и VOL (большая чёрная + серебристая)
+        self.spr["knob_tune"] = self.spr.get("knob_r1c0")
+        self.spr["knob_vol"]  = self.spr.get("knob_r1c2")
             # Псевдонимы для удобства: большая / средняя / маленькая ручка
             # (подберём после просмотра превью)
 

@@ -41,6 +41,8 @@ class Interior:
         self.flower_pos = (14 * TILE, 9 * TILE + 16)
         # Ковёр — центр
         self.rug = pygame.Rect(5 * TILE, 4 * TILE, 6 * TILE, 3 * TILE)
+        # Коврик у кровати
+        self.rug2 = pygame.Rect(1 * TILE, 4 * TILE, 3 * TILE, 2 * TILE)
 
         self.pc_on = False
         self.pc_boot_timer = 0

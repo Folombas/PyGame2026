@@ -2,6 +2,18 @@
 import sys
 import pygame
 
+
+def is_action_key(event):
+    """E/Space/Enter — независимо от раскладки (рус/англ).
+    На русской раскладке клавиша E даёт 1091 (кириллическая 'у'),
+    но scancode = 8 всегда. Используем его."""
+    if event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN, pygame.K_KP_ENTER):
+        return True
+    # SDL_SCANCODE_E = 8 — физическая клавиша E
+    if getattr(event, "scancode", None) == 8:
+        return True
+    return False
+
 from settings import WIDTH, HEIGHT, FPS, TILE
 from world_td import World, Camera
 from player_td import PlayerTD
@@ -96,20 +108,25 @@ def _draw_hint(screen, font_small, text):
 def _try_enter_house(world, player, return_state):
     """Проверяет стоит ли игрок у двери дома. Возвращает Interior или None."""
     p_rect = player.rect
+    print(f"[door] игрок: ({p_rect.centerx}, {p_rect.centery})  домов: {len(world.houses)}")
     for h in world.houses:
-        # Центр двери в пикселях
-        door_cx = h.door_tx * TILE + TILE // 2
-        door_cy = h.door_ty * TILE + TILE // 2
-        # Игрок должен быть ниже двери и не дальше 60px по X, 90px по Y
+        # Центр двери дома
+        door_cx = (h.tx + h.w // 2) * TILE + TILE // 2
+        door_cy = (h.ty + h.h - 1) * TILE + TILE // 2
         dx = abs(p_rect.centerx - door_cx)
-        dy = p_rect.centery - door_cy  # + вниз (дверь сверху)
-        if dx < 60 and 0 <= dy < 90:
+        dy = p_rect.centery - door_cy  # + = игрок ниже двери
+        print(f"[door]   центр двери ({door_cx}, {door_cy}), dx={dx}, dy={dy}")
+
+        # Широкая зона: 80px по X, от -30 до +140 по Y (игрок может быть и выше, и ниже)
+        if dx < 80 and -30 <= dy <= 140:
+            print(f"[door]   ✓ ВХОД!")
             interior = Interior(house_index=world.houses.index(h))
             player.x = interior.exit_tx * TILE + (TILE - player.w) // 2
             player.y = (interior.exit_ty - 1) * TILE + (TILE - player.h)
             player.direction = "up"
             return interior
     return None
+
 
 
 def _try_enter_pc(interior, player):
@@ -447,6 +464,7 @@ def main():
                         title_screen.done = True
 
                 elif state == "world":
+                    print(f"[E] state=world, key={event.key} ({pygame.key.name(event.key)})")
                     # Toggle режима тестера
                     if event.key == pygame.K_t:
                         World._test_mode = not getattr(World, "_test_mode", False)
@@ -486,7 +504,7 @@ def main():
                     # Обычное управление
                     if event.key == pygame.K_m:
                         state = "map"
-                    elif event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN):
+                    elif is_action_key(event):
                         # Войти в дом?
                         new_int = _try_enter_house(world, player, state)
                         if new_int:
@@ -499,7 +517,7 @@ def main():
                             _try_talk_villager(world, player)
 
                 elif state == "interior" and interior:
-                    if event.key in (pygame.K_e, pygame.K_SPACE, pygame.K_RETURN):
+                    if is_action_key(event):
                         # Сначала — выход у двери
                         if _try_exit_house(interior, player):
                             state = "world"
