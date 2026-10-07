@@ -160,3 +160,87 @@ def all_months_summary(storage):
             f"{sign}{fmt_money(bal)}[/]" if False else f"[{'green' if bal>=0 else 'red'}]{fmt_money(bal)}[/]",
         )
     console.print(table)
+
+
+def compare_months(storage, year, month):
+    """Сравнивает текущий месяц с предыдущим."""
+    # Считаем предыдущий месяц
+    if month == 1:
+        prev_year, prev_month = year - 1, 12
+    else:
+        prev_year, prev_month = year, month - 1
+
+    cur = storage.month(year, month)
+    prev = storage.month(prev_year, prev_month)
+
+    if not cur and not prev:
+        console.print(f"[yellow]Нет данных для сравнения {year}-{month:02d}[/yellow]")
+        return
+
+    def group(txns):
+        d = defaultdict(float)
+        for t in txns:
+            if t["kind"] == "spend":
+                d[t["category"]] += t["amount"]
+        return d
+
+    cur_by = group(cur)
+    prev_by = group(prev)
+
+    all_cats = sorted(set(cur_by) | set(prev_by))
+
+    console.print()
+    console.print(Panel(
+        f"[bold]Сравнение {year}-{month:02d} с {prev_year}-{prev_month:02d}[/bold]",
+        expand=False
+    ))
+    console.print()
+
+    table = Table()
+    table.add_column("Категория", style="magenta")
+    table.add_column(f"{prev_year}-{prev_month:02d}", justify="right")
+    table.add_column(f"{year}-{month:02d}", justify="right")
+    table.add_column("Δ", justify="right")
+
+    cur_total = sum(cur_by.values())
+    prev_total = sum(prev_by.values())
+
+    for cat in all_cats:
+        c = cur_by.get(cat, 0)
+        p = prev_by.get(cat, 0)
+        if p == 0:
+            delta = "[dim]—[/dim]"
+        else:
+            diff = (c - p) / p * 100
+            if diff > 5:
+                delta = f"[red]↑ {diff:+.0f}%[/red]"
+            elif diff < -5:
+                delta = f"[green]↓ {diff:+.0f}%[/green]"
+            else:
+                delta = f"[dim]{diff:+.0f}%[/dim]"
+        table.add_row(cat, fmt_money(p), fmt_money(c), delta)
+
+    # Итого
+    if prev_total:
+        diff = (cur_total - prev_total) / prev_total * 100
+        delta = f"[red]↑ {diff:+.0f}%[/red]" if diff > 5 else \
+                f"[green]↓ {diff:+.0f}%[/green]" if diff < -5 else f"[dim]{diff:+.0f}%[/dim]"
+    else:
+        delta = "[dim]—[/dim]"
+    table.add_row("[bold]ИТОГО[/bold]", f"[bold]{fmt_money(prev_total)}[/bold]",
+                  f"[bold]{fmt_money(cur_total)}[/bold]", delta)
+
+    console.print(table)
+
+
+def search_transactions(storage, query, limit=50):
+    """Поиск по описанию."""
+    all_t = storage.all()
+    q = query.lower()
+    results = [t for t in all_t if q in t["description"].lower()
+               or q in t["category"].lower()]
+    if not results:
+        console.print(f"[yellow]Ничего не найдено по запросу: {query}[/yellow]")
+        return
+    console.print(f"[cyan]Найдено: {len(results)} транзакций[/cyan]")
+    show_transactions(results[-limit:])

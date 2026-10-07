@@ -7,7 +7,8 @@ from rich.console import Console
 from rich.table import Table
 from storage import Storage
 from categories import categorize, all_categories
-from reports import show_transactions, month_report, all_months_summary, fmt_money
+from reports import (show_transactions, month_report, all_months_summary,
+                     fmt_money, compare_months, search_transactions)
 import budgets
 
 
@@ -103,6 +104,28 @@ def cmd_budget(args):
             console.print(f"[red]✗ Лимит для {args.category} не найден[/red]")
 
 
+
+def cmd_compare(args):
+    """Сравнение с прошлым месяцем."""
+    st = Storage()
+    if args.month:
+        try:
+            year, month = map(int, args.month.split("-"))
+        except ValueError:
+            console.print("[red]Формат: YYYY-MM[/red]")
+            return
+    else:
+        now = datetime.now()
+        year, month = now.year, now.month
+    compare_months(st, year, month)
+
+
+def cmd_search(args):
+    """Поиск по описанию."""
+    st = Storage()
+    search_transactions(st, args.query)
+
+
 def main():
     p = argparse.ArgumentParser(
         prog="budget",
@@ -146,6 +169,16 @@ def main():
     # cats
     cp = sub.add_parser("cats", help="Список категорий")
     cp.set_defaults(func=cmd_cats)
+
+    # compare
+    cmp = sub.add_parser("compare", help="Сравнить с прошлым месяцем")
+    cmp.add_argument("month", nargs="?", help="YYYY-MM (по умолчанию — текущий)")
+    cmp.set_defaults(func=cmd_compare)
+
+    # search
+    sr = sub.add_parser("search", help="Поиск по описанию")
+    sr.add_argument("query", help="Что искать")
+    sr.set_defaults(func=cmd_search)
 
     # budget
     bp = sub.add_parser("budget", help="Управление лимитами")
