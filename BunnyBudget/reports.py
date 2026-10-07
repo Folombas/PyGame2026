@@ -6,6 +6,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.text import Text
 from rich.progress import Progress
+import budgets
 
 
 console = Console()
@@ -79,24 +80,57 @@ def month_report(storage, year=None, month=None):
 
     # Таблица по категориям
     if by_cat:
+        limits = budgets.all_limits()
+        has_budgets = bool(limits)
+
         table = Table(title="Расходы по категориям")
         table.add_column("Категория", style="magenta")
         table.add_column("Сумма", justify="right")
         table.add_column("% от расходов", justify="right")
-        table.add_column("Бары", width=20)
+
+        if has_budgets:
+            table.add_column("Бюджет", justify="right")
+            table.add_column("Статус", justify="left", width=25)
 
         total_spend = sum(by_cat.values())
         for cat, s in sorted(by_cat.items(), key=lambda x: -x[1]):
             pct = s / total_spend * 100
             bar_len = int(pct / 5)
             bar = "█" * bar_len
-            table.add_row(
+
+            row = [
                 cat,
                 fmt_money(s),
-                f"{pct:.1f}%",
-                f"[red]{bar}[/red]",
-            )
+                f"{pct:.1f}% [red]{bar}[/red]",
+            ]
+
+            if has_budgets:
+                limit = limits.get(cat)
+                if limit:
+                    used = s / limit * 100
+                    if used > 100:
+                        status = f"[red]⚠️ {used:.0f}% ПРЕВЫШЕН[/red]"
+                    elif used > 80:
+                        status = f"[yellow]⚠️ {used:.0f}%[/yellow]"
+                    else:
+                        status = f"[green]✅ {used:.0f}%[/green]"
+                    row.append(fmt_money(limit))
+                    row.append(status)
+                else:
+                    row.append("—")
+                    row.append("")
+
+            table.add_row(*row)
         console.print(table)
+
+        # Дополнительный блок — категории с бюджетом, но без трат в этом месяце
+        if has_budgets:
+            unused = [(c, l) for c, l in limits.items() if c not in by_cat]
+            if unused:
+                console.print()
+                console.print("[dim]Бюджеты без трат в этом месяце:[/dim]")
+                for c, l in unused:
+                    console.print(f"  • {c}: [dim]{fmt_money(l)}[/dim] не потрачено")
 
 
 def all_months_summary(storage):

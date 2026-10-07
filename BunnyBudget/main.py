@@ -4,9 +4,11 @@ import sys
 from datetime import datetime
 
 from rich.console import Console
+from rich.table import Table
 from storage import Storage
 from categories import categorize, all_categories
 from reports import show_transactions, month_report, all_months_summary, fmt_money
+import budgets
 
 
 console = Console()
@@ -69,6 +71,38 @@ def cmd_cats(args):
         console.print(f"  • {c}")
 
 
+
+def cmd_budget(args):
+    """Управление лимитами."""
+    action = args.action
+    if action == "set":
+        if not args.category or args.amount is None:
+            console.print("[red]Использование: budget set КАТЕГОРИЯ СУММА[/red]")
+            return
+        budgets.set_limit(args.category, args.amount)
+        console.print(f"[green]✓ Лимит {args.category}: {fmt_money(args.amount)}[/green]")
+    elif action == "list":
+        limits = budgets.all_limits()
+        if not limits:
+            console.print("[yellow]Лимитов пока нет[/yellow]")
+            console.print("Установи: [cyan]budget set Еда 15000[/cyan]")
+            return
+        table = Table(title="Установленные лимиты")
+        table.add_column("Категория", style="magenta")
+        table.add_column("Лимит", justify="right")
+        for c, v in sorted(limits.items()):
+            table.add_row(c, fmt_money(v))
+        console.print(table)
+    elif action == "delete":
+        if not args.category:
+            console.print("[red]Укажи категорию[/red]")
+            return
+        if budgets.delete_limit(args.category):
+            console.print(f"[green]✓ Лимит {args.category} удалён[/green]")
+        else:
+            console.print(f"[red]✗ Лимит для {args.category} не найден[/red]")
+
+
 def main():
     p = argparse.ArgumentParser(
         prog="budget",
@@ -112,6 +146,14 @@ def main():
     # cats
     cp = sub.add_parser("cats", help="Список категорий")
     cp.set_defaults(func=cmd_cats)
+
+    # budget
+    bp = sub.add_parser("budget", help="Управление лимитами")
+    bp.add_argument("action", choices=["set", "list", "delete"],
+                    help="set | list | delete")
+    bp.add_argument("category", nargs="?", help="Категория")
+    bp.add_argument("amount", nargs="?", type=float, help="Лимит в рублях")
+    bp.set_defaults(func=cmd_budget)
 
     args = p.parse_args()
     args.func(args)
