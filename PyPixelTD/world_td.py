@@ -142,48 +142,48 @@ class World:
         import random
         random.seed(42)
 
-        # Тропинка от дома вниз
-        for y in range(8, self.h):
+        # Тропинка от дома вниз до края
+        for y in range(10, self.h):
             self.tiles[y][self.w // 2] = T_PATH
 
         # Пруд слева-снизу
-        for y in range(12, 16):
-            for x in range(1, 5):
+        for y in range(13, 17):
+            for x in range(2, 6):
                 self.tiles[y][x] = T_WATER
 
         # Немного цветов
-        for _ in range(12):
+        for _ in range(20):
             x = random.randint(1, self.w - 2)
             y = random.randint(1, self.h - 2)
             if self.tiles[y][x] == T_GRASS:
                 self.tiles[y][x] = T_FLOWER
 
-        # Деревья по краям (не в центре, не на тропе)
-        for _ in range(30):
+        # Деревья по краям
+        for _ in range(45):
             x = random.randint(1, self.w - 2)
             y = random.randint(1, self.h - 2)
-            if abs(x - self.w // 2) < 3 and y > 8:
+            if abs(x - self.w // 2) < 3 and y > 10:
                 continue
             if self.tiles[y][x] == T_GRASS:
                 self.tiles[y][x] = T_TREE
 
         # ДОМ Зайки — по центру
-        self.houses.append(House(10, 5, 4, 3))
+        self.houses.append(House(14, 6, 4, 3))
 
-        # Грядки слева от дома (морковь + капуста)
-        for gy in range(5, 7):
-            for gx in range(4, 8):
+        # Грядки слева от дома
+        for gy in range(6, 8):
+            for gx in range(7, 11):
                 self.tiles[gy][gx] = T_GARDEN_CARROT
-        for gy in range(7, 9):
-            for gx in range(4, 8):
+        for gy in range(8, 10):
+            for gx in range(7, 11):
                 self.tiles[gy][gx] = T_GARDEN_CABBAGE
 
-        # Животные рядом с домом
-        self.animals.append(Animal(6, 12, "cow"))
+        # Животные рядом
         self.animals.append(Animal(10, 14, "cow"))
-        self.animals.append(Animal(14, 12, "chicken"))
-        self.animals.append(Animal(17, 14, "chicken"))
-        self.animals.append(Animal(8, 16, "chicken"))
+        self.animals.append(Animal(14, 16, "cow"))
+        self.animals.append(Animal(18, 14, "chicken"))
+        self.animals.append(Animal(22, 16, "chicken"))
+        self.animals.append(Animal(12, 18, "chicken"))
 
 
     # ---- Доступ ----

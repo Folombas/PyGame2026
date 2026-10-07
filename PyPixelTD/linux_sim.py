@@ -181,23 +181,189 @@ class LinuxSim:
 
     # ============== COMMANDS ==============
     def run(self, line):
-        """Возвращает список строк вывода."""
+        """Возвращает список строк вывода.
+        Поддерживает: pipe (|), redirect (> >>), && и ||."""
         line = line.strip()
         self.history.append(line)
         if not line:
             return []
-
-        # pipe support? нет, простой разбор
-        parts = line.split()
-        cmd = parts[0]
-        args = parts[1:]
-
         try:
-            return self._dispatch(cmd, args)
+            return self._run_logical(line)
         except Exception as e:
-            return [f"bash: {cmd}: ошибка: {e}"]
+            return [f"bash: ошибка: {e}"]
 
-    def _dispatch(self, cmd, args):
+    # ---------- ПАРСИНГ ЛОГИЧЕСКИХ ОПЕРАТОРОВ ----------
+    def _split_top_level(self, line, sep):
+        """Разбивает строку по sep, игнорируя sep внутри кавычек."""
+        parts = []
+        buf = []
+        in_quote = None
+        i = 0
+        while i < len(line):
+            c = line[i]
+            if c in ('"', "'"):
+                if in_quote == c:
+                    in_quote = None
+                elif in_quote is None:
+                    in_quote = c
+                buf.append(c)
+            elif in_quote is None and line.startswith(sep, i):
+                parts.append("".join(buf))
+                buf = []
+                i += len(sep)
+                continue
+            else:
+                buf.append(c)
+            i += 1
+        parts.append("".join(buf))
+        return parts
+
+    def _is_error(self, lines):
+        """Есть ли в выводе ошибка (для && / ||)."""
+        if not lines:
+            return False
+        for l in lines:
+            low = l.lower()
+            if ("не найдена" in low or "не найден" in low
+                    or "not found" in low or "ошибка" in low
+                    or "no such file" in low or "command not found" in low):
+                return True
+        return False
+
+    def _run_logical(self, line):
+        """Обрабатывает || и &&."""
+        # Сначала || (низкий приоритет)
+        or_parts = self._split_top_level(line, "||")
+        if len(or_parts) > 1:
+            result = []
+            for part in or_parts:
+                out = self._run_pipeline(part.strip())
+                result.extend(out)
+                if not self._is_error(out):
+                    return result
+            return result
+
+        # Затем &&
+        and_parts = self._split_top_level(line, "&&")
+        if len(and_parts) > 1:
+            result = []
+            for part in and_parts:
+                out = self._run_pipeline(part.strip())
+                result.extend(out)
+                if self._is_error(out):
+                    return result
+            return result
+
+        return self._run_pipeline(line)
+
+    # ---------- PIPE И REDIRECT ----------
+    def _run_pipeline(self, line):
+        """Обрабатывает |, >, >>."""
+        line = line.strip()
+        if not line:
+            return []
+
+        # --- RedIRECT в файл (ищем в конце) ---
+        redirect_file = None
+        redirect_mode = None
+        if " >> " in line:
+            idx = line.rfind(" >> ")
+            redirect_file = line[idx + 4:].strip()
+            redirect_mode = ">>"
+            line = line[:idx].strip()
+        elif " > " in line:
+            idx = line.rfind(" > ")
+            redirect_file = line[idx + 3:].strip()
+            redirect_mode = ">"
+            line = line[:idx].strip()
+
+        # --- PIPE ---
+        pipe_parts = self._split_top_level(line, "|")
+        stdin_lines = None
+        result = []
+        for part in pipe_parts:
+            part = part.strip()
+            if not part:
+                continue
+            result = self._run_single(part, stdin_lines)
+            stdin_lines = result
+
+        # --- Запись в файл ---
+        if redirect_file:
+            path = self._normalize(self._abs_path(redirect_file))
+            content = "\n".join(result)
+            if redirect_mode == ">>":
+                old = self._read_file(path)
+                if old is not None:
+                    content = old + "\n" + content
+            self._write_file(path, content)
+            return []
+        return result
+
+    def _run_single(self, line, stdin_lines=None):
+        """Выполняет одну команду с опциональным stdin."""
+        tokens = self._tokenize(line)
+        if not tokens:
+            return stdin_lines or []
+        cmd = tokens[0]
+        args = tokens[1:]
+        return self._dispatch(cmd, args, stdin_lines)
+
+    def _tokenize(self, line):
+        """Разбивает строку на токены, учитывая кавычки."""
+        tokens = []
+        buf = []
+        in_quote = None
+        for c in line:
+            if c in ('"', "'"):
+                if in_quote == c:
+                    in_quote = None
+                elif in_quote is None:
+                    in_quote = c
+                else:
+                    buf.append(c)
+            elif c == " " and in_quote is None:
+                if buf:
+                    tokens.append("".join(buf))
+                    buf = []
+            else:
+                buf.append(c)
+        if buf:
+            tokens.append("".join(buf))
+        return tokens
+
+    # ---------- ЧТЕНИЕ/ЗАПИСЬ ФАЙЛОВ ----------
+    def _read_file(self, path):
+        """Читает содержимое файла или None."""
+        if path not in self.fs:
+            return None
+        node = self.fs[path]
+        if node.get("type") != "file":
+            return None
+        return node.get("content", "")
+
+    def _write_file(self, path, content):
+        """Записывает содержимое в файл (создаёт если нет)."""
+        if path in self.fs:
+            if self.fs[path].get("type") == "file":
+                self.fs[path]["content"] = content
+            return True
+        # Создаём новый файл в родительской папке
+        parent = "/".join(path.split("/")[:-1]) or "/"
+        name = path.split("/")[-1]
+        if parent in self.fs and self.fs[parent].get("type") == "dir":
+            self.fs[path] = {"type": "file", "content": content}
+            if "children" not in self.fs[parent]:
+                self.fs[parent]["children"] = []
+            self.fs[parent]["children"].append(name)
+            return True
+        return False
+
+    def _dispatch(self, cmd, args, stdin_lines=None):
+        # === ФИЛЬТРЫ (grep/head/tail/wc/sort/uniq) — читают из pipe ===
+        if stdin_lines is not None and cmd in ("grep", "head", "tail", "wc", "sort", "uniq"):
+            return self._filter_command(cmd, args, stdin_lines)
+
         if cmd == "help":
             return [
                 "BunnyOS Shell · Carrot Linux — доступные команды:",

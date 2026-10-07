@@ -4,7 +4,7 @@ FPS = 60
 TILE = 32
 
 # Мир
-WORLD_W, WORLD_H = 24, 18      # в тайлах = 1920x1440 px
+WORLD_W, WORLD_H = 32, 20      # в тайлах = 1920x1440 px
 INTERIOR_W, INTERIOR_H = 15, 10 # интерьер дома
 
 # Цвета
