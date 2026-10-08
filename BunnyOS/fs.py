@@ -1,4 +1,5 @@
 """Виртуальная Unix-ФС + оболочка BunnyOS."""
+import sys
 import time
 
 
@@ -40,6 +41,7 @@ class VirtualFS:
             "3. Write new program\n"
         )
         self.files["/tmp/test.txt"] = "temporary file\n"
+        self.files["/usr/bin/snake"] = "# Snake game binary\n"
 
     def _norm(self, path, cwd="/"):
         if not path:
@@ -271,6 +273,24 @@ class Shell:
             return ["__CLEAR__"]
         if cmd == "history":
             return [f"{i+1:3}  {h}" for i, h in enumerate(self.history)]
+        if cmd == "snake":
+            # Запуск Змейки во внешнем окне через subprocess
+            import subprocess
+            import os
+            script = os.path.join(os.path.dirname(__file__), "snake.py")
+            try:
+                subprocess.Popen([sys.executable, script])
+                return ["[snake] Змейка запущена в отдельном окне"]
+            except Exception as e:
+                return [f"[snake] ошибка: {e}"]
+
+        if cmd == "games":
+            return [
+                "Доступные игры:",
+                "  snake  — Змейка (классика)",
+                "  (скоро) tetris, 2048, pong",
+            ]
+
         if cmd == "exit":
             return ["__EXIT__"]
         if cmd == "mkdir":

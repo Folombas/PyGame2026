@@ -139,14 +139,29 @@ class BunnyOS:
             self.focus(w)
 
     def _desktop_icon_click(self, mx, my):
-        icons = list(APPS.keys())
+        # Иконки на рабочем столе (включая игры)
+        desktop_icons = list(APPS.keys()) + ["snake"]
         x0, y0 = 20, 20
-        for i, app_id in enumerate(icons):
+        for i, app_id in enumerate(desktop_icons):
             ir = pygame.Rect(x0, y0 + i * 90, 80, 80)
             if ir.collidepoint(mx, my):
-                self.open_app(app_id)
+                if app_id == "snake":
+                    self.launch_snake()
+                else:
+                    self.open_app(app_id)
                 return True
         return False
+
+    def launch_snake(self):
+        """Запускает Змейку как внешнее приложение."""
+        import subprocess
+        import os
+        script = os.path.join(os.path.dirname(__file__), "snake.py")
+        try:
+            subprocess.Popen([sys.executable, script])
+            print("[OS] Змейка запущена в отдельном окне")
+        except Exception as e:
+            print(f"[OS] Ошибка запуска: {e}")
 
     def focus(self, w):
         if self.active_win and self.active_win != w:
