@@ -173,35 +173,98 @@ class TerminalApp:
         ]
         self.input = ""
         self.tick = 0
+        # История листания (по стрелкам ↑↓)
+        self.hist_idx = -1         # -1 = не листаем, иначе индекс в history
+        self.saved_input = ""      # что было введено ДО начала листания
 
     def handle_event(self, event, rect):
         if event.type != pygame.KEYDOWN:
             return
+        mods = pygame.key.get_mods()
+
+        # --- Ctrl-комбинации ---
+        if mods & pygame.KMOD_CTRL:
+            if event.key == pygame.K_l:
+                # Ctrl+L — очистить экран (как в bash)
+                self.lines = []
+                return
+            if event.key == pygame.K_u:
+                # Ctrl+U — стереть строку
+                self.input = ""
+                self.hist_idx = -1
+                return
+            if event.key == pygame.K_c:
+                # Ctrl+C — отмена строки
+                self.input = ""
+                self.hist_idx = -1
+                self.lines.append(f"{self.os.shell.prompt()} ^C")
+                return
+
+        # --- Enter ---
         if event.key == pygame.K_RETURN:
             cmd = self.input
             self.lines.append(f"{self.os.shell.prompt()} {cmd}")
             self.input = ""
+            self.hist_idx = -1          # сброс листания
+            self.saved_input = ""
             out = self.os.shell.run(cmd)
             if out and out == ["__CLEAR__"]:
                 self.lines = []
             else:
                 self.lines.extend(out)
             self.lines.append("")
+
+        # --- Backspace ---
         elif event.key == pygame.K_BACKSPACE:
             self.input = self.input[:-1]
+
+        # --- Стрелка ВВЕРХ — предыдущая команда ---
+        elif event.key == pygame.K_UP:
+            hist = self.os.shell.history
+            if not hist:
+                return
+            if self.hist_idx == -1:
+                # Начинаем листать — запоминаем что было введено
+                self.saved_input = self.input
+                self.hist_idx = len(hist) - 1
+            else:
+                self.hist_idx = max(0, self.hist_idx - 1)
+            self.input = hist[self.hist_idx]
+
+        # --- Стрелка ВНИЗ — следующая команда (или возврат к исходному) ---
+        elif event.key == pygame.K_DOWN:
+            hist = self.os.shell.history
+            if not hist or self.hist_idx == -1:
+                return
+            if self.hist_idx >= len(hist) - 1:
+                # Дошли до конца — восстанавливаем исходный ввод
+                self.hist_idx = -1
+                self.input = self.saved_input
+                self.saved_input = ""
+            else:
+                self.hist_idx += 1
+                self.input = hist[self.hist_idx]
+
+        # --- Tab — автодополнение ---
         elif event.key == pygame.K_TAB:
             known = ["help","ls","cd","pwd","cat","echo","clear","history",
                      "neofetch","tree","mkdir","touch","rm","grep","head",
                      "tail","wc","man","ps","whoami","hostname","uname",
-                     "date","uptime","sudo","exit"]
+                     "date","uptime","sudo","exit","snake","games"]
             cur = self.input.split()[-1] if self.input else ""
             matches = [c for c in known if c.startswith(cur)]
             if len(matches) == 1:
                 parts = self.input.rsplit(" ", 1)
                 self.input = (parts[0] + " " + matches[0]) if len(parts) > 1 else matches[0]
+            elif len(matches) > 1:
+                self.lines.append(" ".join(matches))
+
+        # --- Обычный ввод ---
         else:
             if event.unicode and event.unicode.isprintable():
                 self.input += event.unicode
+                # Сброс листания при ручном вводе (но текст сохраняем)
+                self.hist_idx = -1
 
     def draw(self, scr, rect, font):
         pygame.draw.rect(scr, C_TERMINAL_BG, rect)
