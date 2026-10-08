@@ -522,21 +522,22 @@ class WallpapersApp:
         self._load_list()
 
     def _load_list(self):
-        d = "assets/wallpapers"
-        self.wallpapers = []
-        if os.path.exists(d):
-            for f in sorted(os.listdir(d)):
-                if f.lower().endswith((".jpg", ".jpeg", ".png")):
-                    self.wallpapers.append(os.path.join(d, f))
-        # Создаём превью
+        """Загружает ВСЕ обои из assets/wallpapers/ (включая подпапки)."""
+        import wallpapers_gen
+        self.wallpapers = wallpapers_gen.get_all_wallpapers()
+        self.thumbs = {}
         for p in self.wallpapers:
             try:
                 img = pygame.image.load(p).convert()
-                # Уменьшаем до 240×135
-                thumb = pygame.transform.smoothscale(img, (240, 135))
+                # Пропорционально уменьшаем до ширины 240px
+                w, h = img.get_size()
+                new_w = 240
+                new_h = int(h * new_w / w)
+                thumb = pygame.transform.smoothscale(img, (new_w, new_h))
                 self.thumbs[p] = thumb
             except Exception:
                 pass
+        print(f"[Personalization] Загружено обоев: {len(self.wallpapers)}")
 
     def handle_event(self, event, rect):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -562,21 +563,24 @@ class WallpapersApp:
                     return
 
     def _download_new(self):
-        """Генерирует новые обои с случайным seed."""
+        """Генерирует новые процедурные обои."""
         try:
             import random as _r
             import wallpapers_gen
-            self.status = "Генерация..."
-            seed = _r.randint(1, 999999)
-            # Генерируем случайный тип
-            types = list(wallpapers_gen.GENERATORS)
-            name, fname, fn = _r.choice(types)
-            # Генерируем с новой случайной вариацией через замену seed
+            self.status = "Генерация новых обоев..."
+            
+            # Выбираем случайный тип и генерируем с новым сидом
+            name, fname, fn = _r.choice(wallpapers_gen.GENERATORS)
             surf = fn()
-            out = f"assets/wallpapers/custom_{seed}.png"
+            
+            # Сохраняем под уникальным именем
+            seed = _r.randint(1, 999999)
+            out = f"assets/wallpapers/gen_{fname}_{seed}.png"
             pygame.image.save(surf, out)
+            
+            # Обновляем список
             self._load_list()
-            self.status = f"✓ Новые обои: {name}"
+            self.status = f"✓ Сгенерированы обои: {name}"
         except Exception as e:
             self.status = f"✗ {type(e).__name__}: {str(e)[:50]}"
 

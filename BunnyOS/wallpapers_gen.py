@@ -157,12 +157,33 @@ GENERATORS = [
 
 
 def generate_all(out_dir="assets/wallpapers"):
-    """Генерирует все обои и сохраняет в out_dir."""
+    """Генерирует процедурные обои и возвращает список всех доступных."""
     import os
     os.makedirs(out_dir, exist_ok=True)
+    # Генерируем процедурные обои
     for name, fname, fn in GENERATORS:
         surf = fn()
         path = os.path.join(out_dir, f"gen_{fname}.png")
-        pygame.image.save(surf, path)
-        print(f"  ✓ {path}")
-    return len(GENERATORS)
+        if not os.path.exists(path):  # не перезаписываем существующие
+            pygame.image.save(surf, path)
+    
+    # Собираем ВСЕ обои из папки (включая скачанные)
+    all_wallpapers = []
+    for root, dirs, files in os.walk("assets/wallpapers"):
+        for f in sorted(files):
+            if f.lower().endswith(('.png', '.jpg', '.jpeg')):
+                all_wallpapers.append(os.path.join(root, f))
+    
+    print(f"  ✓ Всего обоев найдено: {len(all_wallpapers)}")
+    return all_wallpapers
+
+
+def get_all_wallpapers():
+    """Возвращает список путей ко всем доступным обоям."""
+    import os
+    all_wallpapers = []
+    for root, dirs, files in os.walk("assets/wallpapers"):
+        for f in sorted(files):
+            if f.lower().endswith(('.png', '.jpg', '.jpeg')):
+                all_wallpapers.append(os.path.join(root, f))
+    return all_wallpapers
