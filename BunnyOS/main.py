@@ -3,6 +3,7 @@ import sys
 import time
 import pygame
 from settings import *
+from boot_style import BootScreen, LoginScreen
 from fs import VirtualFS, Shell
 from ui import (Window, TerminalApp, FilesApp, NotepadApp,
                 CalculatorApp, AboutApp, WallpapersApp, load_icon)
@@ -36,6 +37,8 @@ class BunnyOS:
         self.state = "boot"
         self.running = True
         self.timer = 0.0
+        self.boot_screen = BootScreen()
+        self.login_screen = LoginScreen()
         self.windows = []
         self.active_win = None
         self.start_open = False
@@ -51,14 +54,11 @@ class BunnyOS:
             self.running = False
             return
         if self.state == "boot":
-            if e.type == pygame.KEYDOWN or e.type == pygame.MOUSEBUTTONDOWN:
-                self.state = "login"
-                self.timer = 0
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+                self.boot_screen.done = True
             return
         if self.state == "login":
-            if e.type == pygame.KEYDOWN or e.type == pygame.MOUSEBUTTONDOWN:
-                self.state = "desktop"
-                self.open_app("terminal")
+            self.login_screen.handle_event(e)
             return
         # desktop
         self.handle_desktop_event(e)
@@ -212,16 +212,23 @@ class BunnyOS:
     # ---------- UPDATE ----------
     def update(self, dt):
         self.timer += dt
-        if self.state == "boot" and self.timer > 2.5:
-            self.state = "login"
-            self.timer = 0
+        if self.state == "boot":
+            self.boot_screen.update(dt)
+            if self.boot_screen.done:
+                self.state = "login"
+                self.timer = 0
+        elif self.state == "login":
+            self.login_screen.update(dt)
+            if self.login_screen.done:
+                self.state = "desktop"
+                self.open_app("terminal")
 
     # ---------- DRAW ----------
     def draw(self):
         if self.state == "boot":
-            self.draw_boot()
+            self.boot_screen.draw(self.screen)
         elif self.state == "login":
-            self.draw_login()
+            self.login_screen.draw(self.screen)
         else:
             self.draw_desktop()
         pygame.display.flip()
