@@ -116,20 +116,29 @@ class TetrisGame:
         return True
 
     def _lock(self):
+        """Фиксирует фигуру и проверяет линии."""
+        print(f"[tetris] 🔒 Фиксация {self.current_key} в позиции ({self.cx},{self.cy})")
+
+        # Кладём фигуру в grid
         for y, row in enumerate(self.current):
             for x, cell in enumerate(row):
                 if cell:
                     gy, gx = self.cy + y, self.cx + x
                     if 0 <= gy < ROWS and 0 <= gx < COLS:
                         self.grid[gy][gx] = self.current_key
+
+        # Считаем заполнение каждой строки — для отладки
+        for y in range(ROWS):
+            filled = sum(1 for x in range(COLS) if self.grid[y][x])
+            if filled >= 8:  # показываем почти полные строки
+                print(f"[tetris]   ряд {y}: {filled}/{COLS} заполнено")
+
         # Проверяем линии
         cleared = self._clear_lines()
         if cleared > 0:
             self.lines += cleared
-            # Очки: 1 линия = 100, 2 = 300, 3 = 500, 4 = 800
             points = {1: 100, 2: 300, 3: 500, 4: 800}.get(cleared, 1000)
             self.score += points * self.level
-            # Уровень каждые 10 линий
             new_level = self.lines // 10 + 1
             if new_level > self.level:
                 self.level = new_level
@@ -137,6 +146,7 @@ class TetrisGame:
             if self.snd_clear:
                 self.snd_clear.play()
         self._spawn()
+
 
     def _clear_lines(self):
         """Удаляет полные ряды и возвращает их количество."""
@@ -361,9 +371,9 @@ class TetrisGame:
         # Управление
         controls_y = next_y + 140
         controls = [
-            ("← →", "движение"),
-            ("↑", "поворот"),
-            ("↓", "ускорить"),
+            ("< >", "движение"),
+            ("^", "поворот"),
+            ("v", "ускорить"),
             ("H", "сброс вниз"),
             ("P", "пауза"),
             ("Esc", "выход"),
