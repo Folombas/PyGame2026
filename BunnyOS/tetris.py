@@ -114,28 +114,36 @@ class TetrisGame:
         self.bag = bag
 
     def _spawn(self):
+        """Создаёт новую фигуру в верхней части поля."""
         if not self.bag:
             self._refill_bag()
         self.current_key = self.next_piece
         self.next_piece = self.bag.pop(0)
         self.current = [row[:] for row in PIECES[self.current_key]]
-        # Центрируем фигуру по горизонтали
-        self.cx = (COLS - len(self.current[0])) // 2
-        # Если фигура с пустыми колонками слева — сдвигаем чтобы не уходила за край
-        # находим первую непустую колонку
-        first_col = len(self.current[0])
+
+        # Центрируем по РЕАЛЬНОЙ ширине фигуры (не по ширине матрицы)
+        # Находим реальные границы непустых клеток
+        min_x, max_x = 99, -1
         for row in self.current:
             for x, cell in enumerate(row):
-                if cell and x < first_col:
-                    first_col = x
-        self.cx -= first_col
-        # Ограничиваем в пределах поля
-        self.cx = max(0, min(self.cx, COLS - len(self.current[0])))
+                if cell:
+                    if x < min_x:
+                        min_x = x
+                    if x > max_x:
+                        max_x = x
+        if max_x < 0:  # пустая (не должно случаться)
+            min_x, max_x = 0, 0
+        real_width = max_x - min_x + 1
+
+        # Ставим так, чтобы центр реальной фигуры был в центре поля
+        self.cx = (COLS - real_width) // 2 - min_x
         self.cy = 0
+
         if not self._valid(self.current, self.cx, self.cy):
             self.game_over = True
             if self.snd_over:
                 self.snd_over.play()
+
 
     def _valid(self, piece, px, py):
         for y, row in enumerate(piece):
@@ -291,31 +299,30 @@ class TetrisGame:
 
 
     def _rotate(self):
-        # Транспонирование + reverse строк = поворот на 90°
+        """Поворот на 90° с wall-kicks (5 попыток смещения)."""
         rotated = [list(row) for row in zip(*self.current[::-1])]
-        for dx in (0, -1, 1, -2, 2):  # wall kicks
-            if self._valid(rotated, self.cx + dx, self.cy):
+        # Классические wall kicks: (dx, dy) — сначала без сдвига, потом в стороны
+        kicks = [(0, 0), (-1, 0), (1, 0), (-2, 0), (2, 0), (0, -1), (-1, -1), (1, -1)]
+        for dx, dy in kicks:
+            if self._valid(rotated, self.cx + dx, self.cy + dy):
                 self.current = rotated
                 self.cx += dx
+                self.cy += dy
                 if self.snd_rotate:
                     self.snd_rotate.play()
                 return
 
+
     def _move(self, dx, dy):
-        new_cx = self.cx + dx
-        new_cy = self.cy + dy
-        # Жёсткая граница поля по X (не пускаем за края)
-        if dx < 0 and new_cx < 0:
-            return False
-        if dx > 0 and new_cx + len(self.current[0]) > COLS:
-            return False
-        if self._valid(self.current, new_cx, new_cy):
-            self.cx = new_cx
-            self.cy = new_cy
+        """Двигает фигуру. _valid сам проверяет границы по РЕАЛЬНЫМ клеткам."""
+        if self._valid(self.current, self.cx + dx, self.cy + dy):
+            self.cx += dx
+            self.cy += dy
             if self.snd_move and dx != 0:
                 self.snd_move.play()
             return True
         return False
+
 
     def _hard_drop(self):
         while self._valid(self.current, self.cx, self.cy + 1):
