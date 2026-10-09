@@ -78,10 +78,11 @@ class TetrisGame:
         self.paused = False
         self.fall_timer = 0.0
         self.fall_speed = 0.8  # секунд на клетку
-        self.next_piece = random.choice(list(PIECES.keys()))
-        self._spawn()
+        # ВАЖНО: bag и next_piece инициализируем ДО _spawn()
         self.bag = []
         self._refill_bag()
+        self.next_piece = self.bag.pop(0)
+        self._spawn()
 
     def _refill_bag(self):
         """7-bag randomizer — все фигуры выпадают равномерно."""
