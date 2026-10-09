@@ -273,6 +273,25 @@ class Shell:
             return ["__CLEAR__"]
         if cmd == "history":
             return [f"{i+1:3}  {h}" for i, h in enumerate(self.history)]
+        if cmd == "tetris":
+
+            import subprocess
+
+            import os
+
+            script = os.path.join(os.path.dirname(__file__), "tetris.py")
+
+            try:
+
+                subprocess.Popen([sys.executable, script])
+
+                return ["[tetris] Тетрис запущен в отдельном окне"]
+
+            except Exception as e:
+
+                return [f"[tetris] ошибка: {e}"]
+
+
         if cmd == "snake":
             # Запуск Змейки во внешнем окне через subprocess
             import subprocess
@@ -287,8 +306,9 @@ class Shell:
         if cmd == "games":
             return [
                 "Доступные игры:",
-                "  snake  — Змейка (классика)",
-                "  (скоро) tetris, 2048, pong",
+                "  snake   — Змейка (классика)",
+                "  tetris  — Тетрис (классика)",
+                "  (скоро) 2048, pong",
             ]
 
         if cmd == "exit":
