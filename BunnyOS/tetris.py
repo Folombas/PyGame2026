@@ -139,11 +139,38 @@ class TetrisGame:
         self._spawn()
 
     def _clear_lines(self):
-        full = [y for y in range(ROWS) if all(self.grid[y][x] for x in range(COLS))]
-        for y in full:
-            del self.grid[y]
-            self.grid.insert(0, [None for _ in range(COLS)])
-        return len(full)
+        """Удаляет полные ряды и возвращает их количество."""
+        # Шаг 1: находим ВСЕ полные ряды явным циклом
+        full_rows = []
+        for y in range(ROWS):
+            is_full = True
+            for x in range(COLS):
+                if not self.grid[y][x]:
+                    is_full = False
+                    break
+            if is_full:
+                full_rows.append(y)
+
+        if not full_rows:
+            return 0
+
+        # Отладка — видим в консоли сколько строк удаляется
+        print(f"[tetris] 🧹 Удалено рядов: {len(full_rows)} ({full_rows})")
+
+        # Шаг 2: собираем новый grid БЕЗ полных рядов (сверху вниз)
+        new_grid = []
+        for y in range(ROWS):
+            if y not in full_rows:
+                new_grid.append(self.grid[y])
+
+        # Шаг 3: добавляем пустые ряды СВЕРХУ, чтобы длина стала ROWS
+        while len(new_grid) < ROWS:
+            new_grid.insert(0, [None] * COLS)
+
+        # Шаг 4: заменяем grid целиком
+        self.grid = new_grid
+        return len(full_rows)
+
 
     def _rotate(self):
         # Транспонирование + reverse строк = поворот на 90°
