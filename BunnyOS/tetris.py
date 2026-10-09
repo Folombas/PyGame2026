@@ -22,6 +22,10 @@ C_TEXT     = (220, 230, 245)
 C_TEXT_DIM = (120, 140, 170)
 C_SHADOW   = (40, 50, 70)
 
+# === ГРОМКОСТЬ ===
+# Общий множитель для ВСЕХ звуков (0.0 = тишина, 1.0 = максимум)
+VOLUME_MASTER = 0.25
+
 # Фигуры (I, O, T, S, Z, J, L) — 4x4 матрицы
 PIECES = {
     "I": [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
@@ -54,31 +58,39 @@ class TetrisGame:
         self.font_small = pygame.font.Font(None, 18)
 
         # Звуки Тетриса — классические, синхронизированные с эффектами
-        self.snd_move = self._load("assets/games/sounds/tetris/selection.wav", 0.3)
-        self.snd_rotate = self._load("assets/games/sounds/tetris/selection.wav", 0.25)
+        self.snd_move = self._load("assets/games/sounds/tetris/selection.wav", 0.4)
+        self.snd_rotate = self._load("assets/games/sounds/tetris/selection.wav", 0.35)
         self.snd_lock = self._load("assets/games/sounds/tetris/fall.wav", 0.5)
-        self.snd_clear = self._load("assets/games/sounds/tetris/line.wav", 0.7)
-        self.snd_tetris = self._load("assets/games/sounds/tetris/line_clear.wav", 0.9)
-        self.snd_levelup = self._load("assets/games/sounds/tetris/selection.wav", 0.6)
-        self.snd_over = self._load("assets/games/sounds/tetris/gameover.wav", 0.8)
+        self.snd_clear = self._load("assets/games/sounds/tetris/line.wav", 0.6)
+        self.snd_tetris = self._load("assets/games/sounds/tetris/line_clear.wav", 0.7)
+        self.snd_levelup = self._load("assets/games/sounds/tetris/selection.wav", 0.5)
+        self.snd_over = self._load("assets/games/sounds/tetris/gameover.wav", 0.6)
 
         # Эффекты
         self.particles = []            # разлетающиеся частицы
         self.clearing_rows = []        # ряды в процессе очистки
         self.clearing_timer = 0.0
-        self.clearing_duration = 0.5
+        self.clearing_duration = 0.7   # чуть дольше для комбо-эффектов
         self.score_pending = 0
         self.pending_spawn = False
         self.shake = 0.0               # сила тряски
         self.shake_duration = 0.0
         self.flash_screen = 0.0        # вспышка всего экрана
+        self.screen_tint = None        # цветной оттенок (для x3/x4)
+        self.screen_tint_alpha = 0.0
+
+        # Комбо-система
+        self.combo_level = 0           # 1, 2, 3, 4 (сколько линий)
+        self.combo_timer = 0.0         # таймер показа текста
+        self.combo_duration = 1.2      # сколько секунд показывать
 
         self.reset()
 
     def _load(self, path, vol=0.5):
         try:
             s = pygame.mixer.Sound(path)
-            s.set_volume(vol)
+            # Применяем мастер-громкость поверх индивидуальной
+            s.set_volume(vol * VOLUME_MASTER)
             return s
         except Exception:
             return None
@@ -101,6 +113,10 @@ class TetrisGame:
         self.shake = 0.0
         self.shake_duration = 0.0
         self.flash_screen = 0.0
+        self.screen_tint = None
+        self.screen_tint_alpha = 0.0
+        self.combo_level = 0
+        self.combo_timer = 0.0
         # ВАЖНО: bag и next_piece инициализируем ДО _spawn()
         self.bag = []
         self._refill_bag()
@@ -159,7 +175,6 @@ class TetrisGame:
 
     def _lock(self):
         """Фиксирует фигуру и запускает анимацию очистки (или сразу спавнит)."""
-        # Кладём фигуру в grid
         for y, row in enumerate(self.current):
             for x, cell in enumerate(row):
                 if cell:
@@ -167,42 +182,61 @@ class TetrisGame:
                     if 0 <= gy < ROWS and 0 <= gx < COLS:
                         self.grid[gy][gx] = self.current_key
 
-        # Ищем полные ряды
         full_rows = []
         for y in range(ROWS):
             if all(self.grid[y][x] for x in range(COLS)):
                 full_rows.append(y)
 
         if full_rows:
-            # ЗАПУСКАЕМ АНИМАЦИЮ очистки
+            n = len(full_rows)
             self.clearing_rows = full_rows
             self.clearing_timer = 0.0
-            self.score_pending = {1: 100, 2: 300, 3: 500, 4: 800}.get(len(full_rows), 1000) * self.level
+            # Очки: 1=100, 2=300, 3=500, 4=800, 5+=1200 (× уровень)
+            base_points = {1: 100, 2: 300, 3: 500, 4: 800}.get(n, 1200)
+            self.score_pending = base_points * self.level
             self.pending_spawn = True
+            self.combo_level = n              # запоминаем уровень комбо
+            self.combo_timer = self.combo_duration
 
-            # Генерируем частицы из каждой клетки полных рядов
+            # ============ ЧАСТИЦЫ — количество зависит от комбо ============
+            particles_per_cell = {1: 4, 2: 8, 3: 12, 4: 18}.get(n, 20)
             for y in full_rows:
                 for x in range(COLS):
                     if self.grid[y][x]:
                         color = PIECE_COLORS[self.grid[y][x]]
-                        self._spawn_particles(x, y, color, count=5)
+                        self._spawn_particles(x, y, color, count=particles_per_cell)
 
-            # Тряска и вспышка
-            self.shake = 4 + len(full_rows) * 2       # 6-12 пикселей
-            self.shake_duration = 0.35
-            if len(full_rows) >= 4:
-                self.flash_screen = 0.25              # большая вспышка при тетрисе
+            # ============ SHAKE — сильнее с комбо ============
+            self.shake = 3 + n * 3              # 6, 9, 12, 15
+            self.shake_duration = 0.3 + n * 0.1  # 0.4 .. 0.7
 
-            # Звук синхронизирован с анимацией: играем сразу при старте очистки
-            if len(full_rows) >= 4 and self.snd_tetris:
+            # ============ SCREEN FLASH + TINT ============
+            if n == 1:
+                self.flash_screen = 0.1
+                self.screen_tint = None
+            elif n == 2:
+                self.flash_screen = 0.2
+                self.screen_tint = (255, 180, 60)   # оранжевый
+                self.screen_tint_alpha = 0.15
+            elif n == 3:
+                self.flash_screen = 0.3
+                self.screen_tint = (200, 80, 255)   # фиолетовый
+                self.screen_tint_alpha = 0.25
+            else:  # 4+ — ТЕТРИС!
+                self.flash_screen = 0.4
+                self.screen_tint = (255, 80, 120)   # розово-красный
+                self.screen_tint_alpha = 0.35
+
+            # ============ ЗВУК ============
+            if n >= 4 and self.snd_tetris:
                 self.snd_tetris.play()
             elif self.snd_clear:
                 self.snd_clear.play()
         else:
-            # Ничего не удаляем — сразу спавним новую фигуру
             if self.snd_lock:
                 self.snd_lock.play()
             self._spawn()
+
 
     def _spawn_particles(self, cell_x, cell_y, color, count=4):
         """Создаёт частицы из клетки игрового поля."""
@@ -375,27 +409,29 @@ class TetrisGame:
         return True
 
     def _update(self, dt):
-        # Таймеры эффектов работают даже на паузе
+        # Таймеры эффектов (работают всегда)
         if self.shake_duration > 0:
             self.shake_duration -= dt
             if self.shake_duration <= 0:
                 self.shake = 0
         if self.flash_screen > 0:
             self.flash_screen = max(0.0, self.flash_screen - dt)
+        if self.combo_timer > 0:
+            self.combo_timer = max(0.0, self.combo_timer - dt)
+        if self.screen_tint_alpha > 0:
+            self.screen_tint_alpha = max(0.0, self.screen_tint_alpha - dt * 0.6)
 
         self._update_particles(dt)
 
         if self.game_over or self.paused:
             return
 
-        # Анимация очистки линий — пауза для игровой логики
         if self.clearing_rows:
             self.clearing_timer += dt
             if self.clearing_timer >= self.clearing_duration:
                 self._finish_clearing()
             return
 
-        # Обычная логика — падение фигуры
         self.fall_timer += dt
         if self.fall_timer >= self.fall_speed:
             self.fall_timer = 0
@@ -417,6 +453,104 @@ class TetrisGame:
         darker = tuple(max(0, c - 60) for c in color)
         pygame.draw.line(scr, darker, (px + 4, py + CELL - 3), (px + CELL - 4, py + CELL - 3), 2)
 
+
+    def _draw_combo_text(self, scr):
+        """Огромный текст X2 / X3 / X4 в центре с анимацией."""
+        if self.combo_timer <= 0 or self.combo_level < 2:
+            return
+        n = self.combo_level
+        # Прогресс анимации: 1.0 → 0.0
+        t = self.combo_timer / self.combo_duration
+
+        # Цвет и текст по уровню
+        if n == 2:
+            text = "COMBO  x2"
+            color = (255, 200, 80)
+            base_scale = 1.0
+            glow_col = (255, 220, 120)
+        elif n == 3:
+            text = "COMBO  x3"
+            color = (220, 100, 255)
+            base_scale = 1.15
+            glow_col = (240, 150, 255)
+        else:
+            text = "TETRIS!  x4"
+            color = (255, 80, 140)
+            base_scale = 1.35
+            glow_col = (255, 120, 180)
+
+        # Пульс + fade
+        # 0..0.3 — быстро нарастает и появляется
+        # 0.3..0.7 — держится
+        # 0.7..1.0 — исчезает, улетая вверх
+        if t > 0.7:
+            appear = (1.0 - t) / 0.3   # 1 при t=0.7, 0 при t=1.0
+            alpha = int(255 * appear)
+            scale = base_scale * (0.5 + appear * 0.5)
+            y_offset = int((1 - appear) * -80)
+        else:
+            # 0.3..0.7 — держим
+            if t > 0.3:
+                appear = 1.0
+            else:
+                # 1.0..0.7 — быстро появилось (t=0 → начало)
+                appear = (1.0 - t) / 0.7
+                appear = min(1.0, appear * 2.5)
+            alpha = int(255 * appear)
+            scale = base_scale * (0.3 + appear * 0.7)
+            y_offset = 0
+
+        # Создаём текст в большом шрифте
+        font_size = int(72 * scale)
+        if font_size < 10:
+            return
+        f = pygame.font.Font(None, font_size)
+        txt = f.render(text, True, color)
+
+        # Позиция — центр поля
+        cx = 15 + PLAY_W // 2
+        cy = 20 + PLAY_H // 2 + y_offset
+        x = cx - txt.get_width() // 2
+        y = cy - txt.get_height() // 2
+
+        # === Свечение (glow) ===
+        for ring in range(6, 0, -1):
+            ga = max(0, 80 - ring * 10) * (alpha / 255)
+            if ga <= 0:
+                continue
+            glow_f = pygame.font.Font(None, font_size)
+            gt = glow_f.render(text, True, glow_col)
+            gsurf = pygame.Surface((gt.get_width() + ring * 8,
+                                    gt.get_height() + ring * 8),
+                                   pygame.SRCALPHA)
+            gsurf.blit(gt, (ring * 4, ring * 4))
+            gsurf.set_alpha(int(ga))
+            scr.blit(gsurf, (x - ring * 4, y - ring * 4))
+
+        # === Тень ===
+        sh = f.render(text, True, (0, 0, 0))
+        sh.set_alpha(alpha)
+        scr.blit(sh, (x + 4, y + 4))
+
+        # === Основной текст ===
+        txt.set_alpha(alpha)
+        scr.blit(txt, (x, y))
+
+        # === Дополнительные лучи для x3 и x4 ===
+        if n >= 3:
+            import math as _m
+            rays = 8 if n == 3 else 16
+            ray_len = 60 + int(40 * (1 - t))
+            for i in range(rays):
+                ang = (i * 2 * _m.pi / rays) + (1 - t) * 3
+                x1 = cx + _m.cos(ang) * 40
+                y1 = cy + _m.sin(ang) * 40
+                x2 = cx + _m.cos(ang) * (40 + ray_len)
+                y2 = cy + _m.sin(ang) * (40 + ray_len)
+                ray_surf = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+                pygame.draw.line(ray_surf, (*glow_col, int(alpha * 0.5)),
+                                 (x1, y1), (x2, y2), 3)
+                scr.blit(ray_surf, (0, 0))
 
     def _draw(self):
         self.screen.fill(C_BG)
@@ -507,6 +641,12 @@ class TetrisGame:
                                         field.y + (self.cy + y) * CELL,
                                         color)
 
+        # Tint (цветной оттенок при x2/x3/x4)
+        if self.screen_tint and self.screen_tint_alpha > 0:
+            tint = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            tint.fill((*self.screen_tint, int(255 * self.screen_tint_alpha)))
+            self.screen.blit(tint, (0, 0))
+
         # Частицы
         self._draw_particles(self.screen)
 
@@ -569,6 +709,9 @@ class TetrisGame:
             flash = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
             flash.fill((255, 255, 255, a))
             self.screen.blit(flash, (0, 0))
+
+        # Комбо-текст рисуем ПОВЕРХ всего (включая sidebar)
+        self._draw_combo_text(self.screen)
 
         if self.paused:
             self._overlay("ПАУЗА", "P — продолжить")
