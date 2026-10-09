@@ -59,6 +59,17 @@ class TetrisGame:
         self.snd_clear = self._load("assets/games/sounds/music.mp3", 0.4)
         self.snd_over = self._load("assets/games/sounds/crash.mp3", 0.6)
 
+        # Эффекты
+        self.particles = []            # разлетающиеся частицы
+        self.clearing_rows = []        # ряды в процессе очистки
+        self.clearing_timer = 0.0
+        self.clearing_duration = 0.5
+        self.score_pending = 0
+        self.pending_spawn = False
+        self.shake = 0.0               # сила тряски
+        self.shake_duration = 0.0
+        self.flash_screen = 0.0        # вспышка всего экрана
+
         self.reset()
 
     def _load(self, path, vol=0.5):
@@ -77,7 +88,16 @@ class TetrisGame:
         self.game_over = False
         self.paused = False
         self.fall_timer = 0.0
-        self.fall_speed = 0.8  # секунд на клетку
+        self.fall_speed = 0.8
+        # Сброс эффектов
+        self.particles = []
+        self.clearing_rows = []
+        self.clearing_timer = 0.0
+        self.score_pending = 0
+        self.pending_spawn = False
+        self.shake = 0.0
+        self.shake_duration = 0.0
+        self.flash_screen = 0.0
         # ВАЖНО: bag и next_piece инициализируем ДО _spawn()
         self.bag = []
         self._refill_bag()
@@ -127,8 +147,8 @@ class TetrisGame:
         return True
 
     def _lock(self):
-        """Фиксирует фигуру в grid и проверяет линии."""
-        # Кладём фигуру
+        """Фиксирует фигуру и запускает анимацию очистки (или сразу спавнит)."""
+        # Кладём фигуру в grid
         for y, row in enumerate(self.current):
             for x, cell in enumerate(row):
                 if cell:
@@ -136,19 +156,97 @@ class TetrisGame:
                     if 0 <= gy < ROWS and 0 <= gx < COLS:
                         self.grid[gy][gx] = self.current_key
 
-        # Проверяем и удаляем линии
-        cleared = self._clear_lines()
-        if cleared > 0:
-            self.lines += cleared
-            points = {1: 100, 2: 300, 3: 500, 4: 800}.get(cleared, 1000)
-            self.score += points * self.level
-            new_level = self.lines // 10 + 1
-            if new_level > self.level:
-                self.level = new_level
-                self.fall_speed = max(0.1, 0.8 - (self.level - 1) * 0.07)
+        # Ищем полные ряды
+        full_rows = []
+        for y in range(ROWS):
+            if all(self.grid[y][x] for x in range(COLS)):
+                full_rows.append(y)
+
+        if full_rows:
+            # ЗАПУСКАЕМ АНИМАЦИЮ очистки
+            self.clearing_rows = full_rows
+            self.clearing_timer = 0.0
+            self.score_pending = {1: 100, 2: 300, 3: 500, 4: 800}.get(len(full_rows), 1000) * self.level
+            self.pending_spawn = True
+
+            # Генерируем частицы из каждой клетки полных рядов
+            for y in full_rows:
+                for x in range(COLS):
+                    if self.grid[y][x]:
+                        color = PIECE_COLORS[self.grid[y][x]]
+                        self._spawn_particles(x, y, color, count=5)
+
+            # Тряска и вспышка
+            self.shake = 4 + len(full_rows) * 2       # 6-12 пикселей
+            self.shake_duration = 0.35
+            if len(full_rows) >= 4:
+                self.flash_screen = 0.25              # большая вспышка при тетрисе
+
             if self.snd_clear:
                 self.snd_clear.play()
-        self._spawn()
+        else:
+            # Ничего не удаляем — сразу спавним новую фигуру
+            self._spawn()
+
+    def _spawn_particles(self, cell_x, cell_y, color, count=4):
+        """Создаёт частицы из клетки игрового поля."""
+        field_x, field_y = 15, 20
+        px = field_x + cell_x * CELL + CELL // 2
+        py = field_y + cell_y * CELL + CELL // 2
+        for _ in range(count):
+            self.particles.append({
+                "x": float(px),
+                "y": float(py),
+                "vx": random.uniform(-350, 350),
+                "vy": random.uniform(-500, -150),
+                "life": 0.9,
+                "max_life": 0.9,
+                "color": color,
+                "size": random.randint(3, 6),
+            })
+
+    def _update_particles(self, dt):
+        for p in self.particles:
+            p["x"] += p["vx"] * dt
+            p["y"] += p["vy"] * dt
+            p["vy"] += 1200 * dt   # гравитация
+            p["life"] -= dt
+        self.particles = [p for p in self.particles if p["life"] > 0]
+
+    def _finish_clearing(self):
+        """Реально удаляет ряды и применяет очки."""
+        # Удаляем ряды
+        for y in sorted(self.clearing_rows, reverse=True):
+            del self.grid[y]
+            self.grid.insert(0, [None] * COLS)
+
+        # Очки
+        cleared = len(self.clearing_rows)
+        self.lines += cleared
+        self.score += self.score_pending
+        new_level = self.lines // 10 + 1
+        if new_level > self.level:
+            self.level = new_level
+            self.fall_speed = max(0.1, 0.8 - (self.level - 1) * 0.07)
+
+        # Сброс состояния
+        self.clearing_rows = []
+        self.clearing_timer = 0.0
+        self.score_pending = 0
+
+        # Спавним следующую фигуру (если ждали)
+        if self.pending_spawn:
+            self.pending_spawn = False
+            self._spawn()
+
+    def _draw_particles(self, scr):
+        for p in self.particles:
+            a = int(255 * (p["life"] / p["max_life"]))
+            if a <= 0:
+                continue
+            s = pygame.Surface((p["size"], p["size"]), pygame.SRCALPHA)
+            s.fill((*p["color"], a))
+            scr.blit(s, (int(p["x"]), int(p["y"])))
 
 
     def _clear_lines(self):
@@ -259,13 +357,33 @@ class TetrisGame:
         return True
 
     def _update(self, dt):
+        # Таймеры эффектов работают даже на паузе
+        if self.shake_duration > 0:
+            self.shake_duration -= dt
+            if self.shake_duration <= 0:
+                self.shake = 0
+        if self.flash_screen > 0:
+            self.flash_screen = max(0.0, self.flash_screen - dt)
+
+        self._update_particles(dt)
+
         if self.game_over or self.paused:
             return
+
+        # Анимация очистки линий — пауза для игровой логики
+        if self.clearing_rows:
+            self.clearing_timer += dt
+            if self.clearing_timer >= self.clearing_duration:
+                self._finish_clearing()
+            return
+
+        # Обычная логика — падение фигуры
         self.fall_timer += dt
         if self.fall_timer >= self.fall_speed:
             self.fall_timer = 0
             if not self._move(0, 1):
                 self._lock()
+
 
     def _draw_cell(self, scr, px, py, color, alpha=255, ghost=False):
         """Рисует клетку по АБСОЛЮТНЫМ пиксельным координатам (px, py)."""
@@ -285,8 +403,14 @@ class TetrisGame:
     def _draw(self):
         self.screen.fill(C_BG)
 
-        # Игровое поле
-        field = pygame.Rect(15, 20, PLAY_W, PLAY_H)
+        # Offset для тряски
+        shake_x = shake_y = 0
+        if self.shake_duration > 0:
+            shake_x = random.randint(-int(self.shake), int(self.shake))
+            shake_y = random.randint(-int(self.shake), int(self.shake))
+
+        # Игровое поле (со сдвигом от тряски)
+        field = pygame.Rect(15 + shake_x, 20 + shake_y, PLAY_W, PLAY_H)
         pygame.draw.rect(self.screen, C_PLAY_BG, field)
 
         # Сетка
@@ -299,40 +423,79 @@ class TetrisGame:
                              (field.x, field.y + y * CELL),
                              (field.right, field.y + y * CELL), 1)
 
-        # Зафиксированные блоки — с ПРАВИЛЬНЫМ offset (field.x + x*CELL)
+        # Зафиксированные блоки
         for y in range(ROWS):
             for x in range(COLS):
+                # Пропускаем ряды, которые сейчас в анимации
+                if self.clearing_rows and y in self.clearing_rows:
+                    continue
                 if self.grid[y][x]:
                     color = PIECE_COLORS[self.grid[y][x]]
+                    self._draw_cell(self.screen,
+                                    field.x + x * CELL, field.y + y * CELL,
+                                    color)
+
+        # === АНИМАЦИЯ ОЧИСТКИ ===
+        if self.clearing_rows:
+            progress = self.clearing_timer / self.clearing_duration
+            for y in self.clearing_rows:
+                for x in range(COLS):
                     px = field.x + x * CELL
                     py = field.y + y * CELL
-                    self._draw_cell(self.screen, px, py, color)
+                    value = self.grid[y][x]
+                    if not value:
+                        continue
+                    color = PIECE_COLORS[value]
+
+                    # Первая половина — вспышка белым
+                    if progress < 0.5:
+                        t = progress / 0.5
+                        white_alpha = int(255 * (1 - abs(t - 0.5) * 2))
+                        # Вспышка поверх цветного блока
+                        self._draw_cell(self.screen, px, py, color)
+                        flash = pygame.Surface((CELL, CELL), pygame.SRCALPHA)
+                        flash.fill((255, 255, 255, white_alpha))
+                        self.screen.blit(flash, (px, py))
+                    else:
+                        # Вторая половина — сжатие и исчезновение
+                        t = (progress - 0.5) / 0.5
+                        size = int(CELL * (1 - t))
+                        alpha = int(255 * (1 - t))
+                        offset = (CELL - size) // 2
+                        s = pygame.Surface((size, size), pygame.SRCALPHA)
+                        pygame.draw.rect(s, (*color, alpha), (0, 0, size, size), border_radius=4)
+                        self.screen.blit(s, (px + offset, py + offset))
 
         # Призрак
-        if not self.game_over:
+        if not self.game_over and not self.clearing_rows:
             gy = self._ghost_y()
             ghost_color = PIECE_COLORS[self.current_key]
             for y, row in enumerate(self.current):
                 for x, cell in enumerate(row):
                     if cell:
-                        px = field.x + (self.cx + x) * CELL
-                        py = field.y + (gy + y) * CELL
-                        self._draw_cell(self.screen, px, py, ghost_color, ghost=True)
+                        self._draw_cell(self.screen,
+                                        field.x + (self.cx + x) * CELL,
+                                        field.y + (gy + y) * CELL,
+                                        ghost_color, ghost=True)
 
         # Текущая фигура
-        if not self.game_over:
+        if not self.game_over and not self.clearing_rows:
             color = PIECE_COLORS[self.current_key]
             for y, row in enumerate(self.current):
                 for x, cell in enumerate(row):
                     if cell:
-                        px = field.x + (self.cx + x) * CELL
-                        py = field.y + (self.cy + y) * CELL
-                        self._draw_cell(self.screen, px, py, color)
+                        self._draw_cell(self.screen,
+                                        field.x + (self.cx + x) * CELL,
+                                        field.y + (self.cy + y) * CELL,
+                                        color)
+
+        # Частицы
+        self._draw_particles(self.screen)
 
         # Рамка поля
         pygame.draw.rect(self.screen, C_BORDER, field, 2, border_radius=4)
 
-        # === Сайдбар ===
+        # === Сайдбар (БЕЗ тряски) ===
         sx = 30 + PLAY_W
         sy = 20
 
@@ -340,7 +503,6 @@ class TetrisGame:
         self._sidebar_text("ЛИНИИ", f"{self.lines}", sx, sy + 60)
         self._sidebar_text("УРОВЕНЬ", f"{self.level}", sx, sy + 120)
 
-        # Следующая фигура
         next_y = sy + 200
         label = self.font_small.render("СЛЕДУЮЩАЯ", True, C_TEXT_DIM)
         self.screen.blit(label, (sx, next_y))
@@ -368,7 +530,6 @@ class TetrisGame:
                     pygame.draw.line(self.screen, lighter,
                                      (px + 3, py + 3), (px + mini - 3, py + 3), 1)
 
-        # Управление — ASCII-стрелки
         controls_y = next_y + 140
         controls = [
             ("< >", "движение"),
@@ -383,6 +544,13 @@ class TetrisGame:
             dt = self.font_small.render(desc, True, C_TEXT_DIM)
             self.screen.blit(kt, (sx, controls_y + i * 20))
             self.screen.blit(dt, (sx + 55, controls_y + i * 20))
+
+        # Вспышка всего экрана (при тетрисе — 4 линии)
+        if self.flash_screen > 0:
+            a = int(255 * (self.flash_screen / 0.25) * 0.5)
+            flash = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            flash.fill((255, 255, 255, a))
+            self.screen.blit(flash, (0, 0))
 
         if self.paused:
             self._overlay("ПАУЗА", "P — продолжить")
