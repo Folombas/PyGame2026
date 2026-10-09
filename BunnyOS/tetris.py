@@ -53,11 +53,14 @@ class TetrisGame:
         self.font_big = pygame.font.Font(None, 48)
         self.font_small = pygame.font.Font(None, 18)
 
-        # Звуки (пытаемся загрузить, иначе None)
-        self.snd_move = self._load("assets/games/sounds/crunch.wav", 0.2)
-        self.snd_drop = self._load("assets/games/sounds/crunch.wav", 0.4)
-        self.snd_clear = self._load("assets/games/sounds/music.mp3", 0.4)
-        self.snd_over = self._load("assets/games/sounds/crash.mp3", 0.6)
+        # Звуки Тетриса — классические, синхронизированные с эффектами
+        self.snd_move = self._load("assets/games/sounds/tetris/selection.wav", 0.3)
+        self.snd_rotate = self._load("assets/games/sounds/tetris/selection.wav", 0.25)
+        self.snd_lock = self._load("assets/games/sounds/tetris/fall.wav", 0.5)
+        self.snd_clear = self._load("assets/games/sounds/tetris/line.wav", 0.7)
+        self.snd_tetris = self._load("assets/games/sounds/tetris/line_clear.wav", 0.9)
+        self.snd_levelup = self._load("assets/games/sounds/tetris/selection.wav", 0.6)
+        self.snd_over = self._load("assets/games/sounds/tetris/gameover.wav", 0.8)
 
         # Эффекты
         self.particles = []            # разлетающиеся частицы
@@ -182,10 +185,15 @@ class TetrisGame:
             if len(full_rows) >= 4:
                 self.flash_screen = 0.25              # большая вспышка при тетрисе
 
-            if self.snd_clear:
+            # Звук синхронизирован с анимацией: играем сразу при старте очистки
+            if len(full_rows) >= 4 and self.snd_tetris:
+                self.snd_tetris.play()
+            elif self.snd_clear:
                 self.snd_clear.play()
         else:
             # Ничего не удаляем — сразу спавним новую фигуру
+            if self.snd_lock:
+                self.snd_lock.play()
             self._spawn()
 
     def _spawn_particles(self, cell_x, cell_y, color, count=4):
@@ -228,6 +236,8 @@ class TetrisGame:
         if new_level > self.level:
             self.level = new_level
             self.fall_speed = max(0.1, 0.8 - (self.level - 1) * 0.07)
+            if self.snd_levelup:
+                self.snd_levelup.play()
 
         # Сброс состояния
         self.clearing_rows = []
@@ -287,8 +297,8 @@ class TetrisGame:
             if self._valid(rotated, self.cx + dx, self.cy):
                 self.current = rotated
                 self.cx += dx
-                if self.snd_move:
-                    self.snd_move.play()
+                if self.snd_rotate:
+                    self.snd_rotate.play()
                 return
 
     def _move(self, dx, dy):
@@ -311,8 +321,9 @@ class TetrisGame:
         while self._valid(self.current, self.cx, self.cy + 1):
             self.cy += 1
             self.score += 2  # бонус за hard drop
-        if self.snd_drop:
-            self.snd_drop.play()
+        # Звук «удара» — синхронизирован с фиксацией
+        if self.snd_lock:
+            self.snd_lock.play()
         self._lock()
 
     def _ghost_y(self):
