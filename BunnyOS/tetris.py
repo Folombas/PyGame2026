@@ -96,7 +96,18 @@ class TetrisGame:
         self.current_key = self.next_piece
         self.next_piece = self.bag.pop(0)
         self.current = [row[:] for row in PIECES[self.current_key]]
-        self.cx = COLS // 2 - len(self.current[0]) // 2
+        # Центрируем фигуру по горизонтали
+        self.cx = (COLS - len(self.current[0])) // 2
+        # Если фигура с пустыми колонками слева — сдвигаем чтобы не уходила за край
+        # находим первую непустую колонку
+        first_col = len(self.current[0])
+        for row in self.current:
+            for x, cell in enumerate(row):
+                if cell and x < first_col:
+                    first_col = x
+        self.cx -= first_col
+        # Ограничиваем в пределах поля
+        self.cx = max(0, min(self.cx, COLS - len(self.current[0])))
         self.cy = 0
         if not self._valid(self.current, self.cx, self.cy):
             self.game_over = True
@@ -116,10 +127,8 @@ class TetrisGame:
         return True
 
     def _lock(self):
-        """Фиксирует фигуру и проверяет линии."""
-        print(f"[tetris] 🔒 Фиксация {self.current_key} в позиции ({self.cx},{self.cy})")
-
-        # Кладём фигуру в grid
+        """Фиксирует фигуру в grid и проверяет линии."""
+        # Кладём фигуру
         for y, row in enumerate(self.current):
             for x, cell in enumerate(row):
                 if cell:
@@ -127,14 +136,7 @@ class TetrisGame:
                     if 0 <= gy < ROWS and 0 <= gx < COLS:
                         self.grid[gy][gx] = self.current_key
 
-        # Отладка: показываем ВСЕ нижние 5 рядов узором (X = занято, . = пусто)
-        for y in range(max(0, ROWS - 5), ROWS):
-            pattern = "".join("X" if self.grid[y][x] else "." for x in range(COLS))
-            filled = pattern.count("X")
-            if filled >= 7:
-                print(f"[tetris]   row {y}: [{pattern}] {filled}/10")
-
-        # Проверяем линии
+        # Проверяем и удаляем линии
         cleared = self._clear_lines()
         if cleared > 0:
             self.lines += cleared
@@ -165,9 +167,6 @@ class TetrisGame:
         if not full_rows:
             return 0
 
-        # Отладка — видим в консоли сколько строк удаляется
-        print(f"[tetris] 🧹 Удалено рядов: {len(full_rows)} ({full_rows})")
-
         # Шаг 2: собираем новый grid БЕЗ полных рядов (сверху вниз)
         new_grid = []
         for y in range(ROWS):
@@ -195,9 +194,16 @@ class TetrisGame:
                 return
 
     def _move(self, dx, dy):
-        if self._valid(self.current, self.cx + dx, self.cy + dy):
-            self.cx += dx
-            self.cy += dy
+        new_cx = self.cx + dx
+        new_cy = self.cy + dy
+        # Жёсткая граница поля по X (не пускаем за края)
+        if dx < 0 and new_cx < 0:
+            return False
+        if dx > 0 and new_cx + len(self.current[0]) > COLS:
+            return False
+        if self._valid(self.current, new_cx, new_cy):
+            self.cx = new_cx
+            self.cy = new_cy
             if self.snd_move and dx != 0:
                 self.snd_move.play()
             return True
