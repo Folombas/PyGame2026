@@ -127,11 +127,12 @@ class TetrisGame:
                     if 0 <= gy < ROWS and 0 <= gx < COLS:
                         self.grid[gy][gx] = self.current_key
 
-        # Считаем заполнение каждой строки — для отладки
-        for y in range(ROWS):
-            filled = sum(1 for x in range(COLS) if self.grid[y][x])
-            if filled >= 8:  # показываем почти полные строки
-                print(f"[tetris]   ряд {y}: {filled}/{COLS} заполнено")
+        # Отладка: показываем ВСЕ нижние 5 рядов узором (X = занято, . = пусто)
+        for y in range(max(0, ROWS - 5), ROWS):
+            pattern = "".join("X" if self.grid[y][x] else "." for x in range(COLS))
+            filled = pattern.count("X")
+            if filled >= 7:
+                print(f"[tetris]   row {y}: [{pattern}] {filled}/10")
 
         # Проверяем линии
         cleared = self._clear_lines()
@@ -260,23 +261,20 @@ class TetrisGame:
             if not self._move(0, 1):
                 self._lock()
 
-    def _draw_cell(self, scr, x, y, color, alpha=255, ghost=False):
-        px = x * CELL
-        py = y * CELL
+    def _draw_cell(self, scr, px, py, color, alpha=255, ghost=False):
+        """Рисует клетку по АБСОЛЮТНЫМ пиксельным координатам (px, py)."""
         if ghost:
             s = pygame.Surface((CELL - 2, CELL - 2), pygame.SRCALPHA)
             pygame.draw.rect(s, (*color, 60), (0, 0, CELL - 2, CELL - 2), border_radius=4)
             pygame.draw.rect(s, (*color, 180), (0, 0, CELL - 2, CELL - 2), 2, border_radius=4)
             scr.blit(s, (px + 1, py + 1))
             return
-        # Основа
         pygame.draw.rect(scr, color, (px + 1, py + 1, CELL - 2, CELL - 2), border_radius=4)
-        # Верхний блик
         lighter = tuple(min(255, c + 50) for c in color)
         pygame.draw.line(scr, lighter, (px + 4, py + 3), (px + CELL - 4, py + 3), 2)
-        # Нижняя тень
         darker = tuple(max(0, c - 60) for c in color)
         pygame.draw.line(scr, darker, (px + 4, py + CELL - 3), (px + CELL - 4, py + CELL - 3), 2)
+
 
     def _draw(self):
         self.screen.fill(C_BG)
@@ -295,26 +293,25 @@ class TetrisGame:
                              (field.x, field.y + y * CELL),
                              (field.right, field.y + y * CELL), 1)
 
-        # Зафиксированные блоки
+        # Зафиксированные блоки — с ПРАВИЛЬНЫМ offset (field.x + x*CELL)
         for y in range(ROWS):
             for x in range(COLS):
                 if self.grid[y][x]:
                     color = PIECE_COLORS[self.grid[y][x]]
-                    self._draw_cell(self.screen,
-                                    field.x // CELL + x, field.y // CELL + y,
-                                    color)
+                    px = field.x + x * CELL
+                    py = field.y + y * CELL
+                    self._draw_cell(self.screen, px, py, color)
 
-        # Призрак (куда упадёт)
+        # Призрак
         if not self.game_over:
             gy = self._ghost_y()
             ghost_color = PIECE_COLORS[self.current_key]
             for y, row in enumerate(self.current):
                 for x, cell in enumerate(row):
                     if cell:
-                        self._draw_cell(self.screen,
-                                        field.x // CELL + self.cx + x,
-                                        field.y // CELL + gy + y,
-                                        ghost_color, ghost=True)
+                        px = field.x + (self.cx + x) * CELL
+                        py = field.y + (gy + y) * CELL
+                        self._draw_cell(self.screen, px, py, ghost_color, ghost=True)
 
         # Текущая фигура
         if not self.game_over:
@@ -322,10 +319,9 @@ class TetrisGame:
             for y, row in enumerate(self.current):
                 for x, cell in enumerate(row):
                     if cell:
-                        self._draw_cell(self.screen,
-                                        field.x // CELL + self.cx + x,
-                                        field.y // CELL + self.cy + y,
-                                        color)
+                        px = field.x + (self.cx + x) * CELL
+                        py = field.y + (self.cy + y) * CELL
+                        self._draw_cell(self.screen, px, py, color)
 
         # Рамка поля
         pygame.draw.rect(self.screen, C_BORDER, field, 2, border_radius=4)
@@ -334,7 +330,6 @@ class TetrisGame:
         sx = 30 + PLAY_W
         sy = 20
 
-        # Счёт
         self._sidebar_text("СЧЁТ", f"{self.score}", sx, sy)
         self._sidebar_text("ЛИНИИ", f"{self.lines}", sx, sy + 60)
         self._sidebar_text("УРОВЕНЬ", f"{self.level}", sx, sy + 120)
@@ -344,7 +339,6 @@ class TetrisGame:
         label = self.font_small.render("СЛЕДУЮЩАЯ", True, C_TEXT_DIM)
         self.screen.blit(label, (sx, next_y))
 
-        # Отрисовка next в маленьком квадрате
         box = pygame.Rect(sx, next_y + 22, SIDE_W - 30, 90)
         pygame.draw.rect(self.screen, C_PLAY_BG, box)
         pygame.draw.rect(self.screen, C_GRID, box, 1, border_radius=4)
@@ -368,7 +362,7 @@ class TetrisGame:
                     pygame.draw.line(self.screen, lighter,
                                      (px + 3, py + 3), (px + mini - 3, py + 3), 1)
 
-        # Управление
+        # Управление — ASCII-стрелки
         controls_y = next_y + 140
         controls = [
             ("< >", "движение"),
@@ -384,13 +378,13 @@ class TetrisGame:
             self.screen.blit(kt, (sx, controls_y + i * 20))
             self.screen.blit(dt, (sx + 55, controls_y + i * 20))
 
-        # Пауза
         if self.paused:
             self._overlay("ПАУЗА", "P — продолжить")
 
-        # Конец игры
         if self.game_over:
-            self._overlay("ИГРА ОКОНЧЕНА", f"Счёт: {self.score}", "Enter — заново, Esc — выход")
+            self._overlay("ИГРА ОКОНЧЕНА", f"Счёт: {self.score}",
+                          "Enter — заново, Esc — выход")
+
 
     def _sidebar_text(self, label, value, x, y):
         lt = self.font_small.render(label, True, C_TEXT_DIM)
