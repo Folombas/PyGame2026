@@ -48,22 +48,28 @@ class GameHub:
         self.screen = pygame.display.set_mode((HUB_W, HUB_H))
         pygame.display.set_caption("Game Hub — BunnyOS")
 
-        # === Шрифты ===
-        if os.path.exists(FONT_PATH):
-            self.f_title = pygame.font.Font(FONT_PATH, 32)
-            self.f_card = pygame.font.Font(FONT_PATH, 14)
-            self.f_small = pygame.font.Font(FONT_PATH, 10)
-            self.font_ok = True
-        else:
-            self.f_title = pygame.font.Font(None, 56)
-            self.f_card = pygame.font.Font(None, 28)
-            self.f_small = pygame.font.Font(None, 18)
-            self.font_ok = False
+        # === Шрифты (с проверкой размера файла!) ===
+        def _try_font(path, size, fallback_size):
+            """Загружает шрифт, если файл существует И не пустой."""
+            if not os.path.exists(path):
+                return pygame.font.Font(None, fallback_size), False
+            # Проверка размера — пустые файлы сломают pygame
+            if os.path.getsize(path) < 1000:
+                print(f"[hub] ⚠ шрифт {path} пустой ({os.path.getsize(path)} байт), fallback")
+                return pygame.font.Font(None, fallback_size), False
+            try:
+                return pygame.font.Font(path, size), True
+            except Exception as e:
+                print(f"[hub] ⚠ не смог загрузить {path}: {e}")
+                return pygame.font.Font(None, fallback_size), False
 
-        if os.path.exists(FONT_DESC):
-            self.f_desc = pygame.font.Font(FONT_DESC, 24)
-        else:
-            self.f_desc = pygame.font.Font(None, 20)
+        self.f_title, ok1 = _try_font(FONT_PATH, 32, 56)
+        self.f_card,  ok2 = _try_font(FONT_PATH, 14, 28)
+        self.f_small, ok3 = _try_font(FONT_PATH, 10, 18)
+        self.font_ok = ok1 and ok2 and ok3
+
+        self.f_desc, _ = _try_font(FONT_DESC, 24, 20)
+        print(f"[hub] шрифт Press Start 2P: {'✓' if self.font_ok else '✗ (fallback)'}")
 
         self.clock = pygame.time.Clock()
         self.selected = 0
