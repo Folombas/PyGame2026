@@ -53,34 +53,11 @@ class PongGame:
         self.reset()
 
     def _load_sprites(self):
-        """Загружает и масштабирует спрайты для понга."""
-        try:
-            # Ракетка игрока (синяя, большая)
-            p = pygame.image.load("assets/games/pong/bluepongbig.png").convert_alpha()
-            self.spr_player = pygame.transform.scale(p, (PADDLE_W, PADDLE_H))
-            # Ракетка ИИ (красная, большая)
-            a = pygame.image.load("assets/games/pong/redpongbig.png").convert_alpha()
-            self.spr_ai = pygame.transform.scale(a, (PADDLE_W, PADDLE_H))
-            # Мяч
-            b = pygame.image.load("assets/games/pong/balls.png").convert_alpha()
-            # Берем первую ячейку 8x8 (нужно уточнить, но масштабируем до размера)
-            # Если спрайт-лист, можно обрезать, но для простоты масштабируем весь
-            # Лучше загрузить отдельный спрайт мяча, если он есть.
-            # Пока используем tiles.png или balls.png
-            try:
-                b = pygame.image.load("assets/games/pong/balls.png").convert_alpha()
-                # Предположим, что первый шар в листе - это 8x8
-                if b.get_width() > 32: # Если это лист
-                    rect = pygame.Rect(0, 0, 8, 8) # Пример
-                    sub = pygame.Surface((8,8), pygame.SRCALPHA)
-                    sub.blit(b, (0,0), rect)
-                    b = sub
-            except:
-                pass
-            self.spr_ball = pygame.transform.scale(b, (BALL_SIZE, BALL_SIZE))
-        except Exception as e:
-            print(f"[pong] Не удалось загрузить спрайты: {e}")
-            self.spr_player = self.spr_ai = self.spr_ball = None
+        """Спрайты из паков не подходят по пропорциям — рисуем процедурно."""
+        self.spr_player = None
+        self.spr_ai = None
+        self.spr_ball = None
+
 
     def _load(self, path, vol=0.5):
         try:
@@ -93,6 +70,7 @@ class PongGame:
     def reset(self):
         self.player_y = HEIGHT // 2 - PADDLE_H // 2
         self.ai_y = HEIGHT // 2 - PADDLE_H // 2
+        self.ball_trail = []
         self.player_score = 0
         self.ai_score = 0
         self.game_over = False
@@ -108,6 +86,7 @@ class PongGame:
         self.ball_vx = math.cos(angle) * speed * direction
         self.ball_vy = math.sin(angle) * speed
         self.ball_speed = speed
+        self.ball_trail = []  # история для шлейфа
 
     def _handle_events(self):
         for e in pygame.event.get():
@@ -151,6 +130,14 @@ class PongGame:
         # === Движение мяча ===
         self.ball_x += self.ball_vx * dt
         self.ball_y += self.ball_vy * dt
+
+        # Шлейф — запоминаем последние позиции
+        if not hasattr(self, "ball_trail"):
+            self.ball_trail = []
+        self.ball_trail.append((self.ball_x + BALL_SIZE // 2,
+                                self.ball_y + BALL_SIZE // 2))
+        if len(self.ball_trail) > 12:
+            self.ball_trail.pop(0)
 
         # Отскок от верх/низ
         if self.ball_y <= 0:
@@ -233,28 +220,68 @@ class PongGame:
             pygame.draw.rect(self.screen, C_MIDLINE,
                              (WIDTH // 2 - 2, y + 5, 4, 18))
 
-        # Ракетки
-        if self.spr_player:
-            self.screen.blit(self.spr_player, (30, self.player_y))
-        else:
-            pygame.draw.rect(self.screen, C_PLAYER,
-                             (30, self.player_y, PADDLE_W, PADDLE_H),
-                             border_radius=6)
+        # === Ракетки — процедурные, с градиентом и свечением ===
+        self._draw_paddle(30, self.player_y, C_PLAYER)
+        self._draw_paddle(WIDTH - 30 - PADDLE_W, self.ai_y, C_AI)
 
-        if self.spr_ai:
-            self.screen.blit(self.spr_ai, (WIDTH - 30 - PADDLE_W, self.ai_y))
-        else:
-            pygame.draw.rect(self.screen, C_AI,
-                             (WIDTH - 30 - PADDLE_W, self.ai_y, PADDLE_W, PADDLE_H),
-                             border_radius=6)
+        # === Шлейф мяча ===
+        if hasattr(self, "ball_trail"):
+            for i, (tx, ty) in enumerate(self.ball_trail[:-1]):
+                t = (i + 1) / len(self.ball_trail)
+                size = max(2, int(BALL_SIZE * t * 0.9))
+                alpha = int(180 * t)
+                trail = pygame.Surface((size, size), pygame.SRCALPHA)
+                pygame.draw.circle(trail, (*C_BALL, alpha),
+                                   (size // 2, size // 2), size // 2)
+                self.screen.blit(trail, (tx - size // 2, ty - size // 2))
 
-        # Мяч
-        if self.spr_ball:
-            self.screen.blit(self.spr_ball, (self.ball_x, self.ball_y))
-        else:
-            pygame.draw.rect(self.screen, C_BALL,
-                             (self.ball_x, self.ball_y, BALL_SIZE, BALL_SIZE),
-                             border_radius=4)
+        # === Мяч с ярким свечением ===
+        ball_cx = int(self.ball_x + BALL_SIZE // 2)
+        ball_cy = int(self.ball_y + BALL_SIZE // 2)
+        # Свечение
+        for r in range(BALL_SIZE, BALL_SIZE * 2, 4):
+            glow = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+            a = max(20, 80 - r * 3)
+            pygame.draw.circle(glow, (*C_BALL, a), (r, r), r)
+            self.screen.blit(glow, (ball_cx - r, ball_cy - r))
+        # Ядро
+        pygame.draw.circle(self.screen, C_BALL, (ball_cx, ball_cy), BALL_SIZE // 2)
+        # Блик
+        pygame.draw.circle(self.screen, (255, 255, 255),
+                           (ball_cx - 3, ball_cy - 3), 2)
+
+    def _draw_paddle(self, x, y, color):
+        """Ракетка с градиентом и свечением."""
+        # Свечение (soft glow)
+        glow = pygame.Surface((PADDLE_W + 20, PADDLE_H + 20), pygame.SRCALPHA)
+        for r in range(8, 0, -2):
+            a = 30 - r * 2
+            if a <= 0:
+                continue
+            pygame.draw.rect(glow, (*color, a),
+                             (10 - r, 10 - r, PADDLE_W + r * 2, PADDLE_H + r * 2),
+                             border_radius=12)
+        self.screen.blit(glow, (x - 10, y - 10))
+
+        # Тело ракетки — вертикальный градиент
+        for i in range(PADDLE_H):
+            t = i / PADDLE_H
+            # В центре — ярче
+            bright = 1.0 - abs(t - 0.5) * 0.6
+            r = min(255, int(color[0] * bright + 40))
+            g = min(255, int(color[1] * bright + 40))
+            b = min(255, int(color[2] * bright + 40))
+            pygame.draw.line(self.screen, (r, g, b),
+                             (x + 2, y + i), (x + PADDLE_W - 2, y + i))
+
+        # Скруглённые верх и низ
+        pygame.draw.rect(self.screen, color,
+                         (x, y, PADDLE_W, PADDLE_H), border_radius=7)
+        # Внутренняя полоса (эффект 3D)
+        inner_color = tuple(min(255, c + 60) for c in color)
+        pygame.draw.line(self.screen, inner_color,
+                         (x + PADDLE_W // 2, y + 6),
+                         (x + PADDLE_W // 2, y + PADDLE_H - 6), 2)
 
         # Счёт
         p = self.font_big.render(str(self.player_score), True, C_PLAYER)
