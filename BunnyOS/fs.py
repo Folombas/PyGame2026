@@ -292,6 +292,43 @@ class Shell:
                 return [f"[tetris] ошибка: {e}"]
 
 
+        if cmd == "2048":
+
+
+
+            import subprocess
+
+
+
+            import os
+
+
+
+            script = os.path.join(os.path.dirname(__file__), "game2048.py")
+
+
+
+            try:
+
+
+
+                subprocess.Popen([sys.executable, script])
+
+
+
+                return ["[2048] 2048 запущена в отдельном окне"]
+
+
+
+            except Exception as e:
+
+
+
+                return [f"[2048] ошибка: {e}"]
+
+
+
+
         if cmd == "snake":
             # Запуск Змейки во внешнем окне через subprocess
             import subprocess
@@ -308,7 +345,8 @@ class Shell:
                 "Доступные игры:",
                 "  snake   — Змейка (классика)",
                 "  tetris  — Тетрис (классика)",
-                "  (скоро) 2048, pong",
+                "  2048    — 2048 (головоломка)",
+                "  (скоро) pong",
             ]
 
         if cmd == "exit":
