@@ -329,6 +329,61 @@ class Shell:
 
 
 
+        if cmd == "hub":
+
+
+
+
+
+            import subprocess
+
+
+
+
+
+            import os
+
+
+
+
+
+            script = os.path.join(os.path.dirname(__file__), "game_hub.py")
+
+
+
+
+
+            try:
+
+
+
+
+
+                subprocess.Popen([sys.executable, script])
+
+
+
+
+
+                return ["[hub] Game Hub запущен в отдельном окне"]
+
+
+
+
+
+            except Exception as e:
+
+
+
+
+
+                return [f"[hub] ошибка: {e}"]
+
+
+
+
+
+
         if cmd == "snake":
             # Запуск Змейки во внешнем окне через subprocess
             import subprocess
@@ -346,7 +401,9 @@ class Shell:
                 "  snake   — Змейка (классика)",
                 "  tetris  — Тетрис (классика)",
                 "  2048    — 2048 (головоломка)",
-                "  (скоро) pong",
+                "  pong    — Понг с ИИ",
+                "",
+                "  hub     — Game Hub (все игры в одном окне)",
             ]
 
         if cmd == "exit":
