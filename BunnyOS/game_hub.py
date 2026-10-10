@@ -27,7 +27,8 @@ C_GOLD      = (255, 220, 100)
 C_GRID      = (25, 35, 55)
 
 SCORES_PATH = os.path.expanduser("~/.bunny_games/highscores.json")
-FONT_PATH = "assets/fonts/PressStart2P.ttf"
+# VT323 — терминальный моношрифт, отлично подходит для ретро-стиля
+FONT_PATH = "assets/fonts/VT323.ttf"
 FONT_DESC = "assets/fonts/VT323.ttf"
 
 
@@ -63,13 +64,14 @@ class GameHub:
                 print(f"[hub] ⚠ не смог загрузить {path}: {e}")
                 return pygame.font.Font(None, fallback_size), False
 
-        self.f_title, ok1 = _try_font(FONT_PATH, 32, 56)
-        self.f_card,  ok2 = _try_font(FONT_PATH, 14, 28)
-        self.f_small, ok3 = _try_font(FONT_PATH, 10, 18)
+        # VT323 — большой размер для заголовка, средний для карточек
+        self.f_title, ok1 = _try_font(FONT_PATH, 72, 56)
+        self.f_card,  ok2 = _try_font(FONT_PATH, 30, 28)
+        self.f_small, ok3 = _try_font(FONT_PATH, 22, 18)
         self.font_ok = ok1 and ok2 and ok3
 
-        self.f_desc, _ = _try_font(FONT_DESC, 24, 20)
-        print(f"[hub] шрифт Press Start 2P: {'✓' if self.font_ok else '✗ (fallback)'}")
+        self.f_desc, _ = _try_font(FONT_DESC, 26, 20)
+        print(f"[hub] шрифт VT323: {'✓' if self.font_ok else '✗ (fallback)'}")
 
         self.clock = pygame.time.Clock()
         self.selected = 0
