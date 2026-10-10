@@ -1,4 +1,4 @@
-"""Game Hub — крутой лаунчер игр BunnyOS."""
+"""Game Hub — лаунчер игр BunnyOS в стиле ретро-консоли."""
 import os
 import sys
 import json
@@ -9,61 +9,37 @@ import pygame
 from settings import WIDTH, HEIGHT, TASKBAR_H
 
 
-# === НАСТРОЙКИ ===
 FPS = 60
 HUB_W = WIDTH
 HUB_H = HEIGHT - TASKBAR_H
 
-# === ЦВЕТА ===
-C_BG1        = (12, 16, 28)
-C_BG2        = (28, 20, 50)
-C_CARD       = (25, 30, 50)
-C_CARD_HOVER = (40, 50, 80)
-C_CARD_ACTIVE= (60, 80, 130)
-C_BORDER     = (60, 80, 130)
-C_BORDER_HI  = (100, 180, 255)
-C_TEXT       = (230, 240, 255)
-C_TEXT_DIM   = (130, 150, 180)
-C_ACCENT     = (100, 180, 255)
-C_GOLD       = (255, 200, 80)
+# === ЦВЕТА (ретро-консоль) ===
+C_BG_TOP    = (8, 10, 20)
+C_BG_BOT    = (20, 12, 35)
+C_CARD      = (18, 22, 38)
+C_CARD_SEL  = (28, 36, 60)
+C_BORDER    = (60, 80, 120)
+C_BORDER_HI = (255, 220, 100)
+C_TEXT      = (230, 240, 255)
+C_TEXT_DIM  = (110, 130, 160)
+C_ACCENT    = (100, 180, 255)
+C_GOLD      = (255, 220, 100)
+C_GRID      = (25, 35, 55)
 
-# Папка для рекордов
 SCORES_PATH = os.path.expanduser("~/.bunny_games/highscores.json")
+FONT_PATH = "assets/fonts/PressStart2P.ttf"
+FONT_DESC = "assets/fonts/VT323.ttf"
 
-# === ОПИСАНИЯ ИГР ===
+
 GAMES = [
-    {
-        "id": "snake",
-        "name": "Змейка",
-        "desc": "Классика. Собирай яблоки, не кусай хвост.",
-        "file": "snake.py",
-        "color": (60, 220, 100),
-        "preview": "snake",
-    },
-    {
-        "id": "tetris",
-        "name": "Тетрис",
-        "desc": "7 фигур, 4 линии, комбо-эффекты.",
-        "file": "tetris.py",
-        "color": (200, 120, 240),
-        "preview": "tetris",
-    },
-    {
-        "id": "2048",
-        "name": "2048",
-        "desc": "Соединяй плитки. Дойди до 2048!",
-        "file": "game2048.py",
-        "color": (240, 200, 80),
-        "preview": "2048",
-    },
-    {
-        "id": "pong",
-        "name": "Понг",
-        "desc": "Против ИИ. До 7 очков.",
-        "file": "pong.py",
-        "color": (255, 130, 100),
-        "preview": "pong",
-    },
+    {"id": "snake",  "name": "SNAKE",  "desc": "Collect apples. Don't bite yourself.",
+     "file": "snake.py",    "color": (80, 220, 120), "icon": "terminal"},
+    {"id": "tetris", "name": "TETRIS", "desc": "7 pieces. 4 lines. Combos x2 x3 x4.",
+     "file": "tetris.py",   "color": (200, 120, 240), "icon": "tetris"},
+    {"id": "2048",   "name": "2048",   "desc": "Merge tiles. Reach 2048!",
+     "file": "game2048.py", "color": (240, 200, 80), "icon": "calculator"},
+    {"id": "pong",   "name": "PONG",   "desc": "Play vs AI. First to 7.",
+     "file": "pong.py",     "color": (255, 130, 100), "icon": "browser"},
 ]
 
 
@@ -71,24 +47,43 @@ class GameHub:
     def __init__(self):
         self.screen = pygame.display.set_mode((HUB_W, HUB_H))
         pygame.display.set_caption("Game Hub — BunnyOS")
-        self.clock = pygame.time.Clock()
-        self.font_title = pygame.font.Font(None, 64)
-        self.font_card = pygame.font.Font(None, 36)
-        self.font_desc = pygame.font.Font(None, 20)
-        self.font_small = pygame.font.Font(None, 18)
-        self.font_big = pygame.font.Font(None, 48)
 
+        # === Шрифты ===
+        if os.path.exists(FONT_PATH):
+            self.f_title = pygame.font.Font(FONT_PATH, 32)
+            self.f_card = pygame.font.Font(FONT_PATH, 14)
+            self.f_small = pygame.font.Font(FONT_PATH, 10)
+            self.font_ok = True
+        else:
+            self.f_title = pygame.font.Font(None, 56)
+            self.f_card = pygame.font.Font(None, 28)
+            self.f_small = pygame.font.Font(None, 18)
+            self.font_ok = False
+
+        if os.path.exists(FONT_DESC):
+            self.f_desc = pygame.font.Font(FONT_DESC, 24)
+        else:
+            self.f_desc = pygame.font.Font(None, 20)
+
+        self.clock = pygame.time.Clock()
         self.selected = 0
         self.tick = 0
         self.scores = self._load_scores()
-
-        # Анимации карточек
-        self.card_anims = [0.0 for _ in GAMES]  # 0..1 — плавное появление
+        self.card_anims = [0.0 for _ in GAMES]
         self.hover_anims = [0.0 for _ in GAMES]
-        self.stars = self._make_stars(60)
+        self.stars = self._make_stars(80)
         self.bg_cache = None
 
-    # ---------- УТИЛИТЫ ----------
+        # Иконки игр — из retro pack
+        self.icons = {}
+        try:
+            from ui import load_icon
+            for g in GAMES:
+                img = load_icon(g["icon"], 96)
+                self.icons[g["id"]] = img
+        except Exception:
+            pass
+
     def _load_scores(self):
         if not os.path.exists(SCORES_PATH):
             return {}
@@ -102,48 +97,52 @@ class GameHub:
         rng = random.Random(42)
         return [
             {"x": rng.uniform(0, HUB_W), "y": rng.uniform(0, HUB_H),
-             "r": rng.uniform(0.5, 2.0), "a": rng.randint(40, 150),
-             "speed": rng.uniform(0.1, 0.5)}
+             "r": rng.uniform(0.5, 1.8), "a": rng.randint(40, 180),
+             "speed": rng.uniform(0.2, 0.8), "col": rng.choice([
+                 (180, 200, 255), (255, 220, 180), (200, 180, 255)])}
             for _ in range(n)
         ]
 
     def _make_bg(self):
-        """Тёмный градиент с "туманностью"."""
         s = pygame.Surface((HUB_W, HUB_H))
         for y in range(HUB_H):
             t = y / HUB_H
-            r = int(C_BG1[0] * (1 - t) + C_BG2[0] * t)
-            g = int(C_BG1[1] * (1 - t) + C_BG2[1] * t)
-            b = int(C_BG1[2] * (1 - t) + C_BG2[2] * t)
+            r = int(C_BG_TOP[0] * (1 - t) + C_BG_BOT[0] * t)
+            g = int(C_BG_TOP[1] * (1 - t) + C_BG_BOT[1] * t)
+            b = int(C_BG_TOP[2] * (1 - t) + C_BG_BOT[2] * t)
             pygame.draw.line(s, (r, g, b), (0, y), (HUB_W, y))
-        # Пятна туманности
-        rng = random.Random(7)
-        for _ in range(8):
-            x = rng.randint(100, HUB_W - 100)
-            y = rng.randint(100, HUB_H - 100)
-            r = rng.randint(120, 240)
-            col = (
-                rng.randint(40, 100),
-                rng.randint(30, 80),
-                rng.randint(100, 180),
-            )
-            nebula = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
-            for i in range(10):
-                rr = r - i * 12
-                if rr > 0:
-                    pygame.draw.circle(nebula, (*col, 8), (r, r), rr)
-            s.blit(nebula, (x - r, y - r))
+
+        # Сетка перспективы (ретро-стиль)
+        horizon = HUB_H // 2
+        # Горизонтальные линии
+        for i in range(20):
+            t = i / 20
+            y = horizon + int((HUB_H - horizon) * t * t)
+            a = int(60 * (1 - t * 0.5))
+            pygame.draw.line(s, (*C_GRID, a), (0, y), (HUB_W, y))
+
+        # Вертикальные линии (сходятся к центру горизонта)
+        cx = HUB_W // 2
+        for i in range(-10, 11):
+            x_bottom = cx + i * (HUB_W // 10)
+            pygame.draw.line(s, C_GRID, (cx, horizon), (x_bottom, HUB_H))
+
+        # Свечение горизонта
+        glow = pygame.Surface((HUB_W, 100), pygame.SRCALPHA)
+        for i in range(50):
+            a = int(80 * (1 - i / 50))
+            pygame.draw.line(glow, (*C_ACCENT, a), (0, 50 - i), (HUB_W, 50 - i))
+            pygame.draw.line(glow, (*C_ACCENT, a), (0, 50 + i), (HUB_W, 50 + i))
+        s.blit(glow, (0, horizon - 50))
+
         return s
 
-    # ---------- КООРДИНАТЫ КАРТОЧЕК ----------
     def _card_rect(self, i):
-        # Сетка 2×2, центрирована
-        card_w, card_h = 400, 240
+        card_w, card_h = 400, 250
         gap_x, gap_y = 40, 30
         total_w = card_w * 2 + gap_x
-        total_h = card_h * 2 + gap_y
         x0 = (HUB_W - total_w) // 2
-        y0 = 130  # отступ от заголовка
+        y0 = 150
         col = i % 2
         row = i // 2
         return pygame.Rect(
@@ -152,37 +151,41 @@ class GameHub:
             card_w, card_h,
         )
 
-    # ---------- ПРЕВЬЮ (процедурное) ----------
+    def _draw_grid_bg(self, scr, rect):
+        """Сетка на фоне карточки."""
+        for x in range(rect.x, rect.right, 20):
+            pygame.draw.line(scr, (30, 40, 60),
+                             (x, rect.y), (x, rect.bottom))
+        for y in range(rect.y, rect.bottom, 20):
+            pygame.draw.line(scr, (30, 40, 60),
+                             (rect.x, y), (rect.right, y))
+
     def _draw_preview(self, scr, kind, rect, color, hover):
-        """Рисует маленькое превью игры."""
-        # Фон — тёмный скруглённый
         inner = rect.inflate(-20, -20)
-        pygame.draw.rect(scr, (10, 14, 22), inner, border_radius=8)
+        # Фон
+        pygame.draw.rect(scr, (8, 10, 18), inner, border_radius=6)
+        # Сетка
+        self._draw_grid_bg(scr, inner)
 
         cx, cy = inner.centerx, inner.centery
 
         if kind == "snake":
-            # Змейка: маленькие квадратики
-            cell = 16
+            cell = 18
             start_x = cx - 3 * cell
             start_y = cy - cell // 2
             for i in range(5):
-                c = color if i > 0 else (255, 255, 255)
-                r = 3 if i == 0 else 2
-                pygame.draw.rect(scr, c,
+                col = color if i > 0 else (255, 255, 255)
+                pygame.draw.rect(scr, col,
                                  (start_x + i * cell, start_y, cell - 2, cell - 2),
-                                 border_radius=r)
+                                 border_radius=2)
             # Яблоко
-            pygame.draw.circle(scr, (255, 60, 100),
-                               (cx + 90, cy - 30), 8)
-            pygame.draw.circle(scr, (255, 120, 140),
-                               (cx + 90, cy - 30), 8, 2)
+            pygame.draw.circle(scr, (255, 60, 100), (cx + 90, cy - 30), 10)
+            pygame.draw.circle(scr, (255, 120, 140), (cx + 90, cy - 30), 10, 2)
 
         elif kind == "tetris":
-            # Тетрис: полоски из цветных блоков
-            block = 20
+            block = 22
             base_x = cx - 3 * block
-            base_y = cy + 20
+            base_y = cy + 25
             colors = [(80, 220, 240), (250, 220, 80), (190, 100, 240),
                       (100, 230, 120), (240, 90, 110), (80, 130, 250)]
             for x in range(6):
@@ -190,9 +193,9 @@ class GameHub:
                 pygame.draw.rect(scr, col,
                                  (base_x + x * block, base_y, block - 2, block - 2),
                                  border_radius=3)
-            # Падающая фигура сверху
+            # Падающая фигура
             falling_x = cx - 2 * block
-            falling_y = cy - 40
+            falling_y = cy - 45
             for dx in (-1, 0, 1):
                 pygame.draw.rect(scr, colors[2],
                                  (falling_x + dx * block, falling_y,
@@ -203,8 +206,7 @@ class GameHub:
                              border_radius=3)
 
         elif kind == "2048":
-            # 2048: 4 плитки с числами
-            cell = 50
+            cell = 52
             gap = 6
             nums = [2, 4, 8, 16]
             colors_2048 = [(238, 228, 218), (237, 224, 200),
@@ -225,29 +227,24 @@ class GameHub:
                              y + cell // 2 - t.get_height() // 2))
 
         elif kind == "pong":
-            # Понг: две ракетки и мяч
             pygame.draw.rect(scr, (100, 200, 255),
-                             (cx - 100, cy - 30, 8, 60), border_radius=3)
+                             (cx - 110, cy - 30, 8, 60), border_radius=3)
             pygame.draw.rect(scr, (255, 130, 100),
-                             (cx + 92, cy - 20, 8, 60), border_radius=3)
-            # Мяч
+                             (cx + 102, cy - 20, 8, 60), border_radius=3)
             pygame.draw.circle(scr, (240, 240, 220), (cx, cy), 8)
-            # Шлейф
             for i in range(3):
                 a = 120 - i * 40
                 s = pygame.Surface((10, 10), pygame.SRCALPHA)
                 pygame.draw.circle(s, (240, 240, 220, a), (5, 5), 5 - i)
                 scr.blit(s, (cx - 20 - i * 8, cy - 5))
 
-        # Свечение при hover
+        # Цветное свечение внутри при hover
         if hover > 0.01:
             glow = pygame.Surface((inner.w, inner.h), pygame.SRCALPHA)
-            glow.fill((*C_BORDER_HI, int(30 * hover)))
-            scr.blit(glow, inner.topleft)
+            glow.fill((*color, int(40 * hover)))
+            scr.blit(glow, inner.topleft, special_flags=pygame.BLEND_RGBA_ADD)
 
-    # ---------- ЛОГИКА ----------
     def _launch(self, game):
-        """Запускает игру во внешнем процессе."""
         script = os.path.join(os.path.dirname(__file__), game["file"])
         try:
             subprocess.Popen([sys.executable, script])
@@ -281,7 +278,7 @@ class GameHub:
                         break
             if e.type == pygame.MOUSEMOTION:
                 mx, my = e.pos
-                for i, g in enumerate(GAMES):
+                for i in range(len(GAMES)):
                     if self._card_rect(i).collidepoint(mx, my):
                         self.selected = i
                         break
@@ -289,58 +286,64 @@ class GameHub:
 
     def _update(self, dt):
         self.tick += 1
-        # Плавное появление
         for i in range(len(GAMES)):
-            self.card_anims[i] = min(1.0, self.card_anims[i] + dt * 1.5)
-        # Hover анимации
+            self.card_anims[i] = min(1.0, self.card_anims[i] + dt * 1.8)
         for i in range(len(GAMES)):
             target = 1.0 if i == self.selected else 0.0
-            self.hover_anims[i] += (target - self.hover_anims[i]) * dt * 8
+            self.hover_anims[i] += (target - self.hover_anims[i]) * dt * 10
+        # Звёзды
+        for s in self.stars:
+            s["y"] += s["speed"]
+            if s["y"] > HUB_H:
+                s["y"] = -2
+                s["x"] = random.uniform(0, HUB_W)
 
-    # ---------- ОТРИСОВКА ----------
     def _draw(self):
-        # Фон
         if self.bg_cache is None:
             self.bg_cache = self._make_bg()
         self.screen.blit(self.bg_cache, (0, 0))
 
-        # Звёзды с параллаксом
+        # Звёзды
         for s in self.stars:
-            s["y"] += s["speed"] * 0.3
-            if s["y"] > HUB_H:
-                s["y"] = 0
-                s["x"] = random.uniform(0, HUB_W)
             surf = pygame.Surface((4, 4), pygame.SRCALPHA)
-            pygame.draw.circle(surf, (180, 200, 255, s["a"]),
-                               (2, 2), int(s["r"]))
+            pygame.draw.circle(surf, (*s["col"], s["a"]), (2, 2), int(s["r"]))
             self.screen.blit(surf, (s["x"], s["y"]))
 
         # Заголовок
-        title = self.font_title.render("Game Hub", True, C_TEXT)
-        self.screen.blit(title, (HUB_W // 2 - title.get_width() // 2, 30))
-        # Подзаголовок с акцентом
-        sub = self.font_small.render("BunnyOS · Games Collection", True, C_TEXT_DIM)
-        self.screen.blit(sub, (HUB_W // 2 - sub.get_width() // 2, 92))
+        title = self.f_title.render("GAME HUB", True, C_GOLD)
+        # Двойной контур для ретро-эффекта
+        title_shadow = self.f_title.render("GAME HUB", True, (100, 60, 20))
+        tx = HUB_W // 2 - title.get_width() // 2
+        self.screen.blit(title_shadow, (tx + 3, 36))
+        self.screen.blit(title, (tx, 33))
 
-        # Декоративная линия под заголовком
-        line_y = 118
-        line_w = 300 + int(20 * math.sin(self.tick * 0.05))
-        line_x = HUB_W // 2 - line_w // 2
-        pygame.draw.line(self.screen, C_ACCENT,
-                         (line_x, line_y), (line_x + line_w, line_y), 2)
+        # Мигающий подзаголовок
+        if (self.tick // 30) % 2 == 0:
+            sub = self.f_small.render("* BUNNYOS ARCADE COLLECTION *", True, C_ACCENT)
+            self.screen.blit(sub, (HUB_W // 2 - sub.get_width() // 2, 100))
 
         # Карточки
         for i, g in enumerate(GAMES):
             self._draw_card(i, g)
 
-        # Подсказка внизу
-        hint = self.font_small.render(
-            "Стрелки / WASD — навигация    Enter — играть    Esc — выход",
+        # Подсказки
+        hint = self.f_small.render(
+            "ARROWS/WASD=MOVE   ENTER=PLAY   ESC=EXIT",
             True, C_TEXT_DIM
         )
-        self.screen.blit(hint, (HUB_W // 2 - hint.get_width() // 2, HUB_H - 30))
+        self.screen.blit(hint, (HUB_W // 2 - hint.get_width() // 2, HUB_H - 25))
+
+        # CRT-эффект (сканлайны)
+        self._draw_scanlines()
 
         pygame.display.flip()
+
+    def _draw_scanlines(self):
+        """Тонкие горизонтальные полосы для CRT-эффекта."""
+        scanline = pygame.Surface((HUB_W, HUB_H), pygame.SRCALPHA)
+        for y in range(0, HUB_H, 3):
+            pygame.draw.line(scanline, (0, 0, 0, 30), (0, y), (HUB_W, y))
+        self.screen.blit(scanline, (0, 0))
 
     def _draw_card(self, i, g):
         base_rect = self._card_rect(i)
@@ -348,12 +351,10 @@ class GameHub:
         hover = self.hover_anims[i]
         active = (i == self.selected)
 
-        # Появление — сдвиг снизу + прозрачность
-        offset_y = int((1 - anim) * 60)
+        offset_y = int((1 - anim) * 80)
         rect = base_rect.move(0, offset_y)
 
-        # Масштабирование при активной
-        scale = 1.0 + hover * 0.03
+        scale = 1.0 + hover * 0.04
         if scale != 1.0:
             new_w = int(rect.w * scale)
             new_h = int(rect.h * scale)
@@ -363,67 +364,87 @@ class GameHub:
 
         # Тень
         shadow = pygame.Surface((rect.w + 20, rect.h + 20), pygame.SRCALPHA)
-        pygame.draw.rect(shadow, (0, 0, 0, 100),
-                         (10, 10, rect.w, rect.h), border_radius=16)
+        pygame.draw.rect(shadow, (0, 0, 0, 120),
+                         (10, 10, rect.w, rect.h), border_radius=8)
         self.screen.blit(shadow, (rect.x - 10, rect.y - 10))
 
         # Фон карточки
-        if active:
-            card_col = C_CARD_ACTIVE
-        else:
-            card_col = C_CARD
+        card_col = C_CARD_SEL if active else C_CARD
+        pygame.draw.rect(self.screen, card_col, rect, border_radius=8)
 
-        pygame.draw.rect(self.screen, card_col, rect, border_radius=16)
-
-        # Свечение при активной (пульсация)
+        # Свечение вокруг активной карточки (пульсирующее)
         if active:
-            pulse = 0.6 + 0.4 * math.sin(self.tick * 0.1)
+            pulse = 0.5 + 0.5 * math.sin(self.tick * 0.12)
             glow = pygame.Surface((rect.w + 40, rect.h + 40), pygame.SRCALPHA)
-            for r in range(4):
-                a = int(40 * pulse) - r * 8
+            for r in range(6):
+                a = int(60 * pulse) - r * 8
                 if a > 0:
                     pygame.draw.rect(glow, (*g["color"], a),
-                                     (20 - r * 4, 20 - r * 4,
-                                      rect.w + r * 8, rect.h + r * 8),
-                                     border_radius=20 + r * 4)
+                                     (20 - r * 3, 20 - r * 3,
+                                      rect.w + r * 6, rect.h + r * 6),
+                                     border_radius=10 + r * 3, width=2)
             self.screen.blit(glow, (rect.x - 20, rect.y - 20))
 
-        # Рамка
+        # Рамка карточки — пиксельный стиль
         border_col = C_BORDER_HI if active else C_BORDER
         border_w = 3 if active else 2
-        pygame.draw.rect(self.screen, border_col, rect, border_w, border_radius=16)
+        # Уголки (пиксель-арт стиль)
+        pygame.draw.rect(self.screen, border_col, rect, border_w, border_radius=8)
 
-        # Превью
-        preview_rect = pygame.Rect(rect.x + 20, rect.y + 20,
-                                   rect.w - 40, 120)
-        self._draw_preview(self.screen, g["preview"], preview_rect,
-                           g["color"], hover)
+        # Угловые акценты (как у пиксельной рамки)
+        cl = 12  # длина уголка
+        th = 4   # толщина
+        for (ax, ay, dx, dy) in [
+            (rect.x, rect.y, 1, 1),
+            (rect.right - cl, rect.y, 1, 1),
+            (rect.x, rect.bottom - cl, 1, 1),
+            (rect.right - cl, rect.bottom - cl, 1, 1),
+        ]:
+            # Горизонтальная полоска уголка
+            pygame.draw.rect(self.screen, g["color"],
+                             (ax, ay if dy == 1 else rect.bottom - th,
+                              cl, th))
+            # Вертикальная полоска уголка
+            pygame.draw.rect(self.screen, g["color"],
+                             (ax if dx == 1 else rect.right - th, ay,
+                              th, cl))
 
-        # Название
-        name = self.font_card.render(g["name"], True, C_TEXT)
-        self.screen.blit(name, (rect.x + 20, rect.y + 155))
+        # Иконка игры — слева сверху
+        icon_x = rect.x + 20
+        icon_y = rect.y + 15
+        icon_img = self.icons.get(g["id"])
+        if icon_img:
+            # Рамка вокруг иконки
+            icon_bg = pygame.Rect(icon_x - 4, icon_y - 4, 64, 64)
+            pygame.draw.rect(self.screen, (30, 38, 58), icon_bg, border_radius=6)
+            pygame.draw.rect(self.screen, g["color"], icon_bg, 2, border_radius=6)
+            small_icon = pygame.transform.scale(icon_img, (56, 56))
+            self.screen.blit(small_icon, (icon_x, icon_y))
 
-        # Описание
-        desc = self.font_desc.render(g["desc"], True, C_TEXT_DIM)
-        self.screen.blit(desc, (rect.x + 20, rect.y + 195))
+        # Название игры — справа от иконки
+        name = self.f_card.render(g["name"], True, g["color"])
+        self.screen.blit(name, (icon_x + 75, icon_y + 8))
 
-        # Рекорд (если есть)
+        # Рекорд под названием
         if g["id"] in self.scores:
-            score = self.scores[g["id"]]
-            rec = self.font_small.render(f"Рекорд: {score}", True, C_GOLD)
-            self.screen.blit(rec, (rect.right - rec.get_width() - 20, rect.y + 200))
+            rec = self.f_small.render(f"HI: {self.scores[g['id']]}", True, C_GOLD)
+            self.screen.blit(rec, (icon_x + 75, icon_y + 32))
 
-        # Стрелка при активной
-        if active:
-            arrow_x = rect.right - 30
-            arrow_y = rect.y + 30
-            arrow_off = int(4 * math.sin(self.tick * 0.15))
-            pts = [
-                (arrow_x + arrow_off, arrow_y),
-                (arrow_x + arrow_off + 10, arrow_y + 8),
-                (arrow_x + arrow_off, arrow_y + 16),
-            ]
-            pygame.draw.polygon(self.screen, g["color"], pts)
+        # Превью под названием
+        preview_rect = pygame.Rect(rect.x + 20, rect.y + 100,
+                                    rect.w - 40, 130)
+        self._draw_preview(self.screen, g["id"], preview_rect, g["color"], hover)
+
+        # Описание внизу
+        desc = self.f_desc.render(g["desc"], True, C_TEXT_DIM)
+        self.screen.blit(desc, (rect.x + 20, rect.bottom - 28))
+
+        # Стрелка-курсор справа (мигающая)
+        if active and (self.tick // 15) % 2 == 0:
+            ax = rect.right - 22
+            ay = rect.centery
+            pts = [(ax, ay - 8), (ax + 8, ay), (ax, ay + 8)]
+            pygame.draw.polygon(self.screen, C_BORDER_HI, pts)
 
     def run(self):
         running = True
