@@ -44,7 +44,43 @@ class PongGame:
         self.snd_score = self._load("assets/games/sounds/tetris/coin_01.wav", 0.6)
         self.snd_over = self._load("assets/games/sounds/tetris/jingle_04.wav", 0.5)
 
+        # Спрайты
+        self.spr_player = None
+        self.spr_ai = None
+        self.spr_ball = None
+        self._load_sprites()
+
         self.reset()
+
+    def _load_sprites(self):
+        """Загружает и масштабирует спрайты для понга."""
+        try:
+            # Ракетка игрока (синяя, большая)
+            p = pygame.image.load("assets/games/pong/bluepongbig.png").convert_alpha()
+            self.spr_player = pygame.transform.scale(p, (PADDLE_W, PADDLE_H))
+            # Ракетка ИИ (красная, большая)
+            a = pygame.image.load("assets/games/pong/redpongbig.png").convert_alpha()
+            self.spr_ai = pygame.transform.scale(a, (PADDLE_W, PADDLE_H))
+            # Мяч
+            b = pygame.image.load("assets/games/pong/balls.png").convert_alpha()
+            # Берем первую ячейку 8x8 (нужно уточнить, но масштабируем до размера)
+            # Если спрайт-лист, можно обрезать, но для простоты масштабируем весь
+            # Лучше загрузить отдельный спрайт мяча, если он есть.
+            # Пока используем tiles.png или balls.png
+            try:
+                b = pygame.image.load("assets/games/pong/balls.png").convert_alpha()
+                # Предположим, что первый шар в листе - это 8x8
+                if b.get_width() > 32: # Если это лист
+                    rect = pygame.Rect(0, 0, 8, 8) # Пример
+                    sub = pygame.Surface((8,8), pygame.SRCALPHA)
+                    sub.blit(b, (0,0), rect)
+                    b = sub
+            except:
+                pass
+            self.spr_ball = pygame.transform.scale(b, (BALL_SIZE, BALL_SIZE))
+        except Exception as e:
+            print(f"[pong] Не удалось загрузить спрайты: {e}")
+            self.spr_player = self.spr_ai = self.spr_ball = None
 
     def _load(self, path, vol=0.5):
         try:
@@ -197,28 +233,28 @@ class PongGame:
             pygame.draw.rect(self.screen, C_MIDLINE,
                              (WIDTH // 2 - 2, y + 5, 4, 18))
 
-        # Ракетки с тенью
-        # Игрок
-        pygame.draw.rect(self.screen, C_PLAYER,
-                         (30, self.player_y, PADDLE_W, PADDLE_H),
-                         border_radius=6)
-        # Блик
-        pygame.draw.line(self.screen, (180, 230, 255),
-                         (34, self.player_y + 6),
-                         (34, self.player_y + PADDLE_H - 6), 2)
+        # Ракетки
+        if self.spr_player:
+            self.screen.blit(self.spr_player, (30, self.player_y))
+        else:
+            pygame.draw.rect(self.screen, C_PLAYER,
+                             (30, self.player_y, PADDLE_W, PADDLE_H),
+                             border_radius=6)
 
-        # ИИ
-        pygame.draw.rect(self.screen, C_AI,
-                         (WIDTH - 30 - PADDLE_W, self.ai_y, PADDLE_W, PADDLE_H),
-                         border_radius=6)
-        pygame.draw.line(self.screen, (255, 200, 180),
-                         (WIDTH - 34, self.ai_y + 6),
-                         (WIDTH - 34, self.ai_y + PADDLE_H - 6), 2)
+        if self.spr_ai:
+            self.screen.blit(self.spr_ai, (WIDTH - 30 - PADDLE_W, self.ai_y))
+        else:
+            pygame.draw.rect(self.screen, C_AI,
+                             (WIDTH - 30 - PADDLE_W, self.ai_y, PADDLE_W, PADDLE_H),
+                             border_radius=6)
 
         # Мяч
-        pygame.draw.rect(self.screen, C_BALL,
-                         (self.ball_x, self.ball_y, BALL_SIZE, BALL_SIZE),
-                         border_radius=4)
+        if self.spr_ball:
+            self.screen.blit(self.spr_ball, (self.ball_x, self.ball_y))
+        else:
+            pygame.draw.rect(self.screen, C_BALL,
+                             (self.ball_x, self.ball_y, BALL_SIZE, BALL_SIZE),
+                             border_radius=4)
 
         # Счёт
         p = self.font_big.render(str(self.player_score), True, C_PLAYER)
