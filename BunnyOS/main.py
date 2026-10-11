@@ -158,6 +158,35 @@ class BunnyOS:
                 return True
         return False
 
+    def launch_game(self, game_id):
+        """Запускает игру ВНУТРИ BunnyOS (без отдельного окна)."""
+        GAME_INFO = {
+            "snake":  ("snake",    "SnakeGame"),
+            "tetris": ("tetris",   "TetrisGame"),
+            "2048":   ("game2048", "Game2048"),
+            "pong":   ("pong",     "PongGame"),
+        }
+        if game_id not in GAME_INFO:
+            print(f"[OS] Игра '{game_id}' не найдена")
+            return
+        module_name, class_name = GAME_INFO[game_id]
+        try:
+            mod = __import__(module_name)
+            cls = getattr(mod, class_name)
+            gw = getattr(mod, "WIDTH", 800)
+            gh = getattr(mod, "HEIGHT", 600)
+            self.game_size = (gw, gh)
+            self.game_surface = pygame.Surface((gw, gh)).convert()
+            self._saved_caption = pygame.display.get_caption()[0]
+            self.active_game = cls(screen=self.game_surface)
+            self.state = "game"
+            print(f"[OS] {game_id} запущена в BunnyOS (embedded)")
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[OS] Ошибка запуска {game_id}: {e}")
+            self.active_game = None
+
     def launch_snake(self):
         self.launch_game("snake")
 
