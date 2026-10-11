@@ -174,8 +174,13 @@ class TerminalApp:
         self.input = ""
         self.tick = 0
         # История листания (по стрелкам ↑↓)
-        self.hist_idx = -1         # -1 = не листаем, иначе индекс в history
-        self.saved_input = ""      # что было введено ДО начала листания
+        self.hist_idx = -1
+        self.saved_input = ""
+        # Размер шрифта (Ctrl+= / Ctrl+-)
+        self.font_size = 16
+        self.MIN_FONT = 10
+        self.MAX_FONT = 32
+        self.DEFAULT_FONT = 16
 
     def handle_event(self, event, rect):
         if event.type != pygame.KEYDOWN:
@@ -185,19 +190,31 @@ class TerminalApp:
         # --- Ctrl-комбинации ---
         if mods & pygame.KMOD_CTRL:
             if event.key == pygame.K_l:
-                # Ctrl+L — очистить экран (как в bash)
                 self.lines = []
                 return
             if event.key == pygame.K_u:
-                # Ctrl+U — стереть строку
                 self.input = ""
                 self.hist_idx = -1
                 return
             if event.key == pygame.K_c:
-                # Ctrl+C — отмена строки
                 self.input = ""
                 self.hist_idx = -1
                 self.lines.append(f"{self.os.shell.prompt()} ^C")
+                return
+            # === Ctrl+= или Ctrl++ : увеличить шрифт ===
+            if event.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
+                self.font_size = min(self.MAX_FONT, self.font_size + 2)
+                print(f"[term] Шрифт: {self.font_size}")
+                return
+            # === Ctrl+- : уменьшить шрифт ===
+            if event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                self.font_size = max(self.MIN_FONT, self.font_size - 2)
+                print(f"[term] Шрифт: {self.font_size}")
+                return
+            # === Ctrl+0 : сброс шрифта ===
+            if event.key in (pygame.K_0, pygame.K_KP0):
+                self.font_size = self.DEFAULT_FONT
+                print(f"[term] Шрифт: {self.font_size}")
                 return
 
         # --- Enter ---
@@ -268,8 +285,8 @@ class TerminalApp:
 
     def draw(self, scr, rect, font):
         pygame.draw.rect(scr, C_TERMINAL_BG, rect)
-        mono = pygame.font.Font(None, 16)
-        lh = 18
+        mono = pygame.font.Font(None, self.font_size)
+        lh = self.font_size + 2   # межстрочный интервал зависит от размера
         n = max(1, (rect.h - 40) // lh)
         visible = self.lines[-n:]
         y = rect.y + 8

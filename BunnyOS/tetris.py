@@ -383,7 +383,9 @@ class TetrisGame:
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE:
                     return False
-                if e.key == pygame.K_p or e.key == pygame.K_SPACE:
+                # P (пауза) — на любой раскладке
+                if (e.key == pygame.K_p or e.key == pygame.K_SPACE
+                        or getattr(e, "scancode", 0) == 19):  # 19 = P
                     if not self.game_over:
                         self.paused = not self.paused
                     return True
@@ -394,19 +396,21 @@ class TetrisGame:
                 if self.paused:
                     return True
                 # Управление
-                if e.key in (pygame.K_LEFT, pygame.K_a):
+                sc = getattr(e, "scancode", 0)
+                if e.key in (pygame.K_LEFT, pygame.K_a) or sc == 4:       # ← / A / Ф
                     self._move(-1, 0)
-                elif e.key in (pygame.K_RIGHT, pygame.K_d):
+                elif e.key in (pygame.K_RIGHT, pygame.K_d) or sc == 7:    # → / D / В
                     self._move(1, 0)
-                elif e.key in (pygame.K_DOWN, pygame.K_s):
+                elif e.key in (pygame.K_DOWN, pygame.K_s) or sc == 22:    # ↓ / S / Ы
                     if self._move(0, 1):
                         self.fall_timer = 0
                         self.score += 1
-                elif e.key in (pygame.K_UP, pygame.K_w):
+                elif e.key in (pygame.K_UP, pygame.K_w) or sc == 26:      # ↑ / W / Ц
                     self._rotate()
                 elif e.key == pygame.K_SPACE:
                     pass
-                elif e.key == pygame.K_h:
+                elif e.key == pygame.K_h or getattr(e, "scancode", 0) == 11:
+                    # scancode 11 = H на любой раскладке (в т.ч. русской "Р")
                     self._hard_drop()
         return True
 
