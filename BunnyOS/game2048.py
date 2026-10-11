@@ -46,7 +46,11 @@ VOLUME_MASTER = 0.25
 class Game2048:
     def __init__(self, screen=None):
         self.screen = screen or pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("2048 — BunnyOS")
+        # Не меняем заголовок в embedded-режиме
+
+        if screen is None:
+
+            pygame.display.set_caption("2048 — BunnyOS")
         self.clock = pygame.time.Clock()
         self.font_tile = pygame.font.Font(None, 48)
         self.font_big = pygame.font.Font(None, 44)

@@ -51,7 +51,11 @@ PIECE_COLORS = {
 class TetrisGame:
     def __init__(self, screen=None):
         self.screen = screen or pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("Тетрис — BunnyOS")
+        # Не меняем заголовок в embedded-режиме
+
+        if screen is None:
+
+            pygame.display.set_caption("Тетрис — BunnyOS")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.Font(None, 22)
         self.font_big = pygame.font.Font(None, 48)

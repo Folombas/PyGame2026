@@ -22,7 +22,11 @@ C_TEXT    = (255, 241, 232)
 class SnakeGame:
     def __init__(self, screen=None):
         self.screen = screen or pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("Змейка — BunnyOS")
+        # Не меняем заголовок в embedded-режиме
+
+        if screen is None:
+
+            pygame.display.set_caption("Змейка — BunnyOS")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.Font(None, 24)
         self.big_font = pygame.font.Font(None, 48)

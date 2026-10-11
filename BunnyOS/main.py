@@ -476,8 +476,8 @@ class BunnyOS:
                     self.active_game = None
                     self.game_surface = None
                     self.state = "desktop"
-                    if self._saved_caption:
-                        pygame.display.set_caption(self._saved_caption)
+                    # Возвращаем имя окна BunnyOS
+                    pygame.display.set_caption("BunnyOS 1.0 LTS")
                     continue
                 self.active_game._update(dt)
                 self.active_game._draw()

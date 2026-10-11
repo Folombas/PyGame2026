@@ -32,7 +32,11 @@ VOLUME_MASTER = 0.25
 class PongGame:
     def __init__(self, screen=None):
         self.screen = screen or pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("Понг — BunnyOS")
+        # Не меняем заголовок в embedded-режиме
+
+        if screen is None:
+
+            pygame.display.set_caption("Понг — BunnyOS")
         self.clock = pygame.time.Clock()
         self.font_big = pygame.font.Font(None, 96)
         self.font = pygame.font.Font(None, 28)
