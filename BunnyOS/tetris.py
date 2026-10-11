@@ -374,8 +374,10 @@ class TetrisGame:
             y += 1
         return y
 
-    def _handle_events(self):
-        for e in pygame.event.get():
+    def _handle_events(self, events=None):
+        if events is None:
+            events = pygame.event.get()
+        for e in events:
             if e.type == pygame.QUIT:
                 return False
             if e.type == pygame.KEYDOWN:

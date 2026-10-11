@@ -253,12 +253,17 @@ class GameHub:
             scr.blit(glow, inner.topleft, special_flags=pygame.BLEND_RGBA_ADD)
 
     def _launch(self, game):
-        script = os.path.join(os.path.dirname(__file__), game["file"])
+        """Отправляет запрос BunnyOS на embedded-запуск и закрывается."""
+        req_path = os.path.expanduser("~/.bunny_launch_request")
         try:
-            subprocess.Popen([sys.executable, script])
-            print(f"[Hub] Запуск: {game['name']}")
+            with open(req_path, "w") as f:
+                f.write(game["id"])
+            print(f"[Hub] Запрос на запуск: {game['name']}")
         except Exception as e:
             print(f"[Hub] Ошибка: {e}")
+        # Закрываем Hub, чтобы BunnyOS подхватил запрос
+        pygame.quit()
+        sys.exit(0)
 
     def _handle_events(self):
         for e in pygame.event.get():

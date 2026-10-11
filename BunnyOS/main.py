@@ -1,4 +1,5 @@
 """BunnyOS — симулятор Unix-подобной ОС на PyGame."""
+import os
 import sys
 import time
 import pygame
@@ -42,6 +43,11 @@ class BunnyOS:
         self.windows = []
         self.active_win = None
         self.start_open = False
+        # Embedded-игры
+        self.active_game = None
+        self.game_surface = None
+        self.game_size = (0, 0)
+        self._saved_caption = ""
 
         # Обои
         self.wallpaper = None
@@ -153,15 +159,7 @@ class BunnyOS:
         return False
 
     def launch_snake(self):
-        """Запускает Змейку как внешнее приложение."""
-        import subprocess
-        import os
-        script = os.path.join(os.path.dirname(__file__), "snake.py")
-        try:
-            subprocess.Popen([sys.executable, script])
-            print("[OS] Змейка запущена в отдельном окне")
-        except Exception as e:
-            print(f"[OS] Ошибка запуска: {e}")
+        self.launch_game("snake")
 
     def focus(self, w):
         if self.active_win and self.active_win != w:
@@ -424,6 +422,49 @@ class BunnyOS:
     def run(self):
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
+
+            # === Проверяем запрос из Hub на запуск игры ===
+            import os
+            req_path = os.path.expanduser("~/.bunny_launch_request")
+            if os.path.exists(req_path):
+                try:
+                    with open(req_path, "r") as f:
+                        game_id = f.read().strip()
+                    os.remove(req_path)
+                    self.launch_game(game_id)
+                except Exception as e:
+                    print(f"[OS] Ошибка обработки запроса: {e}")
+                    try:
+                        os.remove(req_path)
+                    except Exception:
+                        pass
+
+            # === Если запущена игра — она управляет всем ===
+            if self.state == "game" and self.active_game is not None:
+                events = pygame.event.get()
+                if not self.active_game._handle_events(events):
+                    # Игра просит выход
+                    self.active_game = None
+                    self.game_surface = None
+                    self.state = "desktop"
+                    if self._saved_caption:
+                        pygame.display.set_caption(self._saved_caption)
+                    continue
+                self.active_game._update(dt)
+                self.active_game._draw()
+                # Центрируем игру на экране BunnyOS
+                self.screen.fill((10, 12, 20))
+                gw, gh = self.game_size
+                gx = (WIDTH - gw) // 2
+                gy = (HEIGHT - gh) // 2
+                self.screen.blit(self.game_surface, (gx, gy))
+                # Рамка вокруг игры
+                pygame.draw.rect(self.screen, (80, 100, 140),
+                                 (gx - 2, gy - 2, gw + 4, gh + 4), 2)
+                pygame.display.flip()
+                continue
+
+            # === Обычный цикл BunnyOS ===
             for e in pygame.event.get():
                 self.handle_event(e)
             self.update(dt)
