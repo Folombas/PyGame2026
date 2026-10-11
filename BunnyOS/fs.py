@@ -126,6 +126,17 @@ class Shell:
         self.cwd = f"/home/{user}"
         self.history = []
 
+    def _launch_game_request(self, game_id, display_name):
+        """Пишет файл-запрос. BunnyOS подхватит его в главном цикле."""
+        import os
+        req_path = os.path.expanduser("~/.bunny_launch_request")
+        try:
+            with open(req_path, "w") as f:
+                f.write(game_id)
+            return [f"[{game_id}] {display_name} запускается в BunnyOS..."]
+        except Exception as e:
+            return [f"[{game_id}] ошибка: {e}"]
+
     def prompt(self):
         short = self.cwd
         home = f"/home/{self.user}"
@@ -274,59 +285,11 @@ class Shell:
         if cmd == "history":
             return [f"{i+1:3}  {h}" for i, h in enumerate(self.history)]
         if cmd == "tetris":
-
-            import subprocess
-
-            import os
-
-            script = os.path.join(os.path.dirname(__file__), "tetris.py")
-
-            try:
-
-                subprocess.Popen([sys.executable, script])
-
-                return ["[tetris] Тетрис запущен в отдельном окне"]
-
-            except Exception as e:
-
-                return [f"[tetris] ошибка: {e}"]
+            return self._launch_game_request("tetris", "Тетрис")
 
 
         if cmd == "2048":
-
-
-
-            import subprocess
-
-
-
-            import os
-
-
-
-            script = os.path.join(os.path.dirname(__file__), "game2048.py")
-
-
-
-            try:
-
-
-
-                subprocess.Popen([sys.executable, script])
-
-
-
-                return ["[2048] 2048 запущена в отдельном окне"]
-
-
-
-            except Exception as e:
-
-
-
-                return [f"[2048] ошибка: {e}"]
-
-
+            return self._launch_game_request("2048", "2048")
 
 
         if cmd == "hub":
@@ -385,15 +348,7 @@ class Shell:
 
 
         if cmd == "snake":
-            # Запуск Змейки во внешнем окне через subprocess
-            import subprocess
-            import os
-            script = os.path.join(os.path.dirname(__file__), "snake.py")
-            try:
-                subprocess.Popen([sys.executable, script])
-                return ["[snake] Змейка запущена в отдельном окне"]
-            except Exception as e:
-                return [f"[snake] ошибка: {e}"]
+            return self._launch_game_request("snake", "Змейка")
 
         if cmd == "games":
             return [
