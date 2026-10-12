@@ -165,6 +165,7 @@ class BunnyOS:
             "tetris": ("tetris",   "TetrisGame"),
             "2048":   ("game2048", "Game2048"),
             "pong":   ("pong",     "PongGame"),
+            "breakout": ("breakout", "BreakoutGame"),
         }
         if game_id not in GAME_INFO:
             print(f"[OS] Игра '{game_id}' не найдена")

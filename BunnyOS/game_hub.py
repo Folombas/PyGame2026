@@ -41,6 +41,8 @@ GAMES = [
      "file": "game2048.py", "color": (240, 200, 80), "icon": "calculator"},
     {"id": "pong",   "name": "PONG",   "desc": "Play vs AI. First to 7.",
      "file": "pong.py",     "color": (255, 130, 100), "icon": "browser"},
+    {"id": "breakout", "name": "BREAKOUT", "desc": "Bricks. Power-ups. Combos.",
+     "file": "breakout.py", "color": (255, 100, 180), "icon": "computer"},
 ]
 
 

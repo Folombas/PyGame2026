@@ -444,6 +444,27 @@ class Shell:
 
 
 
+        if cmd == "breakout":
+
+
+
+
+
+
+
+
+
+            return self._launch_game_request("breakout", "Breakout")
+
+
+
+
+
+
+
+
+
+
         if cmd == "snake":
             return self._launch_game_request("snake", "Змейка")
 
@@ -454,6 +475,7 @@ class Shell:
                 "  tetris  — Тетрис (классика)",
                 "  2048    — 2048 (головоломка)",
                 "  pong    — Понг с ИИ",
+                "  breakout — Арканоид",
                 "",
                 "  hub     — Game Hub (все игры в одном окне)",
             ]
