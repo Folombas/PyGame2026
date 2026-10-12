@@ -34,16 +34,20 @@ class BootScreen:
         ]
 
     def _make_bg(self):
-        """Кэшируем градиент."""
-        s = pygame.Surface((WIDTH, HEIGHT))
-        for y in range(HEIGHT):
-            t = y / HEIGHT
-            # Тёмно-синий → почти чёрный
-            r = int(15 + 10 * (1 - t))
-            g = int(20 + 20 * (1 - t))
-            b = int(40 + 30 * (1 - t))
-            pygame.draw.line(s, (r, g, b), (0, y), (WIDTH, y))
-        return s
+        """Использует процедурные обои из login_wallpaper."""
+        try:
+            from login_wallpaper import generate_login_bg
+            return generate_login_bg()
+        except Exception as e:
+            print(f"[login] fallback на градиент: {e}")
+            # Fallback — простой градиент
+            s = pygame.Surface((WIDTH, HEIGHT))
+            for y in range(HEIGHT):
+                t = y / HEIGHT
+                col = (int(20 + 30 * t), int(30 + 40 * t), int(55 + 50 * t))
+                pygame.draw.line(s, col, (0, y), (WIDTH, y))
+            return s
+
 
     def update(self, dt):
         self.timer += dt
