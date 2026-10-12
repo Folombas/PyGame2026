@@ -93,11 +93,10 @@ class GameHub:
             pass
 
     def _load_scores(self):
-        if not os.path.exists(SCORES_PATH):
-            return {}
+        """Загружает рекорды через общий модуль records."""
         try:
-            with open(SCORES_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+            import records
+            return records.all_scores()
         except Exception:
             return {}
 

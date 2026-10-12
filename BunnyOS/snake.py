@@ -1,5 +1,6 @@
 """Змейка — классика в стиле Pico-8."""
 import pygame
+import records
 import random
 import sys
 
@@ -120,6 +121,13 @@ class SnakeGame:
         self.game_over = True
         if self.snd_crash:
             self.snd_crash.play()
+        # Рекорд
+        try:
+            new_record = records.submit("snake", self.score)
+            if new_record:
+                print(f"[snake] 🏆 Новый рекорд: {self.score}!")
+        except Exception as e:
+            print(f"[snake] ошибка рекорда: {e}")
 
     def _draw(self):
         self.screen.fill(C_BG)

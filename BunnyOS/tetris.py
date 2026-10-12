@@ -1,5 +1,6 @@
 """Тетрис — классика в тёмном стиле BunnyOS."""
 import pygame
+import records
 import random
 import sys
 
@@ -163,6 +164,13 @@ class TetrisGame:
             self.game_over = True
             if self.snd_over:
                 self.snd_over.play()
+            # Рекорд
+            try:
+                new_record = records.submit("tetris", self.score)
+                if new_record:
+                    print(f"[tetris] 🏆 Новый рекорд: {self.score}!")
+            except Exception as e:
+                print(f"[tetris] ошибка рекорда: {e}")
 
 
     def _valid(self, piece, px, py):

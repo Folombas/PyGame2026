@@ -347,6 +347,103 @@ class Shell:
 
 
 
+        if cmd == "scores":
+
+
+
+
+
+
+
+            import records
+
+
+
+
+
+
+
+            data = records.all_scores()
+
+
+
+
+
+
+
+            if not data:
+
+
+
+
+
+
+
+                return ["Рекордов пока нет. Сыграй в игру!"]
+
+
+
+
+
+
+
+            lines = ["🏆 РЕКОРДЫ BunnyOS:", ""]
+
+
+
+
+
+
+
+            names = {"snake": "Змейка", "tetris": "Тетрис",
+
+
+
+
+
+
+
+                      "2048": "2048", "pong": "Понг"}
+
+
+
+
+
+
+
+            for gid, score in sorted(data.items()):
+
+
+
+
+
+
+
+                name = names.get(gid, gid)
+
+
+
+
+
+
+
+                lines.append(f"  {name:<12} {score}")
+
+
+
+
+
+
+
+            return lines
+
+
+
+
+
+
+
+
         if cmd == "snake":
             return self._launch_game_request("snake", "Змейка")
 

@@ -1,5 +1,6 @@
 """2048 — головоломка с плавной анимацией."""
 import pygame
+import records
 import random
 import sys
 import math
@@ -189,6 +190,12 @@ class Game2048:
                 self.game_over = True
                 if self.snd_over:
                     self.snd_over.play()
+                try:
+                    new_record = records.submit("2048", self.score)
+                    if new_record:
+                        print(f"[2048] 🏆 Новый рекорд: {self.score}!")
+                except Exception as e:
+                    print(f"[2048] ошибка рекорда: {e}")
             return True
         return False
 

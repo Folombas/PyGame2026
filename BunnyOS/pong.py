@@ -1,5 +1,6 @@
 """Pong с ИИ — классика в стиле BunnyOS."""
 import pygame
+import records
 import random
 import sys
 import math
@@ -212,6 +213,13 @@ class PongGame:
             self.winner = "PLAYER"
             if self.snd_over:
                 self.snd_over.play()
+            # Рекорд — разница очков (чем больше побед, тем лучше)
+            try:
+                new_record = records.submit("pong", self.player_score)
+                if new_record:
+                    print(f"[pong] 🏆 Новый рекорд: {self.player_score}!")
+            except Exception as e:
+                print(f"[pong] ошибка рекорда: {e}")
         elif self.ai_score >= 7:
             self.game_over = True
             self.winner = "AI"
