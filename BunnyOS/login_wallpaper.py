@@ -82,13 +82,7 @@ def generate_login_bg():
         star.fill((a, a, 255, a))
         surf.blit(star, (x, y))
 
-    # === 6. Виньетка (тёмные края) ===
-    vignette = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    for i in range(80):
-        a = int(120 * (i / 80) ** 2)
-        pygame.draw.rect(vignette, (0, 0, 0, a),
-                         (i, i, WIDTH - i * 2, HEIGHT - i * 2), 1)
-    surf.blit(vignette, (0, 0))
+    # Виньетка убрана по просьбе — она давала «двойные линии» по краям
 
     return surf
 

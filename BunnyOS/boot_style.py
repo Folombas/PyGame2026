@@ -150,6 +150,18 @@ class LoginScreen:
         self._bg_cache = None
         self.password = ""
         self.show_hint = False
+        # Логотип (заяц)
+        self.logo = None
+        try:
+            import os
+            logo_path = "assets/logos/bunny_logo.png"
+            if os.path.exists(logo_path):
+                img = pygame.image.load(logo_path).convert_alpha()
+                # Увеличиваем до 90×90
+                self.logo = pygame.transform.smoothscale(img, (90, 90))
+                print("[login] ✓ логотип загружен")
+        except Exception as e:
+            print(f"[login] ⚠ логотип не загружен: {e}")
 
     def _make_bg(self):
         """Размытый тёмный фон — как заблюренный рабочий стол."""
@@ -198,7 +210,7 @@ class LoginScreen:
 
         cx, cy = WIDTH // 2, HEIGHT // 2 - 40
 
-        # Аватар — круг с монограммой "Z"
+        # Аватар — круг с логотипом
         r = 60
         # Свечение
         for i in range(5):
@@ -211,10 +223,14 @@ class LoginScreen:
         pygame.draw.circle(scr, (45, 65, 95), (cx, cy), r)
         pygame.draw.circle(scr, (140, 180, 230), (cx, cy), r, 2)
 
-        # Монограмма
-        mono = pygame.font.Font(None, 84)
-        mt = mono.render("Z", True, (200, 220, 245))
-        scr.blit(mt, (cx - mt.get_width() // 2, cy - mt.get_height() // 2 + 4))
+        # Логотип (заяц) или fallback — монограмма Z
+        if self.logo:
+            scr.blit(self.logo, (cx - self.logo.get_width() // 2,
+                                  cy - self.logo.get_height() // 2))
+        else:
+            mono = pygame.font.Font(None, 84)
+            mt = mono.render("Z", True, (200, 220, 245))
+            scr.blit(mt, (cx - mt.get_width() // 2, cy - mt.get_height() // 2 + 4))
 
         # Имя
         name = self.font_name.render("Зайка", True, (230, 240, 250))
