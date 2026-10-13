@@ -1139,6 +1139,175 @@ class Shell:
 
 
 
+        if cmd == "weather":
+
+
+
+
+
+
+
+
+
+
+
+
+
+            import random as _r
+
+
+
+
+
+
+
+
+
+
+
+
+
+            conditions = ["☀ Ясно", "⛅ Облачно", "🌧 Дождь", "❄ Снег", "🌩 Гроза"]
+
+
+
+
+
+
+
+
+
+
+
+
+
+            cond = _r.choice(conditions)
+
+
+
+
+
+
+
+
+
+
+
+
+
+            temp = _r.randint(-15, 30)
+
+
+
+
+
+
+
+
+
+
+
+
+
+            wind = _r.randint(1, 15)
+
+
+
+
+
+
+
+
+
+
+
+
+
+            return [
+
+
+
+
+
+
+
+
+
+
+
+
+
+                f"Погода в Bunnyville:",
+
+
+
+
+
+
+
+
+
+
+
+
+
+                f"  {cond}",
+
+
+
+
+
+
+
+
+
+
+
+
+
+                f"  Температура: {temp}°C",
+
+
+
+
+
+
+
+
+
+
+
+
+
+                f"  Ветер: {wind} м/с",
+
+
+
+
+
+
+
+
+
+
+
+
+
+            ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         if cmd == "snake":
             return self._launch_game_request("snake", "Змейка")
 
