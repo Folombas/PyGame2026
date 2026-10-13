@@ -671,472 +671,51 @@ class Shell:
 
 
         if cmd == "cowsay":
-
-
-
-
-
-
-
-
-
-
-
-            if not args:
-
-
-
-
-
-
-
-
-
-
-
+            # 3 источника текста:
+            # 1) stdin (из pipe: fortune | cowsay)
+            # 2) аргументы (cowsay Привет)
+            # 3) без аргументов — usage
+            if stdin is not None and any(l.strip() for l in stdin):
+                text = " ".join(l.strip() for l in stdin if l.strip())
+            elif args:
+                text = " ".join(args)
+            else:
                 return ["usage: cowsay <текст>"]
 
-
-
-
-
-
-
-
-
-
-
-            text = " ".join(args)
-
-
-
-
-
-
-
-
-
-
-
-            # Разбиваем длинный текст на строки
-
-
-
-
-
-
-
-
-
-
-
             w = 40
-
-
-
-
-
-
-
-
-
-
-
             lines = []
-
-
-
-
-
-
-
-
-
-
-
-            while text:
-
-
-
-
-
-
-
-
-
-
-
-                if len(text) <= w:
-
-
-
-
-
-
-
-
-
-
-
-                    lines.append(text)
-
-
-
-
-
-
-
-
-
-
-
+            remaining = text
+            while remaining:
+                if len(remaining) <= w:
+                    lines.append(remaining)
                     break
-
-
-
-
-
-
-
-
-
-
-
-                cut = text.rfind(" ", 0, w)
-
-
-
-
-
-
-
-
-
-
-
+                cut = remaining.rfind(" ", 0, w)
                 if cut < 20:
-
-
-
-
-
-
-
-
-
-
-
                     cut = w
-
-
-
-
-
-
-
-
-
-
-
-                lines.append(text[:cut])
-
-
-
-
-
-
-
-
-
-
-
-                text = text[cut:].lstrip()
-
-
-
-
-
-
-
-
-
-
-
-            # Рисуем облачко
-
-
-
-
-
-
-
-
-
-
+                lines.append(remaining[:cut])
+                remaining = remaining[cut:].lstrip()
 
             max_w = max(len(l) for l in lines)
-
-
-
-
-
-
-
-
-
-
-
             result = [" " + "_" * (max_w + 2)]
-
-
-
-
-
-
-
-
-
-
-
             for i, line in enumerate(lines):
-
-
-
-
-
-
-
-
-
-
-
                 pad = line + " " * (max_w - len(line))
-
-
-
-
-
-
-
-
-
-
-
                 if len(lines) == 1:
-
-
-
-
-
-
-
-
-
-
-
                     result.append(f"< {pad} >")
-
-
-
-
-
-
-
-
-
-
-
                 elif i == 0:
-
-
-
-
-
-
-
-
-
-
-
                     result.append(f"/ {pad} \\")
-
-
-
-
-
-
-
-
-
-
-
                 elif i == len(lines) - 1:
-
-
-
-
-
-
-
-
-
-
-
                     result.append(f"\\ {pad} /")
-
-
-
-
-
-
-
-
-
-
-
                 else:
-
-
-
-
-
-
-
-
-
-
-
                     result.append(f"| {pad} |")
-
-
-
-
-
-
-
-
-
-
-
             result.append(" " + "-" * (max_w + 2))
-
-
-
-
-
-
-
-
-
-
-
-            # Корова
-
-
-
-
-
-
-
-
-
-
-
             result.extend([
-
-
-
-
-
-
-
-
-
-
-
                 "        \\   ^__^",
-
-
-
-
-
-
-
-
-
-
-
                 "         \\  (oo)\\_______",
-
-
-
-
-
-
-
-
-
-
-
                 "            (__)\\       )\\/\\",
-
-
-
-
-
-
-
-
-
-
-
                 "                ||----w |",
-
-
-
-
-
-
-
-
-
-
-
                 "                ||     ||",
-
-
-
-
-
-
-
-
-
-
-
             ])
-
-
-
-
-
-
-
-
-
-
-
             return result
-
-
-
-
-
-
-
-
-
-
 
 
         if cmd == "weather":
