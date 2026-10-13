@@ -1308,6 +1308,151 @@ class Shell:
 
 
 
+        if cmd == "matrix":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            import random as _r
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            # 15 строк «цифрового дождя» в стиле Матрицы
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            chars = "01アイウエオカキクケコサシスセソ"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            lines = []
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            for _ in range(15):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                row = "".join(_r.choice(chars) for _ in range(40))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                lines.append(row)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            return lines
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         if cmd == "snake":
             return self._launch_game_request("snake", "Змейка")
 
