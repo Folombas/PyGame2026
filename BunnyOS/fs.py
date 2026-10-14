@@ -2278,6 +2278,111 @@ class Shell:
 
 
 
+        if cmd == "yes":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            word = " ".join(args) if args else "y"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            # Ограничим 100 строками чтобы не зависнуть
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            return [word] * 100
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         if cmd == "snake":
             return self._launch_game_request("snake", "Змейка")
 
