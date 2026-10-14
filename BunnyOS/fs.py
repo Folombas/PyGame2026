@@ -283,6 +283,9 @@ class Shell:
         if cmd == "clear":
             return ["__CLEAR__"]
         if cmd == "history":
+            if args and args[0] == "-c":
+                self.history = []
+                return []
             return [f"{i+1:3}  {h}" for i, h in enumerate(self.history)]
         if cmd == "tetris":
             return self._launch_game_request("tetris", "Тетрис")
