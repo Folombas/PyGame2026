@@ -41,6 +41,34 @@ class VirtualFS:
             "3. Write new program\n"
         )
         self.files["/tmp/test.txt"] = "temporary file\n"
+        # === /proc/ — живое ядро ===
+        self.dirs.add("/proc")
+        self.files["/proc/version"] = (
+            "Linux version 5.15.0-carrot (bunny@bunnyos)\n"
+            "#1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux\n"
+        )
+        self.files["/proc/cpuinfo"] = (
+            "processor\t: 0\n"
+            "vendor_id\t: BunnyCore\n"
+            "model name\t: BunnyCore i7 @ 3.4GHz\n"
+            "cpu MHz\t\t: 3400.000\n"
+            "cache size\t: 8192 KB\n"
+            "\n"
+            "processor\t: 1\n"
+            "vendor_id\t: BunnyCore\n"
+            "model name\t: BunnyCore i7 @ 3.4GHz\n"
+        )
+        self.files["/proc/meminfo"] = (
+            "MemTotal:       16777216 kB\n"
+            "MemFree:         8123456 kB\n"
+            "MemAvailable:   12876544 kB\n"
+            "Buffers:          123456 kB\n"
+            "Cached:          4567890 kB\n"
+            "SwapTotal:       4194304 kB\n"
+            "SwapFree:        4194304 kB\n"
+        )
+        self.files["/proc/uptime"] = "12345.67 98765.43\n"
+        self.files["/proc/loadavg"] = "0.42 0.51 0.48 1/234 5678\n"
         self.files["/usr/bin/snake"] = "# Snake game binary\n"
 
     def _norm(self, path, cwd="/"):
