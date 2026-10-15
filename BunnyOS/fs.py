@@ -267,7 +267,20 @@ class Shell:
         if cmd == "cat":
             return self._cat(args)
         if cmd == "echo":
-            return [" ".join(args)]
+            if args and args[0] == "-n":
+                # Без перевода строки — вернём с маркером
+                return [" ".join(args[1:]) + "\x00"]
+            # Поддержка $VAR
+            out = []
+            for a in args:
+                if a.startswith("$"):
+                    var = a[1:]
+                    if var == "USER": a = self.user
+                    elif var == "HOME": a = f"/home/{self.user}"
+                    elif var == "HOSTNAME": a = self.host
+                    elif var == "PWD": a = self.cwd
+                out.append(a)
+            return [" ".join(out)]
         if cmd == "whoami":
             return [self.user]
         if cmd == "hostname":
