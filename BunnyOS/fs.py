@@ -313,7 +313,8 @@ class Shell:
             import real_sys
             return [real_sys.whoami()]
         if cmd == "hostname":
-            return [self.host]
+            import real_sys
+            return [real_sys.hostname()]
         if cmd == "uname":
             if "-r" in args: return ["5.15.0-carrot"]
             if "-a" in args: return ["Linux bunnyos 5.15.0-carrot #1 SMP x86_64 GNU/Linux"]
