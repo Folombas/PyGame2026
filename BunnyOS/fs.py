@@ -256,6 +256,13 @@ class Shell:
         # Основные команды
         if cmd == "help":
             return [
+                "🦠 REAL system commands (Фейнман-mode):",
+                "  uname, hostname, whoami, date, uptime",
+                "  df, free, lscpu, ifconfig, ps, id, env",
+                "  cat /proc/cpuinfo  |  cat /proc/meminfo",
+                "  ping google.com  |  curl https://example.com",
+                "  ↑ Эти команды читают ТВОЮ НАСТОЯЩУЮ систему!",
+                "",
                 "BunnyOS Shell — commands:",
                 "  help         — this help",
                 "  ls [path]    — list files",
