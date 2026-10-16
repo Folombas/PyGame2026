@@ -310,7 +310,8 @@ class Shell:
                 out.append(a)
             return [" ".join(out)]
         if cmd == "whoami":
-            return [self.user]
+            import real_sys
+            return [real_sys.whoami()]
         if cmd == "hostname":
             return [self.host]
         if cmd == "uname":
