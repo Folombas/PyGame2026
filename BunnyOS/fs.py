@@ -14121,13 +14121,20 @@ class Shell:
         if cmd == "man":
             return self._man(args)
         if cmd == "ps":
-            return [
-                "  PID TTY          TIME CMD",
-                "    1 ?        00:00:01 init",
-                "  100 ?        00:00:00 bunny-daemon",
-                "  500 tty1     00:00:00 bash",
-                "  501 tty1     00:00:00 ps",
-            ]
+            import os
+            lines = ["  PID TTY          TIME CMD"]
+            lines.append(f"{os.getpid():5d} ?        00:00:01 bunnyos (эта игра)")
+            lines.append(f"{os.getppid():5d} ?        00:00:00 shell")
+            # Добавим ещё несколько настоящих процессов
+            try:
+                with open(f"/proc/1/comm") as f:
+                    init_name = f.read().strip()
+                lines.append(f"    1 ?        00:00:01 {init_name} (systemd)")
+            except Exception:
+                pass
+            return lines
+
+
         if cmd == "sudo":
             return ["[sudo] password for zayka:", "(simulated) OK"]
         if cmd == "clear":
