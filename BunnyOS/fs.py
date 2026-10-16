@@ -14158,6 +14158,16 @@ class Shell:
             return ["cat: missing operand"]
         out = []
         for a in args:
+            # Реальные /proc/ файлы!
+            if a in ("/proc/uptime", "/proc/loadavg", "/proc/version",
+                     "/proc/cpuinfo", "/proc/meminfo"):
+                try:
+                    with open(a) as f:
+                        content = f.read()
+                    out.extend(content.rstrip("\n").split("\n"))
+                    continue
+                except Exception:
+                    pass
             c = self.fs.read(self._res(a))
             if c is None:
                 out.append(f"cat: {a}: No such file")
