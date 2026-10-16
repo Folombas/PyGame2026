@@ -323,7 +323,8 @@ class Shell:
             if "-m" in args: return [__import__("platform").machine()]
             return [__import__("platform").system()]
         if cmd == "date":
-            return [time.strftime("%a %b %d %H:%M:%S %Y")]
+            import real_sys
+            return [real_sys.date_now()]
         if cmd == "uptime":
             return ["up 0 min, 1 user, load average: 0.10, 0.05, 0.01"]
         if cmd == "clear":
