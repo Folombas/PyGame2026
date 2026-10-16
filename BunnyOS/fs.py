@@ -316,9 +316,12 @@ class Shell:
             import real_sys
             return [real_sys.hostname()]
         if cmd == "uname":
-            if "-r" in args: return ["5.15.0-carrot"]
-            if "-a" in args: return ["Linux bunnyos 5.15.0-carrot #1 SMP x86_64 GNU/Linux"]
-            return ["Linux"]
+            import real_sys
+            if "-r" in args: return [real_sys.uname_kernel()]
+            if "-a" in args: return [real_sys.uname_all()]
+            if "-n" in args: return [real_sys.hostname()]
+            if "-m" in args: return [__import__("platform").machine()]
+            return [__import__("platform").system()]
         if cmd == "date":
             return [time.strftime("%a %b %d %H:%M:%S %Y")]
         if cmd == "uptime":
