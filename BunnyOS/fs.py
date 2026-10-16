@@ -326,7 +326,10 @@ class Shell:
             import real_sys
             return [real_sys.date_now()]
         if cmd == "uptime":
-            return ["up 0 min, 1 user, load average: 0.10, 0.05, 0.01"]
+            import real_sys
+            return [real_sys.uptime_str()]
+
+
         if cmd == "clear":
             return ["__CLEAR__"]
         if cmd == "history":
