@@ -20425,6 +20425,10 @@ class Shell:
                 import real_sys
                 out.extend(real_sys.os_release())
                 continue
+            if a == "/etc/hostname":
+                import real_sys
+                out.append(real_sys.hostname())
+                continue
             if a == "/etc/passwd":
                 try:
                     with open(a) as f:
