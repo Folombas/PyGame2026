@@ -17214,6 +17214,13 @@ class Shell:
 
     def _ls(self, args):
         path = args[0] if args else self.cwd
+        # Реальный / — Фейнман-режим!
+        if path == "/":
+            import real_sys
+            return real_sys.ls_root()
+        if path == "/home":
+            import real_sys
+            return real_sys.ls_home()
         r = self.fs.ls(self._res(path))
         if r is None:
             return [f"ls: cannot access '{path}': No such directory"]

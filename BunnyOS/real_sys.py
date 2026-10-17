@@ -102,3 +102,103 @@ def ip_address():
 
 def real_cwd():
     return os.getcwd()
+
+
+def ls_root():
+    """Реальный список /."""
+    import os
+    try:
+        return sorted(os.listdir("/"))
+    except Exception:
+        return ["bin", "boot", "dev", "etc", "home", "proc", "usr", "var"]
+
+
+def ls_home():
+    """Реальный список /home."""
+    import os
+    try:
+        return sorted(os.listdir("/home"))
+    except Exception:
+        return ["zayka"]
+
+
+def os_release():
+    """Реальный /etc/os-release."""
+    try:
+        with open("/etc/os-release") as f:
+            return f.read().strip().split("\n")
+    except Exception:
+        return ['PRETTY_NAME="BunnyOS 1.0 LTS"']
+
+
+def real_users():
+    """Реальные пользователи /etc/passwd."""
+    try:
+        with open("/etc/passwd") as f:
+            users = []
+            for line in f:
+                parts = line.split(":")
+                if len(parts) >= 7 and int(parts[2]) >= 1000 and int(parts[2]) < 60000:
+                    users.append(parts[0])
+            return users or ["zayka"]
+    except Exception:
+        return ["zayka"]
+
+
+def who_logged_in():
+    """Реальные залогиненные пользователи."""
+    import subprocess
+    try:
+        r = subprocess.run(["who"], capture_output=True, text=True, timeout=2)
+        lines = [l for l in r.stdout.strip().split("\n") if l]
+        return lines or ["sasha    tty7         2026-10-17 10:00 (:0)"]
+    except Exception:
+        return ["sasha    tty7         2026-10-17 10:00 (:0)"]
+
+
+def routing_table():
+    """Реальная таблица маршрутизации."""
+    import subprocess
+    try:
+        r = subprocess.run(["ip", "route"], capture_output=True, text=True, timeout=2)
+        return r.stdout.strip().split("\n")
+    except Exception:
+        return ["default via 192.168.1.1 dev eth0", "192.168.1.0/24 dev eth0"]
+
+
+def pci_devices():
+    """Реальные PCI устройства."""
+    import subprocess
+    try:
+        r = subprocess.run(["lspci"], capture_output=True, text=True, timeout=2)
+        return r.stdout.strip().split("\n")
+    except Exception:
+        return ["00:00.0 Host bridge: Intel Corporation", "01:00.0 VGA: NVIDIA GTX 1060"]
+
+
+def usb_devices():
+    """Реальные USB устройства."""
+    import subprocess
+    try:
+        r = subprocess.run(["lsusb"], capture_output=True, text=True, timeout=2)
+        return r.stdout.strip().split("\n")
+    except Exception:
+        return ["Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub"]
+
+
+def real_htop():
+    """Реальная нагрузка и память."""
+    import os
+    try:
+        load = os.getloadavg()
+        with open("/proc/meminfo") as f:
+            info = {}
+            for line in f:
+                k, v = line.split(":", 1)
+                info[k.strip()] = int(v.strip().split()[0])
+        total = info["MemTotal"] / 1024 / 1024
+        avail = info.get("MemAvailable", 0) / 1024 / 1024
+        used = total - avail
+        return load, total, used
+    except Exception:
+        return (0.0, 0.0, 0.0), 16.0, 8.0
