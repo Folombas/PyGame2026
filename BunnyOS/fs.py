@@ -17252,6 +17252,27 @@ class Shell:
                     continue
                 except Exception:
                     pass
+            # Реальный /etc/os-release
+            if a == "/etc/os-release":
+                import real_sys
+                out.extend(real_sys.os_release())
+                continue
+            if a == "/etc/passwd":
+                try:
+                    with open(a) as f:
+                        out.extend(f.read().rstrip("\n").split("\n"))
+                    continue
+                except Exception:
+                    pass
+            # Старая проверка для /proc (уже обработана выше)
+            if False:
+                try:
+                    with open(a) as f:
+                        content = f.read()
+                    out.extend(content.rstrip("\n").split("\n"))
+                    continue
+                except Exception:
+                    pass
             c = self.fs.read(self._res(a))
             if c is None:
                 out.append(f"cat: {a}: No such file")
