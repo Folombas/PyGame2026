@@ -257,6 +257,11 @@ class Shell:
         if cmd == "help":
             return [
                 "🦠 REAL system commands (Фейнман-mode):",
+                "  ls /  | cat /etc/os-release  | uname -a",
+                "  ls /home  | whoami  | users  | w",
+                "  hostnamectl  | arch  | lsb_release",
+                "  lspci  | lsusb  | route  | ifconfig  | ping",
+                "  which ls  | realpath .  | sl -a",
                 "  uname, hostname, whoami, date, uptime",
                 "  df, free, lscpu, ifconfig, ps, id, env",
                 "  cat /proc/cpuinfo  |  cat /proc/meminfo",
