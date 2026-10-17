@@ -323,12 +323,13 @@ class Shell:
             import real_sys
             return [real_sys.hostname()]
         if cmd == "uname":
-            import real_sys
+            import real_sys, platform
             if "-r" in args: return [real_sys.uname_kernel()]
             if "-a" in args: return [real_sys.uname_all()]
             if "-n" in args: return [real_sys.hostname()]
-            if "-m" in args: return [__import__("platform").machine()]
-            return [__import__("platform").system()]
+            if "-m" in args: return [platform.machine()]
+            if "-s" in args: return [platform.system()]
+            return [platform.system()]
         if cmd == "date":
             import real_sys
             return [real_sys.date_now()]
