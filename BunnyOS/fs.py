@@ -20368,6 +20368,13 @@ class Shell:
                 except Exception:
                     pass
             # Реальный /etc/os-release
+            if a in ("/proc/mounts", "/proc/self/mounts"):
+                try:
+                    with open("/proc/mounts") as f:
+                        out.extend(f.read().rstrip("\n").split("\n"))
+                    continue
+                except Exception:
+                    pass
             if a == "/etc/os-release":
                 import real_sys
                 out.extend(real_sys.os_release())
