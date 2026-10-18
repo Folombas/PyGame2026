@@ -27285,6 +27285,13 @@ class Shell:
         out = []
         for a in args:
             # Реальные /proc/ файлы!
+            if a == "/proc/stat":
+                try:
+                    with open(a) as f:
+                        out.extend(f.read().rstrip("\n").split("\n")[:6])
+                    continue
+                except Exception:
+                    pass
             if a in ("/proc/uptime", "/proc/loadavg", "/proc/version",
                      "/proc/cpuinfo", "/proc/meminfo"):
                 try:
