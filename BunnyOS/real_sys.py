@@ -202,3 +202,82 @@ def real_htop():
         return load, total, used
     except Exception:
         return (0.0, 0.0, 0.0), 16.0, 8.0
+
+
+def real_processes():
+    """Реальные процессы через /proc."""
+    import os
+    procs = []
+    try:
+        for pid_str in os.listdir("/proc"):
+            if not pid_str.isdigit():
+                continue
+            try:
+                with open(f"/proc/{pid_str}/comm") as f:
+                    name = f.read().strip()
+                with open(f"/proc/{pid_str}/stat") as f:
+                    parts = f.read().split()
+                    state = parts[2] if len(parts) > 2 else "?"
+                    rss_pages = int(parts[23]) if len(parts) > 23 else 0
+                    rss_kb = rss_pages * 4  # ~4KB на страницу
+                procs.append({
+                    "pid": int(pid_str), "name": name,
+                    "state": state, "rss_kb": rss_kb,
+                })
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return procs
+
+
+def cpu_count_nproc():
+    """Реальное число CPU."""
+    import os
+    return os.cpu_count() or 1
+
+
+def block_devices():
+    """Реальные блочные устройства."""
+    import os
+    result = []
+    try:
+        for entry in sorted(os.listdir("/sys/block")):
+            size_path = f"/sys/block/{entry}/size"
+            try:
+                with open(size_path) as f:
+                    sectors = int(f.read().strip())
+                size_gb = sectors * 512 / (1024**3)
+                result.append({"name": entry, "size_gb": size_gb})
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return result
+
+
+def real_open_files():
+    """Открытые файлы текущего процесса (симуляция lsof)."""
+    import os
+    fd_dir = f"/proc/{os.getpid()}/fd"
+    files = []
+    try:
+        for fd in os.listdir(fd_dir):
+            try:
+                target = os.readlink(f"{fd_dir}/{fd}")
+                files.append((int(fd), target))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return sorted(files)
+
+
+def cpu_stat():
+    """Статистика CPU из /proc/stat."""
+    try:
+        with open("/proc/stat") as f:
+            lines = f.read().strip().split("\n")
+            return lines[:6]  # суммарный + 4 ядра
+    except Exception:
+        return ["cpu  0 0 0 0"]

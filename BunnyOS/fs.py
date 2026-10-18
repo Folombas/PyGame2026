@@ -25395,11 +25395,24 @@ class Shell:
         if cmd == "man":
             return self._man(args)
         if cmd == "ps":
+            import real_sys
+            # ps aux — подробный
+            if "aux" in args or "-ef" in args or "-e" in args:
+                procs = sorted(real_sys.real_processes(), key=lambda p: p["pid"])
+                lines = ["USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND"]
+                for p in procs[:30]:
+                    user = "root" if p["pid"] < 100 else self.user
+                    rss_mb = p["rss_kb"] / 1024
+                    lines.append(
+                        f"{user:<8} {p['pid']:5d}  0.0  0.2  {p['rss_kb']*2:6d} {int(rss_mb*1024):5d} ?        "
+                        f"{p['state']}    10:00   0:00.01 {p['name'][:16]}"
+                    )
+                return lines
+            # Обычный ps
             import os
             lines = ["  PID TTY          TIME CMD"]
             lines.append(f"{os.getpid():5d} ?        00:00:01 bunnyos (эта игра)")
             lines.append(f"{os.getppid():5d} ?        00:00:00 shell")
-            # Добавим ещё несколько настоящих процессов
             try:
                 with open(f"/proc/1/comm") as f:
                     init_name = f.read().strip()
