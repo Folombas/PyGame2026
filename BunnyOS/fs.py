@@ -362,6 +362,12 @@ class Shell:
             if args and args[0] == "-c":
                 self.history = []
                 return []
+            if args and args[0] == "-w":
+                # Запись в виртуальный файл
+                path = self._res("~/.bash_history")
+                content = "\n".join(self.history)
+                self.fs.files[path] = content
+                return [f"[history] {len(self.history)} команд записано в {path}"]
             return [f"{i+1:3}  {h}" for i, h in enumerate(self.history)]
         if cmd == "tetris":
             return self._launch_game_request("tetris", "Тетрис")
