@@ -25397,7 +25397,24 @@ class Shell:
         path = args[0] if args else self.cwd
         # Реальный / — Фейнман-режим!
         if path == "/":
-            import real_sys
+            import real_sys, os as _os
+            # Подробный режим -la
+            if "-l" in args or "-la" in args:
+                out = []
+                try:
+                    for item in sorted(_os.listdir("/")):
+                        full = "/" + item
+                        try:
+                            if _os.path.isdir(full):
+                                out.append(f"drwxr-xr-x   2 root root    4096 Jan  1 00:00 {item}/")
+                            else:
+                                sz = _os.path.getsize(full) if _os.access(full, _os.R_OK) else 0
+                                out.append(f"-rw-r--r--   1 root root {sz:8d} Jan  1 00:00 {item}")
+                        except Exception:
+                            out.append(f"??????????   ? root root       ? Jan  1 00:00 {item}")
+                except Exception:
+                    pass
+                return out
             return real_sys.ls_root()
         if path == "/home":
             import real_sys
