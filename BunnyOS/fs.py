@@ -341,6 +341,15 @@ class Shell:
             return [platform.system()]
         if cmd == "date":
             import real_sys
+            if args and "+%s" in args:
+                import time
+                return [str(int(time.time()))]
+            if args and "+%Y-%m-%d" in args:
+                import time
+                return [time.strftime("%Y-%m-%d")]
+            if args and "+%H:%M:%S" in args:
+                import time
+                return [time.strftime("%H:%M:%S")]
             return [real_sys.date_now()]
         if cmd == "uptime":
             import real_sys
