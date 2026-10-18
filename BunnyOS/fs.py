@@ -334,6 +334,8 @@ class Shell:
             if "-n" in args: return [real_sys.hostname()]
             if "-m" in args: return [platform.machine()]
             if "-s" in args: return [platform.system()]
+            if "-v" in args: return [platform.version()]
+            if "-o" in args: return ["GNU/Linux"]
             return [platform.system()]
         if cmd == "date":
             import real_sys
