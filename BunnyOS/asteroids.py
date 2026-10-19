@@ -166,7 +166,20 @@ class AsteroidsGame:
         self.font = pygame.font.Font(None, 26)
         self.font_small = pygame.font.Font(None, 18)
         self.high_score = records.get("asteroids")
+        # Звуки
+        self.snd_shoot = self._load("assets/games/sounds/tetris/laser_01.wav", 0.25)
+        self.snd_boom = self._load("assets/games/sounds/tetris/explosion_05.wav", 0.5)
+        self.snd_die = self._load("assets/games/sounds/tetris/gameover.wav", 0.5)
+        self.snd_combo = self._load("assets/games/sounds/tetris/coin_05.wav", 0.4)
         self.reset()
+
+    def _load(self, path, vol=0.5):
+        try:
+            s = pygame.mixer.Sound(path)
+            s.set_volume(vol * VOLUME_MASTER)
+            return s
+        except Exception:
+            return None
 
     def reset(self):
         self.ship = Ship(WIDTH // 2, HEIGHT // 2)
@@ -215,6 +228,8 @@ class AsteroidsGame:
                             bx = self.ship.x + math.cos(rad) * SHIP_SIZE
                             by = self.ship.y + math.sin(rad) * SHIP_SIZE
                             self.bullets.append(Bullet(bx, by, self.ship.angle))
+                            if self.snd_shoot:
+                                self.snd_shoot.play()
         return True
 
     def _explode(self, x, y, color=C_ASTEROID, count=15):
@@ -268,6 +283,8 @@ class AsteroidsGame:
                     self.bullets.remove(b)
                     self.asteroids.remove(a)
                     self._explode(a.x, a.y, C_ASTEROID, 20)
+                    if self.snd_boom:
+                        self.snd_boom.play()
                     # очки зависят от размера
                     pts = [50, 30, 15][a.size_idx]
                     self.combo += 1
@@ -285,6 +302,8 @@ class AsteroidsGame:
                 if a.hit(self.ship.x, self.ship.y, SHIP_SIZE * 0.7):
                     self.ship.alive = False
                     self._explode(self.ship.x, self.ship.y, C_SHIP, 40)
+                    if self.snd_die:
+                        self.snd_die.play()
                     self.lives -= 1
                     if self.lives <= 0:
                         self.game_over = True
