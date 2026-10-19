@@ -43,6 +43,8 @@ GAMES = [
      "file": "pong.py",     "color": (255, 130, 100), "icon": "browser"},
     {"id": "breakout", "name": "BREAKOUT", "desc": "Bricks. Power-ups. Combos.",
      "file": "breakout.py", "color": (255, 100, 180), "icon": "computer"},
+    {"id": "asteroids", "name": "ASTEROIDS", "desc": "Space shooter. Real physics.",
+     "file": "asteroids.py", "color": (200, 220, 255), "icon": "terminal"},
 ]
 
 
