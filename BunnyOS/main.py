@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import pygame
+import web_server
 from settings import *
 from boot_style import BootScreen, LoginScreen
 from fs import VirtualFS, Shell
@@ -34,6 +35,14 @@ class BunnyOS:
 
         self.fs = VirtualFS()
         self.shell = Shell(self.fs)
+
+        # Веб-сервер (Фейнман-режим: загляни из браузера!)
+        self.web_started = False
+        try:
+            web_server.start(self.shell)
+            self.web_started = True
+        except Exception as e:
+            print(f"[OS] web server не стартовал: {e}")
 
         self.state = "boot"
         self.running = True
