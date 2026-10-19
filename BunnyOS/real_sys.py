@@ -281,3 +281,55 @@ def cpu_stat():
             return lines[:6]  # суммарный + 4 ядра
     except Exception:
         return ["cpu  0 0 0 0"]
+
+
+def file_type(path):
+    """Реальный тип файла через команду file."""
+    import subprocess, os
+    if not os.path.exists(path):
+        return None
+    try:
+        r = subprocess.run(["file", "-b", path], capture_output=True, text=True, timeout=2)
+        return r.stdout.strip()
+    except Exception:
+        if os.path.isdir(path):
+            return "directory"
+        if os.path.isfile(path):
+            return "regular file"
+        return "unknown"
+
+
+def file_stat(path):
+    """Реальная статистика файла."""
+    import os
+    from datetime import datetime
+    try:
+        st = os.stat(path)
+        mode = oct(st.st_mode)[-3:]
+        if os.path.isdir(path):
+            kind = "directory"
+            access = "drwxr-xr-x"
+        else:
+            kind = "regular file"
+            access = "-rw-r--r--"
+        return {
+            "size": st.st_size,
+            "mtime": datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "mode": mode,
+            "access": access,
+            "kind": kind,
+        }
+    except Exception:
+        return None
+
+
+def read_bytes(path, n=None):
+    """Читает реальный файл в байтах."""
+    import os
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "rb") as f:
+            return f.read(n) if n else f.read()
+    except Exception:
+        return None
