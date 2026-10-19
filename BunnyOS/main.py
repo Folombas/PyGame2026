@@ -418,6 +418,18 @@ class BunnyOS:
             self.screen.blit(t, (wr.x + 8, wr.centery - t.get_height() // 2))
             x += 144
 
+        # Индикатор веб-сервера
+        if getattr(self, "web_started", False):
+            import web_server
+            if web_server._running:
+                icon_x = WIDTH - 160
+                icon_y = HEIGHT - TASKBAR_H + 12
+                # Зелёная точка
+                pygame.draw.circle(self.screen, (100, 240, 120), (icon_x, icon_y + 8), 5)
+                # Иконка 🌐 (упрощённая)
+                wt = self.font_small.render("WEB", True, (140, 220, 140))
+                self.screen.blit(wt, (icon_x + 10, icon_y))
+
         # Часы
         ct = time.strftime("%H:%M")
         dt = time.strftime("%d.%m.%Y")
