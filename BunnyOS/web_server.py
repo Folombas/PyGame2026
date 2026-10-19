@@ -146,6 +146,21 @@ addLine('');
         except Exception as e:
             return {"ok": False, "error": str(e)}, 500
 
+    @app.route("/api/help")
+    def api_help():
+        return {
+            "commands": [
+                "ls", "cd", "pwd", "cat", "echo", "grep", "find",
+                "fortune", "cowsay", "cal", "factor", "bc", "seq",
+                "uname", "hostname", "uptime", "whoami", "df", "free",
+                "ps", "lsblk", "lscpu", "ifconfig", "ping", "curl",
+                "hint", "progress", "explore", "scores",
+                "matrix", "banner", "sl", "weather", "help",
+            ],
+            "games": ["snake", "tetris", "2048", "pong", "breakout", "hub"],
+            "note": "REAL system: uname -a, cat /proc/cpuinfo, ls / (видит реальный Linux!)",
+        }
+
     return app
 
 
