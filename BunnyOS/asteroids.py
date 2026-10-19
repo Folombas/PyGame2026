@@ -154,3 +154,235 @@ class Asteroid:
 
     def hit(self, x, y, r=5):
         return math.hypot(self.x - x, self.y - y) < self.radius + r
+
+
+class AsteroidsGame:
+    def __init__(self, screen=None):
+        self.screen = screen or pygame.display.set_mode((WIDTH, HEIGHT))
+        if screen is None:
+            pygame.display.set_caption("Asteroids — BunnyOS")
+        self.clock = pygame.time.Clock()
+        self.font_big = pygame.font.Font(None, 56)
+        self.font = pygame.font.Font(None, 26)
+        self.font_small = pygame.font.Font(None, 18)
+        self.high_score = records.get("asteroids")
+        self.reset()
+
+    def reset(self):
+        self.ship = Ship(WIDTH // 2, HEIGHT // 2)
+        self.bullets = []
+        self.asteroids = []
+        self.particles = []
+        self.score = 0
+        self.lives = 3
+        self.level = 1
+        self.game_over = False
+        self.paused = False
+        self.combo = 0
+        self.combo_timer = 0
+        self._spawn_wave()
+
+    def _spawn_wave(self):
+        n = 3 + self.level
+        for _ in range(n):
+            while True:
+                x = random.uniform(0, WIDTH)
+                y = random.uniform(0, HEIGHT)
+                # не рядом с игроком
+                if math.hypot(x - self.ship.x, y - self.ship.y) > 200:
+                    break
+            self.asteroids.append(Asteroid(x, y, 0))
+
+    def _handle_events(self, events=None):
+        if events is None:
+            events = pygame.event.get()
+        for e in events:
+            if e.type == pygame.QUIT:
+                return False
+            if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_ESCAPE:
+                    return False
+                if e.key in (pygame.K_p, pygame.K_SPACE) or getattr(e, "scancode", 0) == 19:
+                    if not self.game_over:
+                        self.paused = not self.paused
+                if self.game_over and e.key == pygame.K_RETURN:
+                    self.reset()
+                    continue
+                if not self.game_over and not self.paused:
+                    if e.key == pygame.K_SPACE or e.key == pygame.K_LCTRL:
+                        if len(self.bullets) < 5:
+                            rad = math.radians(self.ship.angle)
+                            bx = self.ship.x + math.cos(rad) * SHIP_SIZE
+                            by = self.ship.y + math.sin(rad) * SHIP_SIZE
+                            self.bullets.append(Bullet(bx, by, self.ship.angle))
+        return True
+
+    def _explode(self, x, y, color=C_ASTEROID, count=15):
+        for _ in range(count):
+            a = random.uniform(0, math.tau)
+            sp = random.uniform(50, 300)
+            self.particles.append({
+                "x": x, "y": y,
+                "vx": math.cos(a) * sp, "vy": math.sin(a) * sp,
+                "life": random.uniform(0.5, 1.0),
+                "max_life": 1.0,
+                "color": color, "size": random.randint(2, 5),
+            })
+
+    def _update_particles(self, dt):
+        for p in self.particles:
+            p["x"] += p["vx"] * dt
+            p["y"] += p["vy"] * dt
+            p["life"] -= dt
+        self.particles = [p for p in self.particles if p["life"] > 0]
+
+    def _draw_particles(self, scr):
+        for p in self.particles:
+            a = int(255 * max(0, p["life"] / p["max_life"]))
+            if a <= 0:
+                continue
+            s = pygame.Surface((p["size"], p["size"]), pygame.SRCALPHA)
+            s.fill((*p["color"], a))
+            scr.blit(s, (int(p["x"]), int(p["y"])))
+
+    def _update(self, dt):
+        self._update_particles(dt)
+        if self.combo_timer > 0:
+            self.combo_timer -= dt
+            if self.combo_timer <= 0:
+                self.combo = 0
+        if self.paused or self.game_over:
+            return
+        keys = pygame.key.get_pressed()
+        self.ship.update(dt, keys)
+        for b in self.bullets[:]:
+            b.update(dt)
+            if b.life <= 0:
+                self.bullets.remove(b)
+        for a in self.asteroids:
+            a.update(dt)
+        # Пули vs астероиды
+        for b in self.bullets[:]:
+            for a in self.asteroids[:]:
+                if a.hit(b.x, b.y, 3):
+                    self.bullets.remove(b)
+                    self.asteroids.remove(a)
+                    self._explode(a.x, a.y, C_ASTEROID, 20)
+                    # очки зависят от размера
+                    pts = [50, 30, 15][a.size_idx]
+                    self.combo += 1
+                    self.combo_timer = 1.5
+                    self.score += pts * self.combo
+                    # разбиваем на части
+                    if a.size_idx < 2:
+                        for _ in range(2):
+                            child = Asteroid(a.x, a.y, a.size_idx + 1)
+                            self.asteroids.append(child)
+                    break
+        # Корабль vs астероиды
+        if self.ship.alive and self.ship.invuln <= 0:
+            for a in self.asteroids:
+                if a.hit(self.ship.x, self.ship.y, SHIP_SIZE * 0.7):
+                    self.ship.alive = False
+                    self._explode(self.ship.x, self.ship.y, C_SHIP, 40)
+                    self.lives -= 1
+                    if self.lives <= 0:
+                        self.game_over = True
+                        records.submit("asteroids", self.score)
+                        self.high_score = records.get("asteroids")
+                    else:
+                        # респавн через 1 сек
+                        pygame.time.set_timer(pygame.USEREVENT + 1, 1000, loops=1)
+                    break
+        # Следующая волна
+        if not self.asteroids and not self.game_over:
+            self.level += 1
+            self._spawn_wave()
+
+    def _respawn(self):
+        self.ship = Ship(WIDTH // 2, HEIGHT // 2)
+
+    def _draw(self):
+        self.screen.fill(C_BG)
+        # Звёзды
+        rng = random.Random(42)
+        for _ in range(60):
+            x = rng.randint(0, WIDTH)
+            y = rng.randint(0, HEIGHT)
+            a = rng.randint(60, 200)
+            s = pygame.Surface((2, 2), pygame.SRCALPHA)
+            s.fill((a, a, 255, a))
+            self.screen.blit(s, (x, y))
+
+        for a in self.asteroids:
+            a.draw(self.screen)
+        for b in self.bullets:
+            b.draw(self.screen)
+        self.ship.draw(self.screen)
+        self._draw_particles(self.screen)
+
+        # HUD
+        sc = self.font.render(f"СЧЁТ: {self.score}", True, C_TEXT)
+        self.screen.blit(sc, (20, 20))
+        hi = self.font_small.render(f"РЕКОРД: {self.high_score}", True, (255, 220, 100))
+        self.screen.blit(hi, (20, 52))
+        lv = self.font.render(f"LVL {self.level}", True, C_ACCENT)
+        self.screen.blit(lv, (WIDTH // 2 - lv.get_width() // 2, 20))
+        lv_lives = self.font.render(f"❤ {self.lives}", True, (255, 100, 140))
+        self.screen.blit(lv_lives, (WIDTH - lv_lives.get_width() - 20, 20))
+
+        # Комбо
+        if self.combo >= 2 and self.combo_timer > 0:
+            t = min(1.0, self.combo_timer / 1.5)
+            col = (255, 220, 100) if self.combo < 5 else (255, 140, 220)
+            ct = self.font_big.render(f"x{self.combo} КОМБО", True, col)
+            self.screen.blit(ct, (WIDTH // 2 - ct.get_width() // 2, 80))
+
+        # Управление
+        hint = self.font_small.render(
+            "WASD/↑↓←→ — движение    SPACE — стрелять    P — пауза    Esc — выход",
+            True, C_TEXT_DIM)
+        self.screen.blit(hint, (WIDTH // 2 - hint.get_width() // 2, HEIGHT - 30))
+
+        if self.paused:
+            self._overlay("ПАУЗА", "P — продолжить")
+        if self.game_over:
+            self._overlay("ИГРА ОКОНЧЕНА", f"Счёт: {self.score}",
+                          f"Рекорд: {self.high_score}", "Enter — заново")
+
+    def _overlay(self, title, *subs):
+        ov = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        ov.fill((0, 0, 0, 180))
+        self.screen.blit(ov, (0, 0))
+        tt = self.font_big.render(title, True, C_TEXT)
+        self.screen.blit(tt, (WIDTH // 2 - tt.get_width() // 2, HEIGHT // 2 - 80))
+        for i, s in enumerate(subs):
+            st = self.font.render(s, True, C_TEXT_DIM)
+            self.screen.blit(st, (WIDTH // 2 - st.get_width() // 2,
+                                  HEIGHT // 2 + 10 + i * 30))
+
+    def run(self):
+        running = True
+        while running:
+            dt = self.clock.tick(FPS) / 1000.0
+            if not self._handle_events():
+                break
+            for e in pygame.event.get(pygame.USEREVENT + 1):
+                if not self.ship.alive and self.lives > 0:
+                    self._respawn()
+            self._update(dt)
+            self._draw()
+            pygame.display.flip()
+        return True
+
+
+if __name__ == "__main__":
+    pygame.init()
+    try:
+        pygame.mixer.init()
+    except Exception:
+        pass
+    game = AsteroidsGame()
+    game.run()
+    pygame.quit()
+    sys.exit(0)
