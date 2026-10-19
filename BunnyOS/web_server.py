@@ -10,7 +10,10 @@ _lock = threading.Lock()
 _shell_ref = None
 _thread = None
 _running = False
-PORT = 8000
+try:
+    from settings import WEB_PORT as PORT
+except Exception:
+    PORT = 8000
 
 
 def _update_frame(surface):
