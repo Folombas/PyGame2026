@@ -78,6 +78,21 @@ tick();
         return {"running": _running, "port": PORT,
                 "frame_size": len(_current_jpeg) if _current_jpeg else 0}
 
+    @app.route("/api/command", methods=["POST"])
+    def api_command():
+        """Выполняет команду в Shell BunnyOS."""
+        if _shell_ref is None:
+            return {"ok": False, "error": "shell not available"}, 503
+        data = request.get_json(silent=True) or {}
+        cmd = data.get("cmd", "").strip()
+        if not cmd:
+            return {"ok": False, "error": "empty command"}, 400
+        try:
+            result = _shell_ref.run(cmd)
+            return {"ok": True, "output": result}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}, 500
+
     return app
 
 
