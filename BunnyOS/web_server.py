@@ -162,6 +162,8 @@ def start(shell_ref=None, port=8000):
         global _running
         _running = True
         try:
+            # Только localhost — никакого внешнего доступа
+            # Это важно для безопасности: команды выполняются в реальной Shell
             app.run(host="127.0.0.1", port=PORT, threaded=True,
                     use_reloader=False, debug=False)
         except Exception as e:
