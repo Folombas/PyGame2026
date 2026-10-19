@@ -501,6 +501,10 @@ class BunnyOS:
                 pygame.draw.rect(self.screen, (80, 100, 140),
                                  (gx - 2, gy - 2, gw + 4, gh + 4), 2)
                 pygame.display.flip()
+                if hasattr(self, "web_started") and self.web_started:
+                    self._web_tick = getattr(self, "_web_tick", 0) + 1
+                    if self._web_tick % 10 == 0:
+                        web_server._update_frame(self.screen)
                 continue
 
             # === Обычный цикл BunnyOS ===
@@ -508,6 +512,11 @@ class BunnyOS:
                 self.handle_event(e)
             self.update(dt)
             self.draw()
+            # Обновляем кадр для веб-сервера (раз в 10 кадров)
+            if hasattr(self, "web_started") and self.web_started:
+                self._web_tick = getattr(self, "_web_tick", 0) + 1
+                if self._web_tick % 10 == 0:
+                    web_server._update_frame(self.screen)
         pygame.quit()
         sys.exit(0)
 
