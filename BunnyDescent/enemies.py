@@ -14,6 +14,7 @@ class Enemy:
 
         # Характеристики по типу
         if kind == "bug":
+            self.display_name = "Искра"
             self.hp = 5
             self.max_hp = 5
             self.attack = 2
@@ -21,6 +22,7 @@ class Enemy:
             self.speed = 0.6
             self.xp_reward = 5
         elif kind == "virus":
+            self.display_name = "Вихрь"
             self.hp = 8
             self.max_hp = 8
             self.attack = 3
@@ -28,6 +30,7 @@ class Enemy:
             self.speed = 0.5
             self.xp_reward = 10
         elif kind == "firewall":
+            self.display_name = "Страж"
             self.hp = 15
             self.max_hp = 15
             self.attack = 5
@@ -35,6 +38,7 @@ class Enemy:
             self.speed = 0.8
             self.xp_reward = 20
         elif kind == "boss":
+            self.display_name = "Хранитель"
             self.hp = 40
             self.max_hp = 40
             self.attack = 8
