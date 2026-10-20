@@ -276,13 +276,29 @@ class Game:
         pygame.display.flip()
 
     def draw_dead(self):
-        self.screen.fill((30, 10, 15))
-        t = self.font_big.render("ВЗЛОМ ПРОВАЛЕН", True, C_DANGER)
-        self.screen.blit(t, (WIDTH // 2 - t.get_width() // 2, HEIGHT // 2 - 80))
-        s = self.font.render(f"Глубина: {self.dungeon.level}", True, C_TEXT)
-        self.screen.blit(s, (WIDTH // 2 - s.get_width() // 2, HEIGHT // 2))
-        h = self.font.render("Enter — попробовать снова", True, C_ACCENT)
-        self.screen.blit(h, (WIDTH // 2 - h.get_width() // 2, HEIGHT // 2 + 60))
+        # Тёмно-синий спокойный фон (не кровавый)
+        self.screen.fill((15, 18, 30))
+        t = self.font_big.render("ТЫ ВЕРНУЛСЯ", True, C_ACCENT)
+        self.screen.blit(t, (WIDTH // 2 - t.get_width() // 2, HEIGHT // 2 - 100))
+
+        s = self.font.render(
+            f"Достигнутая глубина: {self.dungeon.level}",
+            True, C_TEXT)
+        self.screen.blit(s, (WIDTH // 2 - s.get_width() // 2, HEIGHT // 2 - 20))
+
+        # Философский текст
+        sub = self.font_small.render(
+            "Но ты узнал что-то новое о системе.",
+            True, C_TEXT_DIM)
+        self.screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, HEIGHT // 2 + 20))
+
+        sub2 = self.font_small.render(
+            "И это уже — победа.",
+            True, C_TEXT_DIM)
+        self.screen.blit(sub2, (WIDTH // 2 - sub2.get_width() // 2, HEIGHT // 2 + 42))
+
+        h = self.font.render("Enter — продолжить путь", True, C_GOLD)
+        self.screen.blit(h, (WIDTH // 2 - h.get_width() // 2, HEIGHT // 2 + 90))
 
     def run(self):
         while self.running:
