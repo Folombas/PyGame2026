@@ -156,11 +156,26 @@ class Game:
         self.screen.fill(C_BG)
         title = self.font_big.render("BUNNY'S DESCENT", True, C_GOLD)
         tx = WIDTH // 2 - title.get_width() // 2
-        self.screen.blit(title, (tx, HEIGHT // 2 - 100))
+        self.screen.blit(title, (tx, HEIGHT // 2 - 140))
 
-        sub = self.font.render("Провал в систему", True, C_ACCENT)
+        sub = self.font.render("Путь любопытства", True, C_ACCENT)
         sx = WIDTH // 2 - sub.get_width() // 2
-        self.screen.blit(sub, (sx, HEIGHT // 2 - 30))
+        self.screen.blit(sub, (sx, HEIGHT // 2 - 70))
+
+        # Философия
+        lore = [
+            "Зайка нашёл аномалию в своей системе.",
+            "Он не хочет её взломать.",
+            "Он хочет её — понять.",
+            "",
+            "10 уровней глубины. 10 слоёв загадок.",
+            "Каждое существо хранит своё знание.",
+        ]
+        for i, line in enumerate(lore):
+            color = C_TEXT if line else C_TEXT
+            l = self.font_small.render(line, True, color)
+            self.screen.blit(l, (WIDTH // 2 - l.get_width() // 2,
+                                  HEIGHT // 2 - 30 + i * 24))
 
         if int(self.timer * 2) % 2 == 0:
             hint = self.font.render("Нажми ENTER чтобы начать", True, C_TEXT)
