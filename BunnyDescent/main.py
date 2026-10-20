@@ -231,7 +231,7 @@ class Game:
         pygame.draw.rect(self.screen, C_HP, (20, 20, int(bar_w * hp_pct), 22))
         pygame.draw.rect(self.screen, C_TEXT, (20, 20, bar_w, 22), 2)
         hp_txt = self.font_small.render(
-            f"HP {self.player.hp}/{self.player.max_hp}", True, C_TEXT)
+            f"Энергия  {self.player.hp}/{self.player.max_hp}", True, C_TEXT)
         self.screen.blit(hp_txt, (24, 24))
 
         # XP
@@ -239,7 +239,9 @@ class Game:
         pygame.draw.rect(self.screen, (20, 30, 40), (20, 50, 220, 12))
         pygame.draw.rect(self.screen, C_XP, (20, 50, int(220 * xp_pct), 12))
         pygame.draw.rect(self.screen, C_TEXT, (20, 50, 220, 12), 1)
-        xp_txt = self.font_small.render(f"LVL {self.player.level}  XP {self.player.xp}/{self.player.level*20}", True, C_XP)
+        xp_txt = self.font_small.render(
+            f"Ясность {self.player.level}   Знания {self.player.xp}/{self.player.level*20}",
+            True, C_XP)
         self.screen.blit(xp_txt, (24, 50))
 
         # Глубина
