@@ -18,7 +18,7 @@ class Enemy:
             self.hp = 5
             self.max_hp = 5
             self.attack = 2
-            self.color = (200, 60, 80)
+            self.color = (140, 200, 180)
             self.speed = 0.6
             self.xp_reward = 5
         elif kind == "virus":
@@ -26,7 +26,7 @@ class Enemy:
             self.hp = 8
             self.max_hp = 8
             self.attack = 3
-            self.color = (180, 80, 220)
+            self.color = (170, 150, 220)
             self.speed = 0.5
             self.xp_reward = 10
         elif kind == "firewall":
@@ -34,7 +34,7 @@ class Enemy:
             self.hp = 15
             self.max_hp = 15
             self.attack = 5
-            self.color = (220, 140, 60)
+            self.color = (120, 180, 220)
             self.speed = 0.8
             self.xp_reward = 20
         elif kind == "boss":
@@ -42,7 +42,7 @@ class Enemy:
             self.hp = 40
             self.max_hp = 40
             self.attack = 8
-            self.color = (255, 40, 60)
+            self.color = (220, 200, 120)
             self.speed = 0.4
             self.xp_reward = 100
 
