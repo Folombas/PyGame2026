@@ -502,6 +502,7 @@ class BunnyOS:
                         pass
                     if self.real_bash is None:
                         self.real_bash = RealBashUI(self.font_small)
+                    self.real_bash.terminal.sandbox = (mode != "raw")
                     self.real_bash.open_ui()
                     self.state = "real_bash"
                     continue
