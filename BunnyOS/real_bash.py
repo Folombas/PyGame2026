@@ -2,7 +2,7 @@
 import pygame
 import re
 from settings import WIDTH, HEIGHT
-from real_terminal import RealTerminal, SANDBOX_DIR
+from real_terminal import RealTerminal, SANDBOX_DIR, strip_ansi
 
 
 C_BG = (6, 8, 14)
@@ -35,6 +35,46 @@ class RealBashUI:
         # История команд
         self.history = []
         self.hist_idx = -1
+
+    @staticmethod
+    def _copy_to_clipboard(text):
+        """Копирует в системный буфер обмена через xclip/wl-copy."""
+        import subprocess, shutil
+        try:
+            if shutil.which("wl-copy"):
+                subprocess.run(["wl-copy"], input=text.encode(), check=False, timeout=2)
+                return True
+            if shutil.which("xclip"):
+                subprocess.run(["xclip", "-selection", "clipboard"],
+                               input=text.encode(), check=False, timeout=2)
+                return True
+            if shutil.which("xsel"):
+                subprocess.run(["xsel", "--clipboard", "--input"],
+                               input=text.encode(), check=False, timeout=2)
+                return True
+        except Exception:
+            pass
+        return False
+
+    @staticmethod
+    def _paste_from_clipboard():
+        """Читает из системного буфера."""
+        import subprocess, shutil
+        try:
+            if shutil.which("wl-paste"):
+                r = subprocess.run(["wl-paste"], capture_output=True, timeout=2)
+                return r.stdout.decode("utf-8", errors="replace")
+            if shutil.which("xclip"):
+                r = subprocess.run(["xclip", "-selection", "clipboard", "-o"],
+                                   capture_output=True, timeout=2)
+                return r.stdout.decode("utf-8", errors="replace")
+            if shutil.which("xsel"):
+                r = subprocess.run(["xsel", "--clipboard", "--output"],
+                                   capture_output=True, timeout=2)
+                return r.stdout.decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        return ""
 
     def open_ui(self):
         if self.open:
@@ -69,6 +109,21 @@ class RealBashUI:
         if event.key == pygame.K_ESCAPE:
             self.close_ui()
             return
+
+        # Ctrl+Shift+C / Ctrl+Shift+V — буфер обмена
+        shift = mods & pygame.KMOD_SHIFT
+        if (mods & pygame.KMOD_CTRL) and shift:
+            if event.key == pygame.K_c:
+                # Копировать выделенные строки (или последние 20)
+                text = "\n".join(strip_ansi(l) for l in self.lines[-20:])
+                ok = self._copy_to_clipboard(text)
+                self.lines.append(f"[копировано {len(text)} байт]" if ok else "[буфер недоступен]")
+                return
+            if event.key == pygame.K_v:
+                pasted = self._paste_from_clipboard()
+                if pasted:
+                    self.input += pasted.strip()
+                return
 
         # Ctrl-комбинации
         if mods & pygame.KMOD_CTRL:
