@@ -38,6 +38,7 @@ class RealBashUI:
         # Счётчик и таймер
         self.cmd_count = 0
         self.session_start = 0.0
+        self.show_help = False
 
     @staticmethod
     def _copy_to_clipboard(text):
@@ -111,7 +112,14 @@ class RealBashUI:
 
         mods = pygame.key.get_mods()
 
+        if event.key == pygame.K_F1:
+            self.show_help = not self.show_help
+            return
+
         if event.key == pygame.K_ESCAPE:
+            if self.show_help:
+                self.show_help = False
+                return
             self.close_ui()
             return
 
@@ -239,6 +247,64 @@ class RealBashUI:
                 screen.blit(txt, (cx, y))
                 cx += txt.get_width()
 
+    def _draw_help(self, screen):
+        """Оверлей справки."""
+        # Затемнение
+        ov = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        ov.fill((0, 0, 0, 200))
+        screen.blit(ov, (0, 0))
+
+        # Панель
+        panel = pygame.Rect(100, 80, WIDTH - 200, HEIGHT - 160)
+        pygame.draw.rect(screen, (20, 26, 40), panel, border_radius=12)
+        pygame.draw.rect(screen, C_PROMPT, panel, 2, border_radius=12)
+
+        # Заголовок
+        title = self.font.render("REAL BASH — справка (F1/Esc закрыть)",
+                                  True, C_WARNING)
+        screen.blit(title, (panel.x + 20, panel.y + 15))
+
+        # Разделитель
+        pygame.draw.line(screen, C_DIM,
+                         (panel.x + 20, panel.y + 45),
+                         (panel.right - 20, panel.y + 45), 1)
+
+        # Содержимое
+        lines = [
+            "🔥 Настоящий bash с sandbox (bwrap)",
+            "",
+            "УПРАВЛЕНИЕ:",
+            "  ENTER            — выполнить команду",
+            "  Ctrl+C           — прервать (SIGINT)",
+            "  Ctrl+D           — выход из bash",
+            "  Ctrl+L           — очистить экран",
+            "  Ctrl+U           — стереть строку",
+            "  Ctrl+Shift+C     — копировать последние 20 строк",
+            "  Ctrl+Shift+V     — вставить из буфера",
+            "  Tab              — автодополнение",
+            "  ↑↓               — история команд",
+            "  PgUp/PgDn        — скролл",
+            "  F1               — эта справка",
+            "  Esc              — назад в BunnyOS",
+            "",
+            "ПРИМЕРЫ:",
+            "  uname -a         — настоящее ядро",
+            "  df -h            — реальный диск",
+            "  ls ~/bunny_sandbox",
+            "  python3 --version",
+            "",
+            "БЕЗОПАСНОСТЬ:",
+            "  / — read-only, ~/bunny_sandbox — read-write",
+            "  rm -rf /, mkfs, shutdown — ЗАБЛОКИРОВАНЫ",
+        ]
+        y = panel.y + 60
+        for line in lines:
+            color = C_WARNING if line.endswith(":") else (
+                C_PROMPT if line.startswith("  ") and "—" in line else C_TEXT)
+            t = self.font.render(line, True, color)
+            screen.blit(t, (panel.x + 20, y))
+            y += 22
+
     def draw(self, screen):
         screen.fill(C_BG)
 
@@ -312,6 +378,10 @@ class RealBashUI:
         stat = f"⏱ {mins:02d}:{secs:02d}  │  {self.cmd_count} команд  │  {total} строк"
         st = self.font.render(stat, True, C_DIM)
         screen.blit(st, (WIDTH - st.get_width() - 20, HEIGHT - 22))
+
+        # Справка поверх
+        if self.show_help:
+            self._draw_help(screen)
 
         # Bash упал
         if not self.terminal.running and self.lines:
