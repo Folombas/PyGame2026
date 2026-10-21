@@ -123,6 +123,23 @@ class RealBashUI:
             self.close_ui()
             return
 
+        # Ctrl+S — сохранить транскрипт сессии
+        if (mods & pygame.KMOD_CTRL) and event.key == pygame.K_s:
+            import os as _os, time as _t
+            save_path = _os.path.expanduser(
+                f"~/bunny_sandbox/session_{int(_t.time())}.log")
+            try:
+                with open(save_path, "w", encoding="utf-8") as f:
+                    f.write(f"# BunnyOS REAL BASH session\n")
+                    f.write(f"# Started: {_t.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    f.write(f"# Commands: {self.cmd_count}\n\n")
+                    for line in self.lines:
+                        f.write(strip_ansi(line) + "\n")
+                self.lines.append(f"[сессия сохранена: {save_path}]")
+            except Exception as e:
+                self.lines.append(f"[ошибка сохранения: {e}]")
+            return
+
         # Ctrl+Shift+C / Ctrl+Shift+V — буфер обмена
         shift = mods & pygame.KMOD_SHIFT
         if (mods & pygame.KMOD_CTRL) and shift:
@@ -366,7 +383,7 @@ class RealBashUI:
 
         # Hints + статистика
         hint = self.font.render(
-            "ENTER выполнить  Esc выход  Ctrl+C  Ctrl+L  Ctrl+Shift+C/V",
+            "ENTER  Esc  Ctrl+C  Ctrl+L  Ctrl+S  Ctrl+Shift+C/V  F1",
             True, C_DIM)
         screen.blit(hint, (20, HEIGHT - 22))
 
