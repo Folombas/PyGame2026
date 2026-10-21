@@ -32,6 +32,9 @@ class RealBashUI:
         self.input = ""
         self.cursor_blink = 0.0
         self.scroll = 0
+        # История команд
+        self.history = []
+        self.hist_idx = -1
 
     def open_ui(self):
         if self.open:
@@ -106,12 +109,29 @@ class RealBashUI:
         if event.key == pygame.K_RETURN:
             cmd = self.input.strip()
             if cmd:
+                self.history.append(cmd)
+                self.hist_idx = -1
                 self.lines.append(f"$ {cmd}")
                 ok, reason = self.terminal.execute(cmd)
                 if not ok:
                     self.lines.append(f"[BLOCKED] {reason}")
             self.input = ""
             return
+        elif event.key == pygame.K_UP:
+            if self.history:
+                if self.hist_idx == -1:
+                    self.hist_idx = len(self.history) - 1
+                else:
+                    self.hist_idx = max(0, self.hist_idx - 1)
+                self.input = self.history[self.hist_idx]
+        elif event.key == pygame.K_DOWN:
+            if self.hist_idx >= 0:
+                if self.hist_idx >= len(self.history) - 1:
+                    self.hist_idx = -1
+                    self.input = ""
+                else:
+                    self.hist_idx += 1
+                    self.input = self.history[self.hist_idx]
         elif event.key == pygame.K_BACKSPACE:
             self.input = self.input[:-1]
         elif event.key == pygame.K_PAGEUP:
