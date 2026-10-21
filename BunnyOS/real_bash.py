@@ -35,6 +35,9 @@ class RealBashUI:
         # История команд
         self.history = []
         self.hist_idx = -1
+        # Счётчик и таймер
+        self.cmd_count = 0
+        self.session_start = 0.0
 
     @staticmethod
     def _copy_to_clipboard(text):
@@ -79,6 +82,8 @@ class RealBashUI:
     def open_ui(self):
         if self.open:
             return
+        import time as _t
+        self.session_start = _t.time()
         if not self.terminal.start():
             self.lines.append("⚠ Не удалось запустить bash")
             return
@@ -164,6 +169,7 @@ class RealBashUI:
         if event.key == pygame.K_RETURN:
             cmd = self.input.strip()
             if cmd:
+                self.cmd_count += 1
                 self.history.append(cmd)
                 self.hist_idx = -1
                 self.lines.append(f"$ {cmd}")
@@ -276,11 +282,36 @@ class RealBashUI:
             cx = 40 + inp.get_width() + 2
             pygame.draw.rect(screen, C_TEXT, (cx, input_y + 24, 8, 18))
 
-        # Hints
+        # Скроллбар (правый)
+        total = len(self.lines)
+        if total > visible:
+            sb_x = WIDTH - 8
+            sb_y = 54
+            sb_h = HEIGHT - 130
+            # Фон
+            pygame.draw.rect(screen, (30, 30, 40), (sb_x, sb_y, 6, sb_h))
+            # Позиция
+            visible_frac = visible / total
+            bar_h = max(20, int(sb_h * visible_frac))
+            max_scroll = total - visible
+            scroll_frac = self.scroll / max(1, max_scroll) if max_scroll > 0 else 0
+            bar_y = sb_y + int((sb_h - bar_h) * (1 - scroll_frac))
+            pygame.draw.rect(screen, C_PROMPT, (sb_x, bar_y, 6, bar_h))
+
+        # Hints + статистика
         hint = self.font.render(
-            "ENTER выполнить  Esc выход  Ctrl+C прервать  Ctrl+L очистить",
+            "ENTER выполнить  Esc выход  Ctrl+C  Ctrl+L  Ctrl+Shift+C/V",
             True, C_DIM)
         screen.blit(hint, (20, HEIGHT - 22))
+
+        # Статистика справа
+        import time as _t
+        elapsed = _t.time() - self.session_start if self.session_start else 0
+        mins = int(elapsed // 60)
+        secs = int(elapsed % 60)
+        stat = f"⏱ {mins:02d}:{secs:02d}  │  {self.cmd_count} команд  │  {total} строк"
+        st = self.font.render(stat, True, C_DIM)
+        screen.blit(st, (WIDTH - st.get_width() - 20, HEIGHT - 22))
 
         # Bash упал
         if not self.terminal.running and self.lines:
