@@ -6,6 +6,7 @@ import pygame
 import web_server
 from settings import *
 from boot_style import BootScreen, LoginScreen
+from real_bash import RealBashUI
 from fs import VirtualFS, Shell
 from ui import (Window, TerminalApp, FilesApp, NotepadApp,
                 CalculatorApp, AboutApp, WallpapersApp, load_icon)
@@ -30,6 +31,7 @@ class BunnyOS:
         pygame.display.set_caption("BunnyOS 1.0 LTS")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.Font(None, 18)
+        self.font_small = pygame.font.Font(None, 16)
         self.font_bold = pygame.font.Font(None, 20)
         self.font_huge = pygame.font.Font(None, 72)
 
@@ -48,6 +50,7 @@ class BunnyOS:
         self.running = True
         self.timer = 0.0
         self.boot_screen = BootScreen()
+        self.real_bash = None  # создастся при первом вызове
         self.login_screen = LoginScreen()
         self.windows = []
         self.active_win = None
@@ -68,6 +71,13 @@ class BunnyOS:
         if e.type == pygame.QUIT:
             self.running = False
             return
+        if self.state == "real_bash":
+            if self.real_bash:
+                self.real_bash.handle_event(e)
+                if not self.real_bash.open:
+                    self.state = "desktop"
+            return
+
         if self.state == "boot":
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 self.boot_screen.done = True
@@ -250,6 +260,8 @@ class BunnyOS:
     # ---------- UPDATE ----------
     def update(self, dt):
         self.timer += dt
+        if self.state == "real_bash" and self.real_bash:
+            self.real_bash.update(dt)
         if self.state == "boot":
             self.boot_screen.update(dt)
             if self.boot_screen.done:
@@ -263,6 +275,10 @@ class BunnyOS:
 
     # ---------- DRAW ----------
     def draw(self):
+        if self.state == "real_bash" and self.real_bash:
+            self.real_bash.draw(self.screen)
+            pygame.display.flip()
+            return
         if self.state == "boot":
             self.boot_screen.draw(self.screen)
         elif self.state == "login":
