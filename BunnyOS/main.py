@@ -492,7 +492,7 @@ class BunnyOS:
             dt = self.clock.tick(FPS) / 1000.0
 
             # === Проверяем запрос на REAL BASH ===
-            if state == "desktop":
+            if self.state == "desktop":
                 import os
                 req = os.path.expanduser("~/.bunny_realbash_request")
                 if os.path.exists(req):
