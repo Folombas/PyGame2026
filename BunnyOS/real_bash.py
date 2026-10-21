@@ -85,6 +85,24 @@ class RealBashUI:
                 self.input = ""
                 return
 
+        if event.key == pygame.K_TAB:
+            # Простое автодополнение из часто-используемых команд
+            known = [
+                "ls ", "cd ", "pwd", "cat ", "echo ", "grep ", "find ",
+                "uname -a", "df -h", "free -h", "ps aux",
+                "python3 ", "git ", "pip ", "nano ", "vim ",
+                "ls -la ", "ls ~/bunny_sandbox",
+                "clear", "exit", "history",
+            ]
+            last = self.input.split()[-1] if self.input else ""
+            matches = [k for k in known if k.startswith(last) or k.startswith(self.input)]
+            if len(matches) == 1:
+                if " " in self.input:
+                    self.input = self.input.rsplit(" ", 1)[0] + " " + matches[0]
+                else:
+                    self.input = matches[0]
+            return
+
         if event.key == pygame.K_RETURN:
             cmd = self.input.strip()
             if cmd:
