@@ -102,7 +102,7 @@ class BunnyOS:
                 return
             # Start menu items
             if self.start_open:
-                items = list(APPS.keys())
+                items = list(APPS.keys()) + ["realbash"]
                 menu_h = 40 + len(items) * 36
                 menu_y = HEIGHT - TASKBAR_H - menu_h
                 for i, app_id in enumerate(items):
