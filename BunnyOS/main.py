@@ -491,6 +491,21 @@ class BunnyOS:
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
 
+            # === Проверяем запрос на REAL BASH ===
+            if state == "desktop":
+                import os
+                req = os.path.expanduser("~/.bunny_realbash_request")
+                if os.path.exists(req):
+                    try:
+                        os.remove(req)
+                    except Exception:
+                        pass
+                    if self.real_bash is None:
+                        self.real_bash = RealBashUI(self.font_small)
+                    self.real_bash.open_ui()
+                    self.state = "real_bash"
+                    continue
+
             # === Проверяем запрос из Hub на запуск игры ===
             import os
             req_path = os.path.expanduser("~/.bunny_launch_request")
