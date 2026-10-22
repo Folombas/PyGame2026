@@ -269,6 +269,8 @@ class BunnyOS:
     # ---------- UPDATE ----------
     def update(self, dt):
         self.timer += dt
+        if getattr(self, "toast_timer", 0) > 0:
+            self.toast_timer -= 1
         if self.state == "real_bash" and self.real_bash:
             self.real_bash.update(dt)
         if self.state == "boot":
@@ -364,6 +366,28 @@ class BunnyOS:
         # Окна
         for w in self.windows:
             w.draw(self.screen, self.font_bold)
+        # Toast (уведомление)
+        if getattr(self, "toast_timer", 0) > 0 and getattr(self, "toast", ""):
+            # Плавное появление/исчезновение
+            alpha = 255
+            if self.toast_timer < 20:
+                alpha = int(255 * (self.toast_timer / 20))
+            elif self.toast_timer > 100:
+                alpha = int(255 * ((120 - self.toast_timer) / 20))
+
+            t = self.font.render(self.toast, True, (255, 255, 255))
+            pad = 16
+            box = pygame.Surface((t.get_width() + pad * 2, t.get_height() + pad), pygame.SRCALPHA)
+            box.fill((40, 60, 100, int(alpha * 0.95)))
+            pygame.draw.rect(box, (100, 180, 255, alpha),
+                             (0, 0, box.get_width(), box.get_height()), 2, border_radius=8)
+            bx = WIDTH - box.get_width() - 20
+            by = HEIGHT - TASKBAR_H - box.get_height() - 20
+            self.screen.blit(box, (bx, by))
+            # Текст с alpha
+            t.set_alpha(alpha)
+            self.screen.blit(t, (bx + pad, by + pad // 2))
+
         # Taskbar
         self._draw_taskbar()
         if self.start_open:
