@@ -10,6 +10,7 @@ from boot_style import BootScreen, LoginScreen
 from lock_screen import LockScreen
 from real_bash import RealBashUI
 from tiler import Tiler
+from waybar import Waybar
 from fs import VirtualFS, Shell
 from ui import (Window, TerminalApp, FilesApp, NotepadApp,
                 CalculatorApp, AboutApp, WallpapersApp, load_icon)
@@ -37,6 +38,7 @@ class BunnyOS:
         self.font_small = pygame.font.Font(None, 16)
         self.font_bold = pygame.font.Font(None, 20)
         self.font_huge = pygame.font.Font(None, 72)
+        self.waybar = Waybar(self.font_small, self.font_bold)
 
         self.fs = VirtualFS()
         self.shell = Shell(self.fs)
@@ -58,6 +60,8 @@ class BunnyOS:
         self.windows = []
         # === Tiling WM ===
         self.tiler = Tiler()
+        # Создастся после шрифтов — временно None
+        self.waybar = None
         self.tiling = True
         self.workspaces = [[] for _ in range(9)]
         self.current_ws = 0
@@ -412,6 +416,8 @@ class BunnyOS:
             self.real_bash.update(dt)
         if self.state == "locked":
             self.lock_screen.update(dt)
+        if self.state == "desktop" and self.waybar:
+            self.waybar.update(dt)
         if self.state == "boot":
             self.boot_screen.update(dt)
             if self.boot_screen.done:
@@ -510,6 +516,10 @@ class BunnyOS:
         # Окна
         for w in self.current_windows():
             w.draw(self.screen, self.font_bold)
+        # === WAYBAR ===
+        if self.waybar:
+            self.waybar.draw(self.screen, self.current_ws, 9, self.workspaces)
+
         # Погодный виджет (правый верх)
         if getattr(self, "_weather_cache", None):
             text, color, sub = self._weather_cache
@@ -546,8 +556,9 @@ class BunnyOS:
             t.set_alpha(alpha)
             self.screen.blit(t, (bx + pad, by + pad // 2))
 
-        # Taskbar
-        self._draw_taskbar()
+        # Taskbar — только в floating режиме
+        if not self.tiling:
+            self._draw_taskbar()
         if self.start_open:
             self._draw_start_menu()
 
