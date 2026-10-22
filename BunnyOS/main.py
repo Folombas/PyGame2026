@@ -160,7 +160,7 @@ class BunnyOS:
             # Taskbar windows
             if my >= HEIGHT - TASKBAR_H and mx > 60:
                 x = 64
-                for w in self.windows:
+                for w in self.current_windows():
                     wr = pygame.Rect(x, HEIGHT - TASKBAR_H, 140, TASKBAR_H)
                     if wr.collidepoint(mx, my):
                         if w.minimized:
@@ -197,8 +197,8 @@ class BunnyOS:
 
     def _window_result(self, w, res):
         if res == "close":
-            if w in self.windows:
-                self.windows.remove(w)
+            if w in self.current_windows():
+                self.current_windows().remove(w)
             if self.active_win == w:
                 self.active_win = None
         elif res == "minimize":
@@ -422,7 +422,7 @@ class BunnyOS:
         # Лёгкое затемнение внизу для taskbar
         self._draw_desktop_icons()
         # Окна
-        for w in self.windows:
+        for w in self.current_windows():
             w.draw(self.screen, self.font_bold)
         # Погодный виджет (правый верх)
         if getattr(self, "_weather_cache", None):
@@ -522,7 +522,7 @@ class BunnyOS:
 
         # Окна
         x = 64
-        for w in self.windows:
+        for w in self.current_windows():
             wr = pygame.Rect(x, HEIGHT - TASKBAR_H, 140, TASKBAR_H)
             active = w == self.active_win and not w.minimized
             hov = wr.collidepoint(mx, my)
