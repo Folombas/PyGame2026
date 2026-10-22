@@ -94,6 +94,64 @@ class BunnyOS:
             self.open_app("terminal")
             return
 
+        # === SUPER (Hyprland-style) хоткеи ===
+        if self.state == "desktop" and e.type == pygame.KEYDOWN:
+            super_held = bool(pygame.key.get_mods() & (pygame.KMOD_LSUPER | pygame.KMOD_RSUPER)) if hasattr(pygame, 'KMOD_LSUPER') else False
+            # Fallback: Ctrl+Shift
+            if not super_held:
+                mods = pygame.key.get_mods()
+                super_held = (mods & pygame.KMOD_CTRL) and (mods & pygame.KMOD_SHIFT)
+
+            if super_held:
+                # Super+Enter → терминал
+                if e.key == pygame.K_RETURN:
+                    self.open_app("terminal")
+                    return
+                # Super+B → real bash
+                if e.key == pygame.K_b:
+                    if self.real_bash is None:
+                        from real_bash import RealBashUI
+                        self.real_bash = RealBashUI(self.font_small)
+                    self.real_bash.open_ui()
+                    self.state = "real_bash"
+                    return
+                # Super+D → launcher (в след. коммите)
+                # Super+Q → закрыть активное окно
+                if e.key == pygame.K_q:
+                    if self.active_win:
+                        self._window_result(self.active_win, "close")
+                    return
+                # Super+1..9 → workspace
+                if pygame.K_1 <= e.key <= pygame.K_9:
+                    ws = e.key - pygame.K_1
+                    if ws < 9:
+                        self.current_ws = ws
+                        self.active_win = None
+                        if self.tiling:
+                            self.tiler.apply(self.current_windows())
+                        return
+                # Super+H/J/K/L → навигация
+                if e.key == pygame.K_h:
+                    self._focus_dir(-1, 0)
+                    return
+                if e.key == pygame.K_l:
+                    self._focus_dir(1, 0)
+                    return
+                if e.key == pygame.K_k:
+                    self._focus_dir(0, -1)
+                    return
+                if e.key == pygame.K_j:
+                    self._focus_dir(0, 1)
+                    return
+                # Super+T → toggle tiling/floating
+                if e.key == pygame.K_t:
+                    self.tiling = not self.tiling
+                    self.toast = f"Tiling: {'ON' if self.tiling else 'OFF'}"
+                    self.toast_timer = 90
+                    if self.tiling:
+                        self.tiler.apply(self.current_windows())
+                    return
+
         # Ctrl+L — блокировка
         if (self.state == "desktop" and e.type == pygame.KEYDOWN
                 and e.key == pygame.K_l and (pygame.key.get_mods() & pygame.KMOD_CTRL)):
@@ -194,6 +252,34 @@ class BunnyOS:
 
     def current_windows(self):
         return self.workspaces[self.current_ws]
+
+    def _focus_dir(self, dx, dy):
+        """Направленная навигация (HJKL)."""
+        ws = self.current_windows()
+        if len(ws) < 2 or not self.active_win:
+            return
+        cur = self.active_win
+        cx, cy = cur.rect.centerx, cur.rect.centery
+        best = None
+        best_score = 1e9
+        for w in ws:
+            if w is cur:
+                continue
+            wx, wy = w.rect.centerx, w.rect.centery
+            # Разница по нужной оси + штраф за перпендикуляр
+            if dx != 0:
+                dist = (wx - cx) * dx
+                perp = abs(wy - cy)
+            else:
+                dist = (wy - cy) * dy
+                perp = abs(wx - cx)
+            if dist > 0:
+                score = dist + perp * 2
+                if score < best_score:
+                    best_score = score
+                    best = w
+        if best:
+            self.focus(best)
 
     def _window_result(self, w, res):
         if res == "close":
