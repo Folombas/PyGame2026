@@ -11,6 +11,7 @@ from lock_screen import LockScreen
 from real_bash import RealBashUI
 from tiler import Tiler
 from waybar import Waybar
+from launcher import Launcher
 from fs import VirtualFS, Shell
 from ui import (Window, TerminalApp, FilesApp, NotepadApp,
                 CalculatorApp, AboutApp, WallpapersApp, load_icon)
@@ -39,6 +40,7 @@ class BunnyOS:
         self.font_bold = pygame.font.Font(None, 20)
         self.font_huge = pygame.font.Font(None, 72)
         self.waybar = Waybar(self.font_small, self.font_bold)
+        self.launcher = Launcher(self.font_big, self.font_small)
 
         self.fs = VirtualFS()
         self.shell = Shell(self.fs)
@@ -80,6 +82,22 @@ class BunnyOS:
 
     # ---------- EVENTS ----------
     def handle_event(self, e):
+        # Launcher — перехватывает всё если открыт
+        if self.launcher and self.launcher.open:
+            action = self.launcher.handle_event(e)
+            if action:
+                if action == "_realbash":
+                    if self.real_bash is None:
+                        from real_bash import RealBashUI
+                        self.real_bash = RealBashUI(self.font_small)
+                    self.real_bash.open_ui()
+                    self.state = "real_bash"
+                elif action == "_webserver":
+                    self.toast = "Web: http://localhost:8000"
+                    self.toast_timer = 120
+                else:
+                    self.open_app(action)
+            return
         if e.type == pygame.QUIT:
             self.running = False
             return
@@ -119,7 +137,10 @@ class BunnyOS:
                     self.real_bash.open_ui()
                     self.state = "real_bash"
                     return
-                # Super+D → launcher (в след. коммите)
+                # Super+D → launcher
+                if e.key == pygame.K_d:
+                    self.launcher.show()
+                    return
                 # Super+Q → закрыть активное окно
                 if e.key == pygame.K_q:
                     if self.active_win:
@@ -418,6 +439,8 @@ class BunnyOS:
             self.lock_screen.update(dt)
         if self.state == "desktop" and self.waybar:
             self.waybar.update(dt)
+        if self.launcher and self.launcher.open:
+            self.launcher.update(dt)
         if self.state == "boot":
             self.boot_screen.update(dt)
             if self.boot_screen.done:
@@ -561,6 +584,10 @@ class BunnyOS:
             self._draw_taskbar()
         if self.start_open:
             self._draw_start_menu()
+
+        # Launcher — поверх всего
+        if self.launcher and self.launcher.open:
+            self.launcher.draw(self.screen)
 
     def _draw_desktop_icons(self):
         icons = [
