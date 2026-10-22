@@ -4,6 +4,7 @@ import sys
 import time
 import pygame
 import web_server
+import screenshot
 from settings import *
 from boot_style import BootScreen, LoginScreen
 from real_bash import RealBashUI
@@ -76,6 +77,14 @@ class BunnyOS:
                 self.real_bash.handle_event(e)
                 if not self.real_bash.open:
                     self.state = "desktop"
+            return
+
+        # F12 — скриншот
+        if self.state == "desktop" and e.type == pygame.KEYDOWN and e.key == pygame.K_F12:
+            path = screenshot.take_screenshot(self.screen)
+            if path:
+                self.toast = f"📸 {path.split('/')[-1]}"
+                self.toast_timer = 120
             return
 
         if self.state == "boot":
@@ -438,6 +447,7 @@ class BunnyOS:
         # Индикатор веб-сервера
         if getattr(self, "web_started", False):
             import web_server
+import screenshot
             if web_server._running:
                 icon_x = WIDTH - 160
                 icon_y = HEIGHT - TASKBAR_H + 12
