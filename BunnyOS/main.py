@@ -7,6 +7,7 @@ import web_server
 import screenshot
 from settings import *
 from boot_style import BootScreen, LoginScreen
+from lock_screen import LockScreen
 from real_bash import RealBashUI
 from fs import VirtualFS, Shell
 from ui import (Window, TerminalApp, FilesApp, NotepadApp,
@@ -77,6 +78,13 @@ class BunnyOS:
                 self.real_bash.handle_event(e)
                 if not self.real_bash.open:
                     self.state = "desktop"
+            return
+
+        # Ctrl+L — блокировка
+        if (self.state == "desktop" and e.type == pygame.KEYDOWN
+                and e.key == pygame.K_l and (pygame.key.get_mods() & pygame.KMOD_CTRL)):
+            self.lock_screen.show()
+            self.state = "locked"
             return
 
         # F12 — скриншот
@@ -273,6 +281,8 @@ class BunnyOS:
             self.toast_timer -= 1
         if self.state == "real_bash" and self.real_bash:
             self.real_bash.update(dt)
+        if self.state == "locked":
+            self.lock_screen.update(dt)
         if self.state == "boot":
             self.boot_screen.update(dt)
             if self.boot_screen.done:
@@ -286,6 +296,11 @@ class BunnyOS:
 
     # ---------- DRAW ----------
     def draw(self):
+        if self.state == "locked":
+            self.lock_screen.draw(self.screen)
+            pygame.display.flip()
+            return
+
         if self.state == "real_bash" and self.real_bash:
             self.real_bash.draw(self.screen)
             pygame.display.flip()
