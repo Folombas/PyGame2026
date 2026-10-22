@@ -322,11 +322,26 @@ class FilesApp:
         self.refresh()
 
     def refresh(self):
+        # Реальная ФС для /home и /etc
+        if self.path in ("/home", "/etc", "/usr", "/var", "/opt", "/tmp",
+                          "/home/sasha", "/root"):
+            import os as _os
+            self.entries = []
+            try:
+                for name in sorted(_os.listdir(self.path)):
+                    full = _os.path.join(self.path, name)
+                    is_dir = _os.path.isdir(full)
+                    self.entries.append((name, is_dir, "REAL"))
+            except Exception:
+                pass
+            self.selected = -1
+            return
+        # Виртуальная ФС
         r = self.os.fs.ls(self.path)
         self.entries = []
         if r:
             d, f = r
-            self.entries = [(x, True) for x in d] + [(x, False) for x in f]
+            self.entries = [(x, True, "VIRT") for x in d] + [(x, False, "VIRT") for x in f]
         self.selected = -1
 
     def handle_event(self, event, rect):
@@ -342,7 +357,8 @@ class FilesApp:
             return
         # Клик по файлу
         y0 = rect.y + 40
-        for i, (name, is_d) in enumerate(self.entries):
+        for i, entry in enumerate(self.entries):
+            name, is_d = entry[0], entry[1]
             ey = y0 + i * 26
             if rect.x + 6 <= mx <= rect.right - 6 and ey <= my <= ey + 24:
                 self.selected = i
@@ -368,7 +384,9 @@ class FilesApp:
 
         # List
         y0 = rect.y + 40
-        for i, (name, is_d) in enumerate(self.entries):
+        for i, entry in enumerate(self.entries):
+            name, is_d = entry[0], entry[1]
+            src_type = entry[2] if len(entry) > 2 else "VIRT"
             ey = y0 + i * 26
             if i == self.selected:
                 pygame.draw.rect(scr, (0, 120, 215, 80),
@@ -377,6 +395,10 @@ class FilesApp:
             col = (0, 80, 160) if is_d else (60, 60, 60)
             t = font.render(f"{icon}  {name}", True, col)
             scr.blit(t, (rect.x + 12, ey + 5))
+            # Бейдж REAL
+            if src_type == "REAL":
+                badge = font.render("REAL", True, (200, 120, 50))
+                scr.blit(badge, (rect.right - 50, ey + 5))
 
 
 class NotepadApp:
