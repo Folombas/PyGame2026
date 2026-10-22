@@ -298,6 +298,11 @@ class BunnyOS:
         self.timer += dt
         if getattr(self, "toast_timer", 0) > 0:
             self.toast_timer -= 1
+        # Погода — раз в 300 кадров (~5 сек для симуляции)
+        self._weather_timer += 1
+        if self._weather_timer > 300 or self._weather_cache is None:
+            self._weather_timer = 0
+            self._update_weather()
         if self.state == "real_bash" and self.real_bash:
             self.real_bash.update(dt)
         if self.state == "locked":
@@ -400,6 +405,20 @@ class BunnyOS:
         # Окна
         for w in self.windows:
             w.draw(self.screen, self.font_bold)
+        # Погодный виджет (правый верх)
+        if getattr(self, "_weather_cache", None):
+            text, color, sub = self._weather_cache
+            w_panel = pygame.Rect(WIDTH - 200, 20, 180, 80)
+            panel_surf = pygame.Surface((w_panel.w, w_panel.h), pygame.SRCALPHA)
+            panel_surf.fill((20, 30, 50, 180))
+            pygame.draw.rect(panel_surf, (*color, 200),
+                             (0, 0, w_panel.w, w_panel.h), 2, border_radius=10)
+            self.screen.blit(panel_surf, w_panel.topleft)
+            wt = self.font_bold.render(text, True, color) if hasattr(self, 'font_bold') else self.font.render(text, True, color)
+            self.screen.blit(wt, (w_panel.x + 12, w_panel.y + 12))
+            st = self.font.render(sub, True, (150, 170, 200))
+            self.screen.blit(st, (w_panel.x + 12, w_panel.y + 48))
+
         # Toast (уведомление)
         if getattr(self, "toast_timer", 0) > 0 and getattr(self, "toast", ""):
             # Плавное появление/исчезновение
