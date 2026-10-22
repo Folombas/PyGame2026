@@ -94,7 +94,7 @@ class Launcher:
         panel_h = 100 + min(len(items), 8) * 50
         panel = pygame.Rect(
             WIDTH // 2 - panel_w // 2,
-            HEIGHT // 3 - panel_h // 2,
+            HEIGHT // 2 - panel_h // 2,
             panel_w, panel_h,
         )
 

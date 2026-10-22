@@ -39,6 +39,7 @@ class BunnyOS:
         self.font_small = pygame.font.Font(None, 16)
         self.font_bold = pygame.font.Font(None, 20)
         self.font_huge = pygame.font.Font(None, 72)
+        self.font_big = pygame.font.Font(None, 36)
         self.waybar = Waybar(self.font_small, self.font_bold)
         self.launcher = Launcher(self.font_big, self.font_small)
 
@@ -62,6 +63,7 @@ class BunnyOS:
         self.windows = []
         # === Tiling WM ===
         self.tiler = Tiler()
+        self._super_held = False
         # Создастся после шрифтов — временно None
         self.waybar = None
         self.tiling = True
@@ -69,6 +71,11 @@ class BunnyOS:
         self.current_ws = 0
         self.active_win = None
         self.start_open = False
+        # === UI / effects ===
+        self.toast = ""
+        self.toast_timer = 0
+        self._weather_cache = None
+        self._weather_timer = 0
         # Embedded-игры
         self.active_game = None
         self.game_surface = None
@@ -82,6 +89,13 @@ class BunnyOS:
 
     # ---------- EVENTS ----------
     def handle_event(self, e):
+        # Отслеживаем Super (Win) отдельно — SDL не даёт его в mods
+        if e.type == pygame.KEYDOWN and e.key in (pygame.K_LMETA, pygame.K_RMETA):
+            self._super_held = True
+            return
+        if e.type == pygame.KEYUP and e.key in (pygame.K_LMETA, pygame.K_RMETA):
+            self._super_held = False
+            return
         # Launcher — перехватывает всё если открыт
         if self.launcher and self.launcher.open:
             action = self.launcher.handle_event(e)
@@ -118,11 +132,10 @@ class BunnyOS:
 
         # === SUPER (Hyprland-style) хоткеи ===
         if self.state == "desktop" and e.type == pygame.KEYDOWN:
-            super_held = bool(pygame.key.get_mods() & (pygame.KMOD_LSUPER | pygame.KMOD_RSUPER)) if hasattr(pygame, 'KMOD_LSUPER') else False
-            # Fallback: Ctrl+Shift
-            if not super_held:
-                mods = pygame.key.get_mods()
-                super_held = (mods & pygame.KMOD_CTRL) and (mods & pygame.KMOD_SHIFT)
+            # Super: либо отдельный флаг, либо Ctrl+Shift (fallback)
+            mods = pygame.key.get_mods()
+            super_held = (self._super_held
+                          or ((mods & pygame.KMOD_CTRL) and (mods & pygame.KMOD_SHIFT)))
 
             if super_held:
                 # Super+Enter → терминал
@@ -429,6 +442,10 @@ class BunnyOS:
         if getattr(self, "toast_timer", 0) > 0:
             self.toast_timer -= 1
         # Погода — раз в 300 кадров (~5 сек для симуляции)
+        if not hasattr(self, "_weather_timer"):
+            self._weather_timer = 0
+        if not hasattr(self, "_weather_cache"):
+            self._weather_cache = None
         self._weather_timer += 1
         if self._weather_timer > 300 or self._weather_cache is None:
             self._weather_timer = 0
@@ -453,6 +470,26 @@ class BunnyOS:
                 self.open_app("terminal")
 
     # ---------- DRAW ----------
+
+    def _update_weather(self):
+        """Погода из loadavg."""
+        try:
+            import real_sys, re as _re
+            load = real_sys.uptime_str()
+            mm = _re.search(r'load average: ([\d.]+)', load)
+            la = float(mm.group(1)) if mm else 0.0
+            if la < 0.5:
+                w = ("☀ Ясно", (255, 220, 100))
+            elif la < 1.5:
+                w = ("⛅ Облачно", (200, 200, 220))
+            elif la < 3.0:
+                w = ("🌧 Дождь", (120, 160, 220))
+            else:
+                w = ("🌩 Гроза", (180, 100, 180))
+            self._weather_cache = (w[0], w[1], f"load {la:.2f}")
+        except Exception:
+            self._weather_cache = ("☀ Ясно", (255, 220, 100), "load 0.00")
+
     def draw(self):
         if self.state == "locked":
             self.lock_screen.draw(self.screen)
@@ -667,7 +704,6 @@ class BunnyOS:
         # Индикатор веб-сервера
         if getattr(self, "web_started", False):
             import web_server
-import screenshot
             if web_server._running:
                 icon_x = WIDTH - 160
                 icon_y = HEIGHT - TASKBAR_H + 12
