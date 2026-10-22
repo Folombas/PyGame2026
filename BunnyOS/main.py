@@ -80,11 +80,30 @@ class BunnyOS:
                     self.state = "desktop"
             return
 
+        # Ctrl+Alt+T — открыть Терминал
+        if (self.state == "desktop" and e.type == pygame.KEYDOWN
+                and e.key == pygame.K_t
+                and (pygame.key.get_mods() & pygame.KMOD_CTRL)
+                and (pygame.key.get_mods() & pygame.KMOD_ALT)):
+            self.open_app("terminal")
+            return
+
         # Ctrl+L — блокировка
         if (self.state == "desktop" and e.type == pygame.KEYDOWN
                 and e.key == pygame.K_l and (pygame.key.get_mods() & pygame.KMOD_CTRL)):
             self.lock_screen.show()
             self.state = "locked"
+            return
+
+        # Ctrl+Alt+B — REAL BASH
+        if (self.state == "desktop" and e.type == pygame.KEYDOWN
+                and e.key == pygame.K_b
+                and (pygame.key.get_mods() & pygame.KMOD_CTRL)
+                and (pygame.key.get_mods() & pygame.KMOD_ALT)):
+            if self.real_bash is None:
+                self.real_bash = RealBashUI(self.font_small)
+            self.real_bash.open_ui()
+            self.state = "real_bash"
             return
 
         # F12 — скриншот
