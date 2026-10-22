@@ -319,6 +319,8 @@ class FilesApp:
         self.path = "/home/zayka"
         self.entries = []
         self.selected = -1
+        self.search = ""
+        self.search_focus = False
         self.refresh()
 
     def refresh(self):
@@ -345,8 +347,28 @@ class FilesApp:
         self.selected = -1
 
     def handle_event(self, event, rect):
+        # Поиск — клавиатура
+        if event.type == pygame.KEYDOWN and self.search_focus:
+            if event.key == pygame.K_ESCAPE:
+                self.search_focus = False
+                self.search = ""
+            elif event.key == pygame.K_BACKSPACE:
+                self.search = self.search[:-1]
+            elif event.key == pygame.K_RETURN:
+                self.search_focus = False
+            elif event.unicode and event.unicode.isprintable():
+                self.search += event.unicode
+            return
+
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return
+
+        # Клик по полю поиска
+        search_rect = pygame.Rect(rect.x + 76, rect.y + 6, rect.w - 90, 22)
+        if search_rect.collidepoint(event.pos):
+            self.search_focus = True
+            return
+        self.search_focus = False
         mx, my = event.pos
         # Кнопка "up"
         up = pygame.Rect(rect.x + 6, rect.y + 6, 60, 22)
@@ -382,9 +404,23 @@ class FilesApp:
         p = font.render(self.path, True, (0, 0, 0))
         scr.blit(p, (rect.x + 76, rect.y + 10))
 
-        # List
+        # Поле поиска
+        search_rect = pygame.Rect(rect.x + 76, rect.y + 6, rect.w - 90, 22)
+        pygame.draw.rect(scr, (255, 255, 255), search_rect)
+        border_col = (0, 120, 215) if self.search_focus else (180, 180, 180)
+        pygame.draw.rect(scr, border_col, search_rect, 2)
+        if self.search:
+            st = font.render(self.search, True, (0, 0, 0))
+            scr.blit(st, (search_rect.x + 5, search_rect.y + 5))
+        elif not self.search_focus:
+            placeholder = font.render("Поиск...", True, (170, 170, 170))
+            scr.blit(placeholder, (search_rect.x + 5, search_rect.y + 5))
+
+        # List (с фильтром)
         y0 = rect.y + 40
-        for i, entry in enumerate(self.entries):
+        filtered = [e for e in self.entries
+                    if self.search.lower() in e[0].lower()] if self.search else self.entries
+        for i, entry in enumerate(filtered):
             name, is_d = entry[0], entry[1]
             src_type = entry[2] if len(entry) > 2 else "VIRT"
             ey = y0 + i * 26
