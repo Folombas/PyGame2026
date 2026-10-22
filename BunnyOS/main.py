@@ -9,6 +9,7 @@ from settings import *
 from boot_style import BootScreen, LoginScreen
 from lock_screen import LockScreen
 from real_bash import RealBashUI
+from tiler import Tiler
 from fs import VirtualFS, Shell
 from ui import (Window, TerminalApp, FilesApp, NotepadApp,
                 CalculatorApp, AboutApp, WallpapersApp, load_icon)
@@ -55,6 +56,11 @@ class BunnyOS:
         self.real_bash = None  # создастся при первом вызове
         self.login_screen = LoginScreen()
         self.windows = []
+        # === Tiling WM ===
+        self.tiler = Tiler()
+        self.tiling = True
+        self.workspaces = [[] for _ in range(9)]
+        self.current_ws = 0
         self.active_win = None
         self.start_open = False
         # Embedded-игры
@@ -186,6 +192,9 @@ class BunnyOS:
             res = self.active_win.handle_event(e)
             self._window_result(self.active_win, res)
 
+    def current_windows(self):
+        return self.workspaces[self.current_ws]
+
     def _window_result(self, w, res):
         if res == "close":
             if w in self.windows:
@@ -252,9 +261,12 @@ class BunnyOS:
             self.active_win.active = False
         self.active_win = w
         w.active = True
-        if w in self.windows:
-            self.windows.remove(w)
-            self.windows.append(w)
+        ws = self.workspaces[self.current_ws]
+        if w in ws:
+            ws.remove(w)
+            ws.append(w)
+        if self.tiling:
+            self.tiler.apply(ws)
 
     def _load_wallpaper(self):
         """Загружает первый доступный wallpaper из папки."""
@@ -282,16 +294,23 @@ class BunnyOS:
     def open_app(self, app_id):
         if app_id not in APPS:
             return
-        for w in self.windows:
-            if getattr(w.app, "app_id", None) == app_id:
-                w.minimized = False
-                self.focus(w)
-                return
+        # Ищем на ВСЕХ рабочих столах
+        for ws_list in self.workspaces:
+            for w in ws_list:
+                if getattr(w.app, "app_id", None) == app_id:
+                    w.minimized = False
+                    # Переключаемся на тот workspace
+                    idx = self.workspaces.index(ws_list)
+                    self.current_ws = idx
+                    self.focus(w)
+                    return
         cls, title, (x, y, ww, wh) = APPS[app_id]
         app = cls(self)
         w = Window(x, y, ww, wh, title, app)
-        self.windows.append(w)
+        self.workspaces[self.current_ws].append(w)
         self.focus(w)
+        if self.tiling:
+            self.tiler.apply(self.workspaces[self.current_ws])
 
     # ---------- UPDATE ----------
     def update(self, dt):
