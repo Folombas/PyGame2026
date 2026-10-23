@@ -471,6 +471,76 @@ class BunnyOS:
 
     # ---------- DRAW ----------
 
+    def _draw_neofetch(self):
+        """Neofetch-виджет на рабочем столе."""
+        import real_sys, platform
+        try:
+            hostname = real_sys.hostname()
+            user = real_sys.whoami()
+            kernel = platform.release()[:20]
+            mem_total, mem_free, mem_avail = real_sys.meminfo()
+            cpu = real_sys.cpu_model()[:30]
+            cpu_count = real_sys.cpu_count()
+            total_gb, used_gb, free_gb = real_sys.disk_usage("/")
+        except Exception:
+            hostname = "bunnyos"
+            user = "sasha"
+            kernel = "5.15.0"
+            mem_total, mem_free = 16, 8
+            cpu = "Intel Core"
+            cpu_count = 4
+            total_gb, used_gb = 800, 60
+
+        # Панель (левый верх)
+        panel = pygame.Rect(20, 60, 340, 260)
+        bg = pygame.Surface((panel.w, panel.h), pygame.SRCALPHA)
+        bg.fill((16, 16, 24, 220))
+        pygame.draw.rect(bg, (125, 207, 255, 180),
+                         (0, 0, panel.w, panel.h), 2, border_radius=12)
+        self.screen.blit(bg, panel.topleft)
+
+        # ASCII-заяц (упрощённый)
+        ascii_logo = [
+            "   /\\   /\\   ",
+            "  /  \\ /  \\  ",
+            " |    X    |  ",
+            " |   o o   |  ",
+            " |    <    |  ",
+            "  \\_______/  ",
+            "   /|   |\\   ",
+            "  * |___| *   ",
+        ]
+        # Инфо
+        info = [
+            f"{user}@{hostname}",
+            "─" * 20,
+            "OS:     BunnyOS 2.0",
+            f"Kernel: {kernel}",
+            "DE:     Luna (Omarchy)",
+            f"CPU:    {cpu_count}x",
+            f"        {cpu}",
+            f"Memory: {int(mem_total - mem_avail)}G / {int(mem_total)}G",
+            f"Disk:   {int(used_gb)}G / {int(total_gb)}G",
+            "Shell:  realbash",
+        ]
+
+        y = panel.y + 14
+        x_logo = panel.x + 12
+        # Логотип
+        for line in ascii_logo:
+            lt = self.font_small.render(line, True, (125, 207, 255))
+            self.screen.blit(lt, (x_logo, y))
+            y += 16
+        # Инфо
+        y = panel.y + 14
+        for i, line in enumerate(info):
+            color = (187, 154, 247) if i == 0 else (192, 202, 245)
+            if "─" in line:
+                color = (86, 95, 137)
+            t = self.font_small.render(line, True, color)
+            self.screen.blit(t, (x_logo + 130, y))
+            y += 20
+
     def _update_weather(self):
         """Погода из loadavg."""
         try:
@@ -576,6 +646,10 @@ class BunnyOS:
         # Окна
         for w in self.current_windows():
             w.draw(self.screen, self.font_bold)
+        # Neofetch на пустом рабочем столе
+        if not self.current_windows():
+            self._draw_neofetch()
+
         # === WAYBAR ===
         if self.waybar:
             self.waybar.draw(self.screen, self.current_ws, 9, self.workspaces)
