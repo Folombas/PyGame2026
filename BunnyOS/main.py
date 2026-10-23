@@ -12,6 +12,7 @@ from real_bash import RealBashUI
 from tiler import Tiler
 from waybar import Waybar
 from launcher import Launcher
+from keybinds_overlay import KeybindsOverlay
 from fs import VirtualFS, Shell
 from ui import (Window, TerminalApp, FilesApp, NotepadApp,
                 CalculatorApp, AboutApp, WallpapersApp, load_icon)
@@ -42,6 +43,7 @@ class BunnyOS:
         self.font_big = pygame.font.Font(None, 36)
         self.waybar = Waybar(self.font_small, self.font_bold)
         self.launcher = Launcher(self.font_big, self.font_small)
+        self.keybinds_overlay = KeybindsOverlay(self.font_big, self.font_small)
 
         self.fs = VirtualFS()
         self.shell = Shell(self.fs)
@@ -89,6 +91,11 @@ class BunnyOS:
 
     # ---------- EVENTS ----------
     def handle_event(self, e):
+        # Keybinds overlay перехватывает всё если открыт
+        if self.keybinds_overlay and self.keybinds_overlay.open:
+            self.keybinds_overlay.handle_event(e)
+            return
+
         # Отслеживаем Super (Win) отдельно — SDL не даёт его в mods
         if e.type == pygame.KEYDOWN and e.key in (pygame.K_LMETA, pygame.K_RMETA):
             self._super_held = True
@@ -153,6 +160,11 @@ class BunnyOS:
                 # Super+D → launcher
                 if e.key == pygame.K_d:
                     self.launcher.show()
+                    return
+                # Super+H без фокуса → keybinds (если нет активного окна)
+                # Но лучше Super+Slash
+                if e.key == pygame.K_SLASH:
+                    self.keybinds_overlay.toggle()
                     return
                 # Super+Q → закрыть активное окно
                 if e.key == pygame.K_q:
@@ -458,6 +470,8 @@ class BunnyOS:
             self.waybar.update(dt)
         if self.launcher and self.launcher.open:
             self.launcher.update(dt)
+        if self.keybinds_overlay and self.keybinds_overlay.open:
+            self.keybinds_overlay.update(dt)
         if self.state == "boot":
             self.boot_screen.update(dt)
             if self.boot_screen.done:
@@ -699,6 +713,10 @@ class BunnyOS:
         # Launcher — поверх всего
         if self.launcher and self.launcher.open:
             self.launcher.draw(self.screen)
+
+        # Keybinds overlay — самый верх
+        if self.keybinds_overlay and self.keybinds_overlay.open:
+            self.keybinds_overlay.draw(self.screen)
 
     def _draw_desktop_icons(self):
         icons = [
