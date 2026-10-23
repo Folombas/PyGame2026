@@ -13,6 +13,7 @@ from tiler import Tiler
 from waybar import Waybar
 from launcher import Launcher
 from keybinds_overlay import KeybindsOverlay
+import bunny_config
 from fs import VirtualFS, Shell
 from ui import (Window, TerminalApp, FilesApp, NotepadApp,
                 CalculatorApp, AboutApp, WallpapersApp, load_icon)
@@ -68,7 +69,8 @@ class BunnyOS:
         self._super_held = False
         # Создастся после шрифтов — временно None
         self.waybar = None
-        self.tiling = True
+        self._config = bunny_config.load()
+        self.tiling = self._config.get("tiling", True)
         self.workspaces = [[] for _ in range(9)]
         self.current_ws = 0
         self.active_win = None
@@ -179,6 +181,7 @@ class BunnyOS:
                         self.active_win = None
                         if self.tiling:
                             self.tiler.apply(self.current_windows())
+                        bunny_config.update(last_ws=ws)
                         return
                 # Super+H/J/K/L → навигация
                 if e.key == pygame.K_h:
@@ -200,6 +203,7 @@ class BunnyOS:
                     self.toast_timer = 90
                     if self.tiling:
                         self.tiler.apply(self.current_windows())
+                    bunny_config.update(tiling=self.tiling)
                     return
 
         # Ctrl+L — блокировка
