@@ -57,8 +57,11 @@ class Tiler:
         return result
 
     def apply(self, windows):
-        """Применяет раскладку к списку окон."""
+        """Применяет раскладку (анимированно через target_rect)."""
         for w, rect in self.layout(windows):
-            w.rect = rect
+            if hasattr(w, 'target_rect'):
+                w.target_rect = rect
+            else:
+                w.rect = rect
             w.maximized = False
             w.minimized = False

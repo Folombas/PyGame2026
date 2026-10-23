@@ -59,7 +59,8 @@ class Window:
         self.maximized = False
         self._saved_rect = None
         # === Анимация ===
-        self.open_progress = 0.0   # 0→1 за ~0.15с
+        self.open_progress = 0.0
+        self.target_rect = self.rect.copy()  # куда двигаемся (tiling)
 
     def titlebar(self):
         return pygame.Rect(self.rect.x, self.rect.y, self.rect.w, TITLEBAR_H)
@@ -83,6 +84,16 @@ class Window:
         # Анимация открытия
         if self.open_progress < 1.0:
             self.open_progress = min(1.0, self.open_progress + 0.12)
+        # Плавный переход к target_rect (tiling)
+        if self.rect != self.target_rect:
+            lerp = 0.25
+            self.rect.x += int((self.target_rect.x - self.rect.x) * lerp)
+            self.rect.y += int((self.target_rect.y - self.rect.y) * lerp)
+            self.rect.w += int((self.target_rect.w - self.rect.w) * lerp)
+            self.rect.h += int((self.target_rect.h - self.rect.h) * lerp)
+            # Если близко — фиксируем
+            if abs(self.rect.x - self.target_rect.x) < 2 and abs(self.rect.y - self.target_rect.y) < 2:
+                self.rect = self.target_rect.copy()
         slide_y = int((1 - self.open_progress) * 30)
         # Сохраняем оригинальный rect для отрисовки
         orig_y = self.rect.y
