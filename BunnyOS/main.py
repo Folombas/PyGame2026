@@ -212,6 +212,23 @@ class BunnyOS:
                     bunny_config.update(tiling=self.tiling)
                     return
 
+        # R — показать активный квест
+        if (self.state == "desktop" and e.type == pygame.KEYDOWN
+                and e.key == pygame.K_r):
+            try:
+                import quests
+                active = quests.get_active()
+                done, total = quests.progress()
+                if active:
+                    self.toast = f"📜 {active['title']}: {active['desc']}"
+                    self.toast_timer = 200
+                else:
+                    self.toast = f"🏆 Все квесты пройдены! ({done}/{total})"
+                    self.toast_timer = 200
+            except Exception:
+                pass
+            return
+
         # Ctrl+L — блокировка
         if (self.state == "desktop" and e.type == pygame.KEYDOWN
                 and e.key == pygame.K_l and (pygame.key.get_mods() & pygame.KMOD_CTRL)):
@@ -478,6 +495,19 @@ class BunnyOS:
             self.lock_screen.update(dt)
         if self.state == "desktop" and self.waybar:
             self.waybar.update(dt)
+        # Quest progress check — раз в 30 кадров
+        self._quest_check = getattr(self, "_quest_check", 0) + 1
+        if self._quest_check % 30 == 0 and self.state == "desktop":
+            try:
+                import quests
+                done, total = quests.progress()
+                prev = getattr(self, "_last_quest_done", -1)
+                if prev >= 0 and done > prev:
+                    self.toast = f"🏆 Квест выполнен! {done}/{total}"
+                    self.toast_timer = 180
+                self._last_quest_done = done
+            except Exception:
+                pass
         if self.launcher and self.launcher.open:
             self.launcher.update(dt)
         if self.keybinds_overlay and self.keybinds_overlay.open:
