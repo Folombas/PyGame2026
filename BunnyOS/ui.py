@@ -58,6 +58,8 @@ class Window:
         self.drag_off = (0, 0)
         self.maximized = False
         self._saved_rect = None
+        # === Анимация ===
+        self.open_progress = 0.0   # 0→1 за ~0.15с
 
     def titlebar(self):
         return pygame.Rect(self.rect.x, self.rect.y, self.rect.w, TITLEBAR_H)
@@ -78,6 +80,13 @@ class Window:
     def draw(self, scr, font):
         if self.minimized:
             return
+        # Анимация открытия
+        if self.open_progress < 1.0:
+            self.open_progress = min(1.0, self.open_progress + 0.12)
+        slide_y = int((1 - self.open_progress) * 30)
+        # Сохраняем оригинальный rect для отрисовки
+        orig_y = self.rect.y
+        self.rect.y += slide_y
         # Тень
         sh = pygame.Surface((self.rect.w + 10, self.rect.h + 10), pygame.SRCALPHA)
         pygame.draw.rect(sh, (0, 0, 0, 80), (4, 4, self.rect.w, self.rect.h))
@@ -122,6 +131,15 @@ class Window:
         # Контент
         if self.app:
             self.app.draw(scr, self.content(), font)
+
+        # Dimming для неактивных окон
+        if not self.active:
+            dim = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA)
+            dim.fill((10, 10, 18, 110))
+            scr.blit(dim, self.rect.topleft)
+
+        # Восстанавливаем y
+        self.rect.y = orig_y
 
     def handle_event(self, event):
         if self.minimized:
