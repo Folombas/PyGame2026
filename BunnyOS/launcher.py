@@ -13,16 +13,21 @@ class Launcher:
         self.selected = 0
         self.tick = 0
 
+        # (name, app_id, icon, category)
         self.items = [
-            ("Терминал",       "terminal",   ">_"),
-            ("BunnyNet",       "browser",    "🌐"),
-            ("Проводник",      "files",      "📁"),
-            ("Блокнот",        "notepad",    "📝"),
-            ("Калькулятор",    "calc",       "🔢"),
-            ("Game Hub",       "hub",        "🎮"),
-            ("Персонализация", "wallpapers", "🎨"),
-            ("REAL BASH",      "_realbash",  "🔥"),
-            ("Web Server",     "_webserver", "🌐"),
+            ("Терминал",       "terminal",   ">_", "SYSTEM"),
+            ("REAL BASH",      "_realbash",  "🔥", "SYSTEM"),
+            ("Web Server",     "_webserver", "🌐", "SYSTEM"),
+            ("Проводник",      "files",      "📁", "SYSTEM"),
+            ("BunnyNet",       "browser",    "🌐", "NET"),
+            ("Карта",          "map",        "🗺", "NET"),
+            ("Блокнот",        "notepad",    "📝", "TOOLS"),
+            ("Калькулятор",    "calc",       "🔢", "TOOLS"),
+            ("Game Hub",       "hub",        "🎮", "GAMES"),
+            ("Змейка",         "_snake",     "🐍", "GAMES"),
+            ("Тетрис",         "_tetris",    "🧱", "GAMES"),
+            ("2048",           "_2048",      "🔢", "GAMES"),
+            ("Персонализация", "wallpapers", "🎨", "APPEARANCE"),
         ]
 
     def show(self):
@@ -62,7 +67,8 @@ class Launcher:
         if e.key == pygame.K_RETURN:
             items = self.filtered()
             if items and 0 <= self.selected < len(items):
-                app_id = items[self.selected][1]
+                entry = items[self.selected]
+                app_id = entry[1]
                 self.hide()
                 return app_id
             return None
@@ -127,7 +133,8 @@ class Launcher:
 
         # Список
         y = panel.y + 90
-        for i, (name, app_id, icon) in enumerate(items[:8]):
+        for i, entry in enumerate(items[:8]):
+            name, app_id, icon = entry[0], entry[1], entry[2]
             row = pygame.Rect(panel.x + 20, y, panel.w - 40, 44)
             if i == self.selected:
                 # Подсветка

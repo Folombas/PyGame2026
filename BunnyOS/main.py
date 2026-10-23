@@ -118,6 +118,12 @@ class BunnyOS:
                 elif action == "_webserver":
                     self.toast = "Web: http://localhost:8000"
                     self.toast_timer = 120
+                elif action == "_snake":
+                    self.launch_snake()
+                elif action == "_tetris":
+                    self.launch_tetris()
+                elif action == "_2048":
+                    self.launch_2048()
                 else:
                     self.open_app(action)
             return
