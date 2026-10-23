@@ -198,6 +198,8 @@ class RealBashUI:
                 self.history.append(cmd)
                 self.hist_idx = -1
                 self.lines.append(f"$ {cmd}")
+                # === Квест-хук ===
+                self._check_quest_hooks(cmd)
                 ok, reason = self.terminal.execute(cmd)
                 if not ok:
                     self.lines.append(f"[BLOCKED] {reason}")

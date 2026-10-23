@@ -859,6 +859,18 @@ class BunnyOS:
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0
 
+            # === Проверяем запрос на BunnyDescent ===
+            if state == "desktop":
+                import os as _os
+                desc_req = _os.path.expanduser("~/.bunny_descent_request")
+                if _os.path.exists(desc_req):
+                    try:
+                        _os.remove(desc_req)
+                    except Exception:
+                        pass
+                    self.launch_descent()
+                    continue
+
             # === Проверяем запрос на REAL BASH ===
             if self.state == "desktop":
                 import os

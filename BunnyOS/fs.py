@@ -23,6 +23,12 @@ class VirtualFS:
             'PRETTY_NAME="BunnyOS 1.0 LTS"\n'
         )
         self.files["/etc/hostname"] = "bunnyos\n"
+        self.files["/etc/bunny_secret.conf"] = (
+            "# Секретный конфиг BunnyOS\n"
+            "BUNNY_SECRET=RUN_DESCENT\n"
+            "# Ключ: /usr/bin/descent\n"
+            "# Найди его через grep -r BUNNY_SECRET /etc\n"
+        )
         self.files["/etc/passwd"] = (
             "root:x:0:0:root:/root:/bin/bash\n"
             "zayka:x:1000:1000:Zayka:/home/zayka:/bin/bash\n"
@@ -51389,6 +51395,79 @@ class Shell:
                 ]
             except Exception as e:
                 return [f"realbash: {e}"]
+
+
+        if cmd == "descent":
+
+
+
+            import os as _os
+
+
+
+            req_path = _os.path.expanduser("~/.bunny_descent_request")
+
+
+
+            try:
+
+
+
+                with open(req_path, "w") as f:
+
+
+
+                    f.write("open")
+
+
+
+                try:
+
+
+
+                    import quests
+
+
+
+                    if quests.complete("descent_start"):
+
+
+
+                        pass
+
+
+
+                except Exception:
+
+
+
+                    pass
+
+
+
+                return [
+
+
+
+                    "🗺️ BunnyDescent — запуск...",
+
+
+
+                    "  Дойди до 3-го уровня!",
+
+
+
+                ]
+
+
+
+            except Exception as e:
+
+
+
+                return [f"descent: {e}"]
+
+
 
 
         if cmd == "snake":
