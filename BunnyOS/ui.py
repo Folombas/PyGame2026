@@ -105,6 +105,24 @@ class Window:
         # Фон окна
         pygame.draw.rect(scr, C_WINDOW_BG, self.rect)
         pygame.draw.rect(scr, C_WINDOW_BORDER, self.rect, 1)
+        # Glow для активного окна (пульсация)
+        if self.active:
+            import math, time
+            import theme
+            pulse = 0.4 + 0.3 * math.sin(time.time() * 3)
+            # Внешнее свечение cyan
+            glow_col = (125, 207, 255)
+            for i in range(8, 0, -2):
+                a = int(80 * pulse * (i / 8))
+                if a <= 0:
+                    continue
+                gsurf = pygame.Surface((self.rect.w + i * 2, self.rect.h + i * 2),
+                                        pygame.SRCALPHA)
+                pygame.draw.rect(gsurf, (*glow_col, a),
+                                 (0, 0, gsurf.get_width(), gsurf.get_height()),
+                                 border_radius=12)
+                scr.blit(gsurf, (self.rect.x - i, self.rect.y - i))
+
         # Титул
         tb_col = C_TITLEBAR_ACTIVE if self.active else C_TITLEBAR
         pygame.draw.rect(scr, tb_col, self.titlebar())
