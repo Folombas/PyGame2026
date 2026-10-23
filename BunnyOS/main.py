@@ -495,6 +495,65 @@ class BunnyOS:
 
     # ---------- DRAW ----------
 
+    def _draw_quest_widget(self):
+        """Виджет квестов — правый верхний угол."""
+        try:
+            import quests
+            from theme import NEON_YELLOW, NEON_CYAN, NEON_GREEN, TEXT, TEXT_DIM
+        except Exception:
+            return
+
+        active = quests.get_active()
+        done, total = quests.progress()
+
+        # Позиция — правый верх, под погодой
+        pw = 340
+        ph = 140 if active else 80
+        px = WIDTH - pw - 20
+        py = 120
+
+        # Панель
+        panel = pygame.Rect(px, py, pw, ph)
+        bg = pygame.Surface((panel.w, panel.h), pygame.SRCALPHA)
+        bg.fill((26, 27, 38, 235))
+        pygame.draw.rect(bg, (*NEON_YELLOW, 200),
+                         (0, 0, panel.w, panel.h), 2, border_radius=12)
+        self.screen.blit(bg, panel.topleft)
+
+        # Заголовок
+        head = self.font_small.render(
+            f"📜 КВЕСТ {done+1 if active else total}/{total}",
+            True, NEON_YELLOW)
+        self.screen.blit(head, (px + 12, py + 10))
+
+        if not active:
+            # Всё выполнено
+            done_t = self.font_small.render("✅ Все квесты пройдены!", True, NEON_GREEN)
+            self.screen.blit(done_t, (px + 12, py + 40))
+            return
+
+        # Название
+        title = self.font_small.render(active["title"], True, NEON_CYAN)
+        self.screen.blit(title, (px + 12, py + 36))
+
+        # Описание
+        desc = self.font_small.render(active["desc"][:42], True, TEXT)
+        self.screen.blit(desc, (px + 12, py + 60))
+
+        # Подсказка
+        hint_t = self.font_small.render("💡 " + active["hint"][:38], True, TEXT_DIM)
+        self.screen.blit(hint_t, (px + 12, py + 84))
+
+        # Прогресс-бар
+        bar_y = py + ph - 22
+        bar = pygame.Rect(px + 12, bar_y, pw - 24, 8)
+        pygame.draw.rect(self.screen, (40, 40, 60), bar, border_radius=4)
+        fill = int((pw - 24) * done / total) if total else 0
+        if fill > 0:
+            pygame.draw.rect(self.screen, NEON_GREEN,
+                             (bar.x, bar.y, fill, 8), border_radius=4)
+        pygame.draw.rect(self.screen, NEON_YELLOW, bar, 1, border_radius=4)
+
     def _draw_neofetch(self):
         """Neofetch-виджет на рабочем столе."""
         import real_sys, platform
@@ -677,6 +736,9 @@ class BunnyOS:
         # === WAYBAR ===
         if self.waybar:
             self.waybar.draw(self.screen, self.current_ws, 9, self.workspaces)
+
+        # Quest widget
+        self._draw_quest_widget()
 
         # Погодный виджет (правый верх)
         if getattr(self, "_weather_cache", None):
