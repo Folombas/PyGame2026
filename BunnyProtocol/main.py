@@ -46,6 +46,8 @@ class Game:
         self.lights_off_timer = 0.0
         self.alert_level = 0.0
         self.caught_timer = 0.0
+        self.play_time = 0.0
+        self.best_time = self._load_best()
 
     def _restart(self):
         self._new_game()
@@ -84,6 +86,8 @@ class Game:
 
         if self.state != "play":
             return
+
+        self.play_time += dt
 
         # Игрок
         keys = pygame.key.get_pressed()
@@ -126,6 +130,7 @@ class Game:
         # Выход
         if self.exit.can_enter(self.player, self.player.keys_collected):
             self.state = "win"
+            self._save_best(self.play_time)
 
     def _draw_world_with_fov_darken(self):
         """Мир + туман вне зоны видимости игрока."""
@@ -165,6 +170,7 @@ class Game:
             self.player.draw(self.screen, int(self.camera.x), int(self.camera.y))
 
             # HUD
+            self.hud._play_time = self.play_time
             self.hud.draw(self.screen, self.player.keys_collected,
                           KEYS_REQUIRED, self.alert_level,
                           self.lights_off_timer)
@@ -180,8 +186,10 @@ class Game:
                 self.hud.draw_overlay(self.screen, "ОБНАРУЖЕН",
                                      "Система опознала тебя", ALERT)
             elif self.state == "win":
+                best_str = f"Лучшее: {int(self.best_time)}с" if self.best_time else ""
+                t_str = f"Время: {int(self.play_time)}с   {best_str}"
                 self.hud.draw_overlay(self.screen, "ПРОНИКНОВЕНИЕ",
-                                     "Данные получены", OK)
+                                     t_str, OK)
 
         pygame.display.flip()
 

@@ -53,6 +53,11 @@ class HUD:
             t = self.font_small.render(txt, True, (200, 220, 255))
             screen.blit(t, (WIDTH - t.get_width() - 20, 18))
 
+        # Время (правый угол, над заголовком)
+        time_str = f"⏱ {int(self._play_time) if hasattr(self, '_play_time') else 0}с"
+        tt = self.font_small.render(time_str, True, TEXT)
+        screen.blit(tt, (WIDTH - tt.get_width() - 20, 18))
+
         # Заголовок приложения (правый угол)
         title = self.font_small.render("BUNNY PROTOCOL", True, TEXT_DIM)
         screen.blit(title, (WIDTH - title.get_width() - 20,
