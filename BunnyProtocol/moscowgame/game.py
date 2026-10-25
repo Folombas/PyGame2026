@@ -92,7 +92,7 @@ class Game:
 
         now = pygame.time.get_ticks()
         keys = pygame.key.get_pressed()
-        self.player.update(keys)
+        self.player.update(keys, now)
 
         cooldown = 100 if now < self.rapid_until else BULLET_COOLDOWN
         if keys[pygame.K_SPACE] and now - self.last_shot > cooldown:
