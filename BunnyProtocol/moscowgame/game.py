@@ -107,6 +107,12 @@ class Game:
 
         if self.boss:
             self.boss.update()
+            if now - self.last_boss_shot > 800:
+                self.last_boss_shot = now
+                for dx in (-2, 0, 2):
+                    b = EnemyBullet(self.boss.rect.centerx, self.boss.rect.bottom)
+                    b.rect.x += dx * 20
+                    self.enemy_bullets.add(b)
 
         for enemy in pygame.sprite.groupcollide(self.enemies, self.bullets, True, True):
             self.score += 10
@@ -125,7 +131,20 @@ class Game:
             explode(p.rect.centerx, p.rect.centery, GREEN, self.particles, 8)
 
         for _ in pygame.sprite.spritecollide(self.player, self.enemies, True):
-            if pygame.sprite.spritecollide(self.player, self.enemy_bullets, True) or now < self.player.invulnerable_until:
+            if self.boss:
+            hits = pygame.sprite.spritecollide(self.boss, self.bullets, True)
+            for _ in hits:
+                self.boss.hp -= 5
+                explode(self.boss.rect.centerx, self.boss.rect.centery, PURPLE, self.particles, 5)
+                if self.boss.hp <= 0:
+                    explode(self.boss.rect.centerx, self.boss.rect.centery, ORANGE, self.particles, 50)
+                    self.boss.kill()
+                    self.boss = None
+                    self.score += 500
+                    self.shake = 20
+                    self.powerups.add(PowerUp(self.boss.rect.centerx if self.boss else WIDTH//2, 100))
+
+        if pygame.sprite.spritecollide(self.player, self.enemy_bullets, True) or now < self.player.invulnerable_until:
                 continue
             self.lives -= 1
             self.shake = 12
