@@ -141,15 +141,19 @@ class Game:
         self.powerups.update()
         self.particles.update()
 
-        for enemy in pygame.sprite.groupcollide(self.enemies, self.bullets, True, True):
-            self.score += 10
-            explode(enemy.rect.centerx, enemy.rect.centery, ORANGE, self.particles, 12)
-            if self.sounds: self.sounds["hit"].play()
-            self.shake = 4
-            if random.random() < 0.02:
-                self.enemy_bullets.add(EnemyBullet(enemy.rect.centerx, enemy.rect.bottom))
-            if random.random() < 0.12:
-                self.powerups.add(PowerUp(*enemy.rect.center))
+        hits = pygame.sprite.groupcollide(self.enemies, self.bullets, False, True)
+        for enemy, bullets in hits.items():
+            enemy.hp -= len(bullets)
+            if enemy.hp <= 0:
+                enemy.kill()
+                self.score += 10 if enemy.kind != "tank" else 30
+                explode(enemy.rect.centerx, enemy.rect.centery, ORANGE, self.particles, 12)
+                if self.sounds: self.sounds["hit"].play()
+                self.shake = 4
+                if random.random() < 0.02:
+                    self.enemy_bullets.add(EnemyBullet(enemy.rect.centerx, enemy.rect.bottom))
+                if random.random() < 0.12:
+                    self.powerups.add(PowerUp(*enemy.rect.center))
 
         for p in pygame.sprite.spritecollide(self.player, self.powerups, True):
             if p.kind == "rapid":
