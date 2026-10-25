@@ -1,8 +1,10 @@
 import pygame
+import random
 from settings import *
 from player import Player
 from bullet import Bullet
 from enemy import Enemy
+from powerup import PowerUp
 
 
 class Game:
@@ -20,10 +22,13 @@ class Game:
         self.player = Player(WIDTH // 2, HEIGHT - 60)
         self.bullets = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
+        self.powerups = pygame.sprite.Group()
         self.score = 0
         self.lives = START_LIVES
         self.last_shot = 0
         self.last_spawn = pygame.time.get_ticks()
+        self.rapid_until = 0
+        self.triple_until = 0
         self.state = "play"
 
     def run(self):
@@ -52,9 +57,14 @@ class Game:
         keys = pygame.key.get_pressed()
         self.player.update(keys)
 
-        if keys[pygame.K_SPACE] and now - self.last_shot > BULLET_COOLDOWN:
+        cooldown = 100 if now < self.rapid_until else BULLET_COOLDOWN
+        if keys[pygame.K_SPACE] and now - self.last_shot > cooldown:
             self.last_shot = now
-            self.bullets.add(Bullet(self.player.rect.centerx, self.player.rect.top))
+            if now < self.triple_until:
+                for dx in (-12, 0, 12):
+                    self.bullets.add(Bullet(self.player.rect.centerx + dx, self.player.rect.top))
+            else:
+                self.bullets.add(Bullet(self.player.rect.centerx, self.player.rect.top))
 
         if now - self.last_spawn > ENEMY_SPAWN_MS:
             self.last_spawn = now
@@ -62,9 +72,18 @@ class Game:
 
         self.bullets.update()
         self.enemies.update()
+        self.powerups.update()
 
-        for _ in pygame.sprite.groupcollide(self.enemies, self.bullets, True, True):
+        for enemy in pygame.sprite.groupcollide(self.enemies, self.bullets, True, True):
             self.score += 10
+            if random.random() < 0.12:
+                self.powerups.add(PowerUp(*enemy.rect.center))
+
+        for p in pygame.sprite.spritecollide(self.player, self.powerups, True):
+            if p.kind == "rapid":
+                self.rapid_until = now + 6000
+            else:
+                self.triple_until = now + 6000
 
         for _ in pygame.sprite.spritecollide(self.player, self.enemies, True):
             if now < self.player.invulnerable_until:
@@ -83,12 +102,19 @@ class Game:
         self.screen.fill(BLACK)
         self.bullets.draw(self.screen)
         self.enemies.draw(self.screen)
+        self.powerups.draw(self.screen)
         self.screen.blit(self.player.image, self.player.rect)
 
         self.screen.blit(self.font.render(f"SCORE {self.score}", True, WHITE), (20, 16))
         for i in range(self.lives):
             x = WIDTH - 40 - i * 30
             pygame.draw.polygon(self.screen, RED, [(x, 22), (x + 10, 40), (x - 10, 40)])
+
+        now = pygame.time.get_ticks()
+        if now < self.rapid_until:
+            self.text("RAPID", self.small, GREEN, (WIDTH // 2 - 60, 24))
+        if now < self.triple_until:
+            self.text("TRIPLE", self.small, PURPLE, (WIDTH // 2 + 60, 24))
 
         if self.state == "over":
             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
