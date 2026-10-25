@@ -29,7 +29,12 @@ class Game:
         self.state = "title"
         self.running = True
         self.timer = 0.0
+        self.best_time = 0
         self._new_game()
+        try:
+            self.best_time = self._load_best()
+        except Exception:
+            self.best_time = 0
 
     def _new_game(self):
         self.world = World()
@@ -47,7 +52,27 @@ class Game:
         self.alert_level = 0.0
         self.caught_timer = 0.0
         self.play_time = 0.0
-        self.best_time = self._load_best()
+        self.best_time = getattr(self, "best_time", 0) or 0
+
+    def _load_best(self):
+        import os, json
+        p = os.path.expanduser("~/.bunny_protocol_best.json")
+        try:
+            with open(p) as f:
+                return json.load(f).get("best_time", 0)
+        except Exception:
+            return 0
+
+    def _save_best(self, t):
+        import os, json
+        if self.best_time == 0 or t < self.best_time:
+            self.best_time = t
+            p = os.path.expanduser("~/.bunny_protocol_best.json")
+            try:
+                with open(p, "w") as f:
+                    json.dump({"best_time": t}, f)
+            except Exception:
+                pass
 
     def _restart(self):
         self._new_game()
