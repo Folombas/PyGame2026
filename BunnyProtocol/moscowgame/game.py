@@ -6,6 +6,7 @@ from bullet import Bullet, EnemyBullet
 from enemy import Enemy
 from powerup import PowerUp
 from particles import explode
+from boss import Boss
 
 
 class Game:
@@ -37,6 +38,8 @@ class Game:
         self.rapid_until = 0
         self.triple_until = 0
         self.shake = 0
+        self.boss = None
+        self.last_boss_shot = 0
 
     def run(self):
         running = True
@@ -98,6 +101,12 @@ class Game:
         self.enemy_bullets.update()
         self.powerups.update()
         self.particles.update()
+
+        if self.score >= 1000 and not self.boss:
+            self.boss = Boss()
+
+        if self.boss:
+            self.boss.update()
 
         for enemy in pygame.sprite.groupcollide(self.enemies, self.bullets, True, True):
             self.score += 10
@@ -175,6 +184,11 @@ class Game:
 
         if self.state == self.PAUSE:
             self.text("ПАУЗА", self.big, WHITE, (WIDTH // 2, HEIGHT // 2))
+
+        if self.boss:
+            self.screen.blit(self.boss.image, self.boss.rect)
+            pygame.draw.rect(self.screen, RED, (self.boss.rect.x, self.boss.rect.y - 15, self.boss.rect.width, 10))
+            pygame.draw.rect(self.screen, GREEN, (self.boss.rect.x, self.boss.rect.y - 15, self.boss.rect.width * (self.boss.hp / self.boss.max_hp), 10))
 
         if self.state == self.OVER:
             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
