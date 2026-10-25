@@ -1,5 +1,6 @@
 import pygame
 import random
+import json
 from settings import *
 from player import Player
 from bullet import Bullet, EnemyBullet
@@ -19,7 +20,11 @@ class Game:
         self.font = pygame.font.SysFont("arial", 28, bold=True)
         self.big = pygame.font.SysFont("arial", 60, bold=True)
         self.small = pygame.font.SysFont("arial", 20)
-        self.high_score = 0
+        try:
+            with open('highscore.json', 'r') as f:
+                self.high_score = json.load(f).get('high_score', 0)
+        except:
+            self.high_score = 0
         self.sounds = init_audio()
         self.stars = [(random.randint(0, WIDTH), random.randint(0, HEIGHT),
                        random.uniform(0.3, 1.5)) for _ in range(120)]
@@ -157,6 +162,8 @@ class Game:
             self.player.invulnerable_until = now + 1500
             if self.lives <= 0:
                 self.high_score = max(self.high_score, self.score)
+                with open('highscore.json', 'w') as f:
+                    json.dump({'high_score': self.high_score}, f)
                 self.state = self.OVER
 
         if self.shake > 0:
