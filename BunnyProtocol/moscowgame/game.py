@@ -111,7 +111,7 @@ class Game:
         self.powerups.update()
         self.particles.update()
 
-        if self.score >= 1000 and not self.boss:
+        if self.score >= 1000 and not self.boss and getattr(self, "boss_cooldown", 0) < now:
             self.boss = Boss()
 
         if self.boss:
@@ -151,6 +151,7 @@ class Game:
                     self.boss.kill()
                     self.boss = None
                     self.score += 500
+                    self.boss_cooldown = now + 5000
                     self.shake = 20
                     self.powerups.add(PowerUp(self.boss.rect.centerx if self.boss else WIDTH//2, 100))
 
