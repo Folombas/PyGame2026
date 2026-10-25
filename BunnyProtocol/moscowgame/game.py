@@ -175,6 +175,13 @@ class Game:
 
     def draw(self):
         self.screen.fill(BLACK)
+        ticks = pygame.time.get_ticks()
+        for i in range(8):
+            x = (i * 120 - (ticks // 30) % 120)
+            pygame.draw.rect(self.screen, (15, 15, 30), (x, HEIGHT - 150, 100, 150))
+            pygame.draw.rect(self.screen, (25, 25, 45), (x + 10, HEIGHT - 120, 20, 30))
+            pygame.draw.rect(self.screen, (25, 25, 45), (x + 70, HEIGHT - 120, 20, 30))
+
         for sx, sy, sz in self.stars:
             c = (170, 170, 210) if sz > 1 else (80, 80, 120)
             pygame.draw.circle(self.screen, c, (int(sx), int(sy)), 1 if sz < 1 else 2)
