@@ -9,9 +9,11 @@ class Game:
     def __init__(self, screen):
         self.screen = screen
         self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont("arial", 28, bold=True)
         self.player = Player(WIDTH // 2, HEIGHT - 60)
         self.bullets = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
+        self.score = 0
         self.last_shot = 0
         self.last_spawn = pygame.time.get_ticks()
 
@@ -47,9 +49,14 @@ class Game:
         self.bullets.update()
         self.enemies.update()
 
+        for _ in pygame.sprite.groupcollide(self.enemies, self.bullets, True, True):
+            self.score += 10
+
     def draw(self):
         self.screen.fill(BLACK)
         self.bullets.draw(self.screen)
         self.enemies.draw(self.screen)
         self.screen.blit(self.player.image, self.player.rect)
+        hud = self.font.render(f"SCORE {self.score}", True, WHITE)
+        self.screen.blit(hud, (20, 16))
         pygame.display.flip()
