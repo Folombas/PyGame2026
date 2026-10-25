@@ -2,7 +2,7 @@ import pygame
 import random
 from settings import *
 from player import Player
-from bullet import Bullet
+from bullet import Bullet, EnemyBullet
 from enemy import Enemy
 from powerup import PowerUp
 from particles import explode
@@ -26,6 +26,7 @@ class Game:
     def reset(self):
         self.player = Player(WIDTH // 2, HEIGHT - 60)
         self.bullets = pygame.sprite.Group()
+        self.enemy_bullets = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
         self.particles = pygame.sprite.Group()
@@ -94,6 +95,7 @@ class Game:
 
         self.bullets.update()
         self.enemies.update()
+        self.enemy_bullets.update()
         self.powerups.update()
         self.particles.update()
 
@@ -101,6 +103,8 @@ class Game:
             self.score += 10
             explode(enemy.rect.centerx, enemy.rect.centery, ORANGE, self.particles, 12)
             self.shake = 4
+            if random.random() < 0.02:
+                self.enemy_bullets.add(EnemyBullet(enemy.rect.centerx, enemy.rect.bottom))
             if random.random() < 0.12:
                 self.powerups.add(PowerUp(*enemy.rect.center))
 
@@ -112,7 +116,7 @@ class Game:
             explode(p.rect.centerx, p.rect.centery, GREEN, self.particles, 8)
 
         for _ in pygame.sprite.spritecollide(self.player, self.enemies, True):
-            if now < self.player.invulnerable_until:
+            if pygame.sprite.spritecollide(self.player, self.enemy_bullets, True) or now < self.player.invulnerable_until:
                 continue
             self.lives -= 1
             self.shake = 12
@@ -150,7 +154,7 @@ class Game:
             off = (random.randint(-self.shake, self.shake),
                    random.randint(-self.shake, self.shake))
 
-        for group in (self.bullets, self.enemies, self.powerups, self.particles):
+        for group in (self.bullets, self.enemy_bullets, self.enemies, self.powerups, self.particles):
             for s in group:
                 self.screen.blit(s.image, (s.rect.x + off[0], s.rect.y + off[1]))
 
