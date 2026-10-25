@@ -52,6 +52,7 @@ class Game:
         self.boss = None
         self.last_boss_shot = 0
         self.boss_cooldown = 0
+        self.warning_timer = 0
 
     def run(self):
         running = True
@@ -110,7 +111,12 @@ class Game:
             self.enemies.add(Enemy())
 
         if self.score >= 1000 and not self.boss and self.boss_cooldown < now:
-            self.boss = Boss()
+            if self.warning_timer == 0:
+                self.warning_timer = now + 2000  # 2 секунды на предупреждение
+            
+            if now > self.warning_timer:
+                self.boss = Boss()
+                self.warning_timer = 0
 
         if self.boss:
             self.boss.update()
@@ -241,6 +247,10 @@ class Game:
             self.text("RAPID", self.small, GREEN, (WIDTH // 2 - 60, 24))
         if now < self.triple_until:
             self.text("TRIPLE", self.small, PURPLE, (WIDTH // 2 + 60, 24))
+
+        if self.warning_timer > 0 and now < self.warning_timer:
+            if (now // 200) % 2 == 0:
+                self.text("BOSS INCOMING", self.font, RED, (WIDTH // 2, HEIGHT // 2 - 40))
 
         if self.state == self.PAUSE:
             self.text("ПАУЗА", self.big, WHITE, (WIDTH // 2, HEIGHT // 2))
