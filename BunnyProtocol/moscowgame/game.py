@@ -23,9 +23,11 @@ class Game:
         
         try:
             with open('highscore.json', 'r') as f:
-                self.high_score = json.load(f).get('high_score', 0)
+                data = json.load(f)
+                self.scores = data.get('scores', [0, 0, 0, 0, 0])
         except:
-            self.high_score = 0
+            self.scores = [0, 0, 0, 0, 0]
+        self.high_score = self.scores[0]
 
         self.sounds = init_audio()
         
@@ -182,9 +184,12 @@ class Game:
             explode(self.player.rect.centerx, self.player.rect.centery, CYAN, self.particles, 22)
             self.player.invulnerable_until = now + 1500
             if self.lives <= 0:
-                self.high_score = max(self.high_score, self.score)
+                self.scores.append(self.score)
+                self.scores.sort(reverse=True)
+                self.scores = self.scores[:5]
+                self.high_score = self.scores[0]
                 with open('highscore.json', 'w') as f:
-                    json.dump({'high_score': self.high_score}, f)
+                    json.dump({'scores': self.scores}, f)
                 self.state = self.OVER
 
         if self.shake > 0:
@@ -213,7 +218,9 @@ class Game:
         if self.state == self.MENU:
             self.text("MOSCOW GAME WEEK", self.big, CYAN, (WIDTH // 2, HEIGHT // 2 - 80))
             self.text("SPACE DEFENDER", self.big, YELLOW, (WIDTH // 2, HEIGHT // 2 - 10))
-            self.text(f"Рекорд: {self.high_score}", self.font, YELLOW, (WIDTH // 2, HEIGHT // 2 + 40))
+            for i, s in enumerate(self.scores):
+                if s > 0:
+                    self.text(f"{i+1}. {s}", self.small, YELLOW, (WIDTH // 2, HEIGHT // 2 + 20 + i * 25))
             self.text("ENTER / SPACE — старт", self.font, WHITE, (WIDTH // 2, HEIGHT // 2 + 90))
             self.text("<- -> движение · SPACE огонь · P пауза · ESC выход",
                       self.small, (150, 150, 180), (WIDTH // 2, HEIGHT // 2 + 140))
