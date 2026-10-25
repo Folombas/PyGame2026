@@ -87,7 +87,8 @@ class Game:
             else:
                 self.bullets.add(Bullet(self.player.rect.centerx, self.player.rect.top))
 
-        if now - self.last_spawn > ENEMY_SPAWN_MS:
+        interval = max(280, ENEMY_SPAWN_MS - self.score * 4)
+        if now - self.last_spawn > interval:
             self.last_spawn = now
             self.enemies.add(Enemy())
 
@@ -137,9 +138,10 @@ class Game:
         if self.state == self.MENU:
             self.text("MOSCOW GAME WEEK", self.big, CYAN, (WIDTH // 2, HEIGHT // 2 - 80))
             self.text("SPACE DEFENDER", self.big, YELLOW, (WIDTH // 2, HEIGHT // 2 - 10))
-            self.text("ENTER / SPACE — старт", self.font, WHITE, (WIDTH // 2, HEIGHT // 2 + 70))
+            self.text(f"Рекорд: {self.high_score}", self.font, YELLOW, (WIDTH // 2, HEIGHT // 2 + 40))
+            self.text("ENTER / SPACE — старт", self.font, WHITE, (WIDTH // 2, HEIGHT // 2 + 90))
             self.text("<- -> движение · SPACE огонь · P пауза · ESC выход",
-                      self.small, (150, 150, 180), (WIDTH // 2, HEIGHT // 2 + 120))
+                      self.small, (150, 150, 180), (WIDTH // 2, HEIGHT // 2 + 140))
             pygame.display.flip()
             return
 
