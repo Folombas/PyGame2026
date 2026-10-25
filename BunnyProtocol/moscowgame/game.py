@@ -9,6 +9,8 @@ from particles import explode
 
 
 class Game:
+    MENU, PLAY, PAUSE, OVER = "menu", "play", "pause", "over"
+
     def __init__(self, screen):
         self.screen = screen
         self.clock = pygame.time.Clock()
@@ -16,8 +18,10 @@ class Game:
         self.big = pygame.font.SysFont("arial", 60, bold=True)
         self.small = pygame.font.SysFont("arial", 20)
         self.high_score = 0
-        self.state = "play"
+        self.stars = [(random.randint(0, WIDTH), random.randint(0, HEIGHT),
+                       random.uniform(0.3, 1.5)) for _ in range(120)]
         self.reset()
+        self.state = self.MENU
 
     def reset(self):
         self.player = Player(WIDTH // 2, HEIGHT - 60)
@@ -32,7 +36,6 @@ class Game:
         self.rapid_until = 0
         self.triple_until = 0
         self.shake = 0
-        self.state = "play"
 
     def run(self):
         running = True
@@ -49,13 +52,28 @@ class Game:
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE:
                     return False
-                if self.state == "over" and e.key in (pygame.K_RETURN, pygame.K_SPACE):
+                if self.state == self.MENU and e.key in (pygame.K_RETURN, pygame.K_SPACE):
                     self.reset()
+                    self.state = self.PLAY
+                elif self.state == self.OVER and e.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    self.reset()
+                    self.state = self.PLAY
+                elif self.state == self.PLAY and e.key == pygame.K_p:
+                    self.state = self.PAUSE
+                elif self.state == self.PAUSE and e.key == pygame.K_p:
+                    self.state = self.PLAY
         return True
 
     def update(self):
-        if self.state != "play":
+        for i, (sx, sy, sz) in enumerate(self.stars):
+            sy += sz
+            if sy > HEIGHT:
+                sx, sy = random.randint(0, WIDTH), 0
+            self.stars[i] = (sx, sy, sz)
+
+        if self.state != self.PLAY:
             return
+
         now = pygame.time.get_ticks()
         keys = pygame.key.get_pressed()
         self.player.update(keys)
@@ -101,7 +119,7 @@ class Game:
             self.player.invulnerable_until = now + 1500
             if self.lives <= 0:
                 self.high_score = max(self.high_score, self.score)
-                self.state = "over"
+                self.state = self.OVER
 
         if self.shake > 0:
             self.shake -= 1
@@ -112,6 +130,18 @@ class Game:
 
     def draw(self):
         self.screen.fill(BLACK)
+        for sx, sy, sz in self.stars:
+            c = (170, 170, 210) if sz > 1 else (80, 80, 120)
+            pygame.draw.circle(self.screen, c, (int(sx), int(sy)), 1 if sz < 1 else 2)
+
+        if self.state == self.MENU:
+            self.text("MOSCOW GAME WEEK", self.big, CYAN, (WIDTH // 2, HEIGHT // 2 - 80))
+            self.text("SPACE DEFENDER", self.big, YELLOW, (WIDTH // 2, HEIGHT // 2 - 10))
+            self.text("ENTER / SPACE — старт", self.font, WHITE, (WIDTH // 2, HEIGHT // 2 + 70))
+            self.text("<- -> движение · SPACE огонь · P пауза · ESC выход",
+                      self.small, (150, 150, 180), (WIDTH // 2, HEIGHT // 2 + 120))
+            pygame.display.flip()
+            return
 
         off = (0, 0)
         if self.shake > 0:
@@ -137,7 +167,10 @@ class Game:
         if now < self.triple_until:
             self.text("TRIPLE", self.small, PURPLE, (WIDTH // 2 + 60, 24))
 
-        if self.state == "over":
+        if self.state == self.PAUSE:
+            self.text("ПАУЗА", self.big, WHITE, (WIDTH // 2, HEIGHT // 2))
+
+        if self.state == self.OVER:
             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 170))
             self.screen.blit(overlay, (0, 0))
