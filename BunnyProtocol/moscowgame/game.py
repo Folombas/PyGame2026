@@ -7,6 +7,7 @@ from enemy import Enemy
 from powerup import PowerUp
 from particles import explode
 from boss import Boss
+from audio import init_audio
 
 
 class Game:
@@ -19,6 +20,7 @@ class Game:
         self.big = pygame.font.SysFont("arial", 60, bold=True)
         self.small = pygame.font.SysFont("arial", 20)
         self.high_score = 0
+        self.sounds = init_audio()
         self.stars = [(random.randint(0, WIDTH), random.randint(0, HEIGHT),
                        random.uniform(0.3, 1.5)) for _ in range(120)]
         self.reset()
@@ -90,6 +92,7 @@ class Game:
                     self.bullets.add(Bullet(self.player.rect.centerx + dx, self.player.rect.top))
             else:
                 self.bullets.add(Bullet(self.player.rect.centerx, self.player.rect.top))
+                self.sounds["shoot"].play()
 
         interval = max(280, ENEMY_SPAWN_MS - self.score * 4)
         if now - self.last_spawn > interval:
@@ -117,6 +120,7 @@ class Game:
         for enemy in pygame.sprite.groupcollide(self.enemies, self.bullets, True, True):
             self.score += 10
             explode(enemy.rect.centerx, enemy.rect.centery, ORANGE, self.particles, 12)
+            self.sounds["hit"].play()
             self.shake = 4
             if random.random() < 0.02:
                 self.enemy_bullets.add(EnemyBullet(enemy.rect.centerx, enemy.rect.bottom))
@@ -148,6 +152,7 @@ class Game:
                 continue
             self.lives -= 1
             self.shake = 12
+            self.sounds["explode"].play()
             explode(self.player.rect.centerx, self.player.rect.centery, CYAN, self.particles, 22)
             self.player.invulnerable_until = now + 1500
             if self.lives <= 0:
