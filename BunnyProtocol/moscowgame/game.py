@@ -1,11 +1,13 @@
 import pygame
 from settings import *
+from player import Player
 
 
 class Game:
     def __init__(self, screen):
         self.screen = screen
         self.clock = pygame.time.Clock()
+        self.player = Player(WIDTH // 2, HEIGHT - 60)
 
     def run(self):
         running = True
@@ -24,8 +26,9 @@ class Game:
         return True
 
     def update(self):
-        pass
+        self.player.update(pygame.key.get_pressed())
 
     def draw(self):
         self.screen.fill(BLACK)
+        self.screen.blit(self.player.image, self.player.rect)
         pygame.display.flip()
