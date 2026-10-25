@@ -6,3 +6,4 @@ moscowgame.ru | #gamedev
 ## Запуск
 pip install pygame
 python main.py
+Moscow Game Week 2026!
