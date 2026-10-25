@@ -45,6 +45,7 @@ class Game:
         self.rapid_until = 0
         self.triple_until = 0
         self.shake = 0
+        self.flash = 0
         self.boss = None
         self.last_boss_shot = 0
 
@@ -157,6 +158,7 @@ class Game:
                 continue
             self.lives -= 1
             self.shake = 12
+            self.flash = 255
             self.sounds["explode"].play()
             explode(self.player.rect.centerx, self.player.rect.centery, CYAN, self.particles, 22)
             self.player.invulnerable_until = now + 1500
@@ -168,6 +170,8 @@ class Game:
 
         if self.shake > 0:
             self.shake -= 1
+        if self.flash > 0:
+            self.flash -= 15
 
     def text(self, msg, font, color, center):
         surf = font.render(msg, True, color)
@@ -193,7 +197,13 @@ class Game:
             self.text("ENTER / SPACE — старт", self.font, WHITE, (WIDTH // 2, HEIGHT // 2 + 90))
             self.text("<- -> движение · SPACE огонь · P пауза · ESC выход",
                       self.small, (150, 150, 180), (WIDTH // 2, HEIGHT // 2 + 140))
-            pygame.display.flip()
+            if self.flash > 0:
+            flash_surf = pygame.Surface((WIDTH, HEIGHT))
+            flash_surf.fill((255, 0, 0))
+            flash_surf.set_alpha(self.flash)
+            self.screen.blit(flash_surf, (0, 0))
+
+        pygame.display.flip()
             return
 
         off = (0, 0)
@@ -236,5 +246,11 @@ class Game:
             self.text(f"Счёт: {self.score}", self.font, WHITE, (WIDTH // 2, HEIGHT // 2 + 10))
             self.text(f"Рекорд: {self.high_score}", self.font, YELLOW, (WIDTH // 2, HEIGHT // 2 + 50))
             self.text("ENTER — снова", self.small, CYAN, (WIDTH // 2, HEIGHT // 2 + 110))
+
+        if self.flash > 0:
+            flash_surf = pygame.Surface((WIDTH, HEIGHT))
+            flash_surf.fill((255, 0, 0))
+            flash_surf.set_alpha(self.flash)
+            self.screen.blit(flash_surf, (0, 0))
 
         pygame.display.flip()
