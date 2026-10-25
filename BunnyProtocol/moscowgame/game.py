@@ -20,12 +20,15 @@ class Game:
         self.font = pygame.font.SysFont("arial", 28, bold=True)
         self.big = pygame.font.SysFont("arial", 60, bold=True)
         self.small = pygame.font.SysFont("arial", 20)
+        
         try:
             with open('highscore.json', 'r') as f:
                 self.high_score = json.load(f).get('high_score', 0)
         except:
             self.high_score = 0
+
         self.sounds = init_audio()
+        
         self.stars = [(random.randint(0, WIDTH), random.randint(0, HEIGHT),
                        random.uniform(0.3, 1.5)) for _ in range(120)]
         self.reset()
@@ -48,6 +51,7 @@ class Game:
         self.flash = 0
         self.boss = None
         self.last_boss_shot = 0
+        self.boss_cooldown = 0
 
     def run(self):
         running = True
@@ -93,25 +97,19 @@ class Game:
         cooldown = 100 if now < self.rapid_until else BULLET_COOLDOWN
         if keys[pygame.K_SPACE] and now - self.last_shot > cooldown:
             self.last_shot = now
+            if self.sounds: self.sounds["shoot"].play()
             if now < self.triple_until:
                 for dx in (-12, 0, 12):
                     self.bullets.add(Bullet(self.player.rect.centerx + dx, self.player.rect.top))
             else:
                 self.bullets.add(Bullet(self.player.rect.centerx, self.player.rect.top))
-                self.sounds["shoot"].play()
 
         interval = max(280, ENEMY_SPAWN_MS - self.score * 4)
         if now - self.last_spawn > interval:
             self.last_spawn = now
             self.enemies.add(Enemy())
 
-        self.bullets.update()
-        self.enemies.update()
-        self.enemy_bullets.update()
-        self.powerups.update()
-        self.particles.update()
-
-        if self.score >= 1000 and not self.boss and getattr(self, "boss_cooldown", 0) < now:
+        if self.score >= 1000 and not self.boss and self.boss_cooldown < now:
             self.boss = Boss()
 
         if self.boss:
@@ -122,11 +120,31 @@ class Game:
                     b = EnemyBullet(self.boss.rect.centerx, self.boss.rect.bottom)
                     b.rect.x += dx * 20
                     self.enemy_bullets.add(b)
+            
+            hits = pygame.sprite.spritecollide(self.boss, self.bullets, True)
+            for _ in hits:
+                self.boss.hp -= 5
+                explode(self.boss.rect.centerx, self.boss.rect.centery, PURPLE, self.particles, 5)
+                if self.boss.hp <= 0:
+                    explode(self.boss.rect.centerx, self.boss.rect.centery, ORANGE, self.particles, 50)
+                    self.boss.kill()
+                    self.boss = None
+                    self.score += 500
+                    self.shake = 20
+                    self.boss_cooldown = now + 5000
+                    self.powerups.add(PowerUp(WIDTH//2, 100))
+                    break
+
+        self.bullets.update()
+        self.enemies.update()
+        self.enemy_bullets.update()
+        self.powerups.update()
+        self.particles.update()
 
         for enemy in pygame.sprite.groupcollide(self.enemies, self.bullets, True, True):
             self.score += 10
             explode(enemy.rect.centerx, enemy.rect.centery, ORANGE, self.particles, 12)
-            self.sounds["hit"].play()
+            if self.sounds: self.sounds["hit"].play()
             self.shake = 4
             if random.random() < 0.02:
                 self.enemy_bullets.add(EnemyBullet(enemy.rect.centerx, enemy.rect.bottom))
@@ -140,27 +158,17 @@ class Game:
                 self.triple_until = now + 6000
             explode(p.rect.centerx, p.rect.centery, GREEN, self.particles, 8)
 
-        for _ in pygame.sprite.spritecollide(self.player, self.enemies, True):
-            if self.boss:
-            hits = pygame.sprite.spritecollide(self.boss, self.bullets, True)
-            for _ in hits:
-                self.boss.hp -= 5
-                explode(self.boss.rect.centerx, self.boss.rect.centery, PURPLE, self.particles, 5)
-                if self.boss.hp <= 0:
-                    explode(self.boss.rect.centerx, self.boss.rect.centery, ORANGE, self.particles, 50)
-                    self.boss.kill()
-                    self.boss = None
-                    self.score += 500
-                    self.boss_cooldown = now + 5000
-                    self.shake = 20
-                    self.powerups.add(PowerUp(self.boss.rect.centerx if self.boss else WIDTH//2, 100))
-
-        if pygame.sprite.spritecollide(self.player, self.enemy_bullets, True) or now < self.player.invulnerable_until:
-                continue
+        player_hit = False
+        if pygame.sprite.spritecollide(self.player, self.enemies, True):
+            player_hit = True
+        if pygame.sprite.spritecollide(self.player, self.enemy_bullets, True):
+            player_hit = True
+        
+        if player_hit and now >= self.player.invulnerable_until:
             self.lives -= 1
             self.shake = 12
             self.flash = 255
-            self.sounds["explode"].play()
+            if self.sounds: self.sounds["explode"].play()
             explode(self.player.rect.centerx, self.player.rect.centery, CYAN, self.particles, 22)
             self.player.invulnerable_until = now + 1500
             if self.lives <= 0:
@@ -180,6 +188,7 @@ class Game:
 
     def draw(self):
         self.screen.fill(BLACK)
+        
         ticks = pygame.time.get_ticks()
         for i in range(8):
             x = (i * 120 - (ticks // 30) % 120)
@@ -198,13 +207,7 @@ class Game:
             self.text("ENTER / SPACE — старт", self.font, WHITE, (WIDTH // 2, HEIGHT // 2 + 90))
             self.text("<- -> движение · SPACE огонь · P пауза · ESC выход",
                       self.small, (150, 150, 180), (WIDTH // 2, HEIGHT // 2 + 140))
-            if self.flash > 0:
-            flash_surf = pygame.Surface((WIDTH, HEIGHT))
-            flash_surf.fill((255, 0, 0))
-            flash_surf.set_alpha(self.flash)
-            self.screen.blit(flash_surf, (0, 0))
-
-        pygame.display.flip()
+            pygame.display.flip()
             return
 
         off = (0, 0)
@@ -216,10 +219,14 @@ class Game:
             for s in group:
                 self.screen.blit(s.image, (s.rect.x + off[0], s.rect.y + off[1]))
 
+        if self.boss:
+            self.screen.blit(self.boss.image, (self.boss.rect.x + off[0], self.boss.rect.y + off[1]))
+            pygame.draw.rect(self.screen, RED, (self.boss.rect.x, self.boss.rect.y - 15, self.boss.rect.width, 10))
+            pygame.draw.rect(self.screen, GREEN, (self.boss.rect.x, self.boss.rect.y - 15, self.boss.rect.width * (self.boss.hp / self.boss.max_hp), 10))
+
         now = pygame.time.get_ticks()
         if now > self.player.invulnerable_until or (now // 100) % 2 == 0:
-            self.screen.blit(self.player.image,
-                             (self.player.rect.x + off[0], self.player.rect.y + off[1]))
+            self.screen.blit(self.player.image, (self.player.rect.x + off[0], self.player.rect.y + off[1]))
 
         self.screen.blit(self.font.render(f"SCORE {self.score}", True, WHITE), (20, 16))
         for i in range(self.lives):
@@ -233,11 +240,6 @@ class Game:
 
         if self.state == self.PAUSE:
             self.text("ПАУЗА", self.big, WHITE, (WIDTH // 2, HEIGHT // 2))
-
-        if self.boss:
-            self.screen.blit(self.boss.image, self.boss.rect)
-            pygame.draw.rect(self.screen, RED, (self.boss.rect.x, self.boss.rect.y - 15, self.boss.rect.width, 10))
-            pygame.draw.rect(self.screen, GREEN, (self.boss.rect.x, self.boss.rect.y - 15, self.boss.rect.width * (self.boss.hp / self.boss.max_hp), 10))
 
         if self.state == self.OVER:
             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)

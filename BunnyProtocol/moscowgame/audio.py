@@ -11,9 +11,12 @@ def make_sound(freq, duration, volume=0.1):
     return pygame.mixer.Sound(buffer=buf)
 
 def init_audio():
-    pygame.mixer.init()
-    return {
-        'shoot': make_sound(600, 0.05),
-        'hit': make_sound(300, 0.1),
-        'explode': make_sound(100, 0.3, 0.2)
-    }
+    try:
+        pygame.mixer.init()
+        return {
+            'shoot': make_sound(600, 0.05),
+            'hit': make_sound(300, 0.1),
+            'explode': make_sound(100, 0.3, 0.2)
+        }
+    except Exception:
+        return None
