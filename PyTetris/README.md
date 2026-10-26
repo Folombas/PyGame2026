@@ -25,3 +25,6 @@
     SPACE  hard drop
     P/ESC  пауза
     M      mute
+
+## Музыка
+- "Funky Chiptune" by Eric Matyas (www.soundimage.org) — CC BY 4.0
