@@ -55,3 +55,30 @@ def toggle_mute(muted):
             pygame.mixer.pause()
         else:
             pygame.mixer.unpause()
+
+MUSIC_CHANNEL = pygame.mixer.Channel(0) if _OK else None
+MUSIC_SOUND = None
+
+def load_music(path="assets/music/funky_chiptune.ogg"):
+    global MUSIC_SOUND
+    if not _OK:
+        return
+    try:
+        MUSIC_SOUND = pygame.mixer.Sound(path)
+        MUSIC_SOUND.set_volume(0.4)
+        print(f"🎵 Музыка загружена: {path}")
+    except Exception as e:
+        print(f"⚠️ Музыка не загружена: {e}")
+        MUSIC_SOUND = None
+
+def play_music():
+    if MUSIC_CHANNEL and MUSIC_SOUND:
+        if not MUSIC_CHANNEL.get_busy():
+            MUSIC_CHANNEL.play(MUSIC_SOUND, loops=-1)
+
+def stop_music():
+    if MUSIC_CHANNEL:
+        MUSIC_CHANNEL.stop()
+
+# Загружаем музыку при импорте модуля
+load_music()
