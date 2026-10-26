@@ -76,9 +76,9 @@ game.on_levelup = cb_levelup
 game.on_gameover = cb_gameover
 
 # Buttons
-def start_game():
+def start_game(zen=False):
     global run_time
-    game.reset()
+    game.reset(zen=zen)
     run_time = 0.0
     set_state(PLAY)
 
@@ -89,11 +89,12 @@ def quit_game():
     pygame.quit(); sys.exit()
 
 menu_buttons = [
-    ui.Button("PLAY",          S.WIDTH // 2, 290, 280, 64, start_game),
-    ui.Button("LEADERBOARD",   S.WIDTH // 2, 370, 280, 64, lambda: set_state(SCORES), accent=S.GOLD),
-    ui.Button("ACHIEVEMENTS",  S.WIDTH // 2, 450, 280, 64, lambda: set_state(ACHS),   accent=S.ACCENT2),
-    ui.Button("DAILY QUESTS",  S.WIDTH // 2, 530, 280, 64, lambda: set_state(DAILY),  accent=S.ACCENT),
-    ui.Button("QUIT",          S.WIDTH // 2, 610, 280, 54, quit_game, accent=S.DANGER),
+    ui.Button("PLAY",          S.WIDTH // 2, 270, 280, 54, lambda: start_game(False)),
+    ui.Button("ZEN MODE",      S.WIDTH // 2, 340, 280, 54, lambda: start_game(True), accent=S.GOLD),
+    ui.Button("LEADERBOARD",   S.WIDTH // 2, 410, 280, 54, lambda: set_state(SCORES), accent=S.GOLD),
+    ui.Button("ACHIEVEMENTS",  S.WIDTH // 2, 480, 280, 54, lambda: set_state(ACHS),   accent=S.ACCENT2),
+    ui.Button("DAILY QUESTS",  S.WIDTH // 2, 550, 280, 54, lambda: set_state(DAILY),  accent=S.ACCENT),
+    ui.Button("QUIT",          S.WIDTH // 2, 620, 280, 54, quit_game, accent=S.DANGER),
 ]
 
 over_buttons = [

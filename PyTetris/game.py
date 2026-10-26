@@ -28,7 +28,8 @@ class Game:
         self.on_levelup = None
         self.reset()
 
-    def reset(self):
+    def reset(self, zen=False):
+        self.zen = zen
         self.grid = [[None] * COLS for _ in range(ROWS)]
         self.bag = []
         self.current = self._spawn()
@@ -137,7 +138,10 @@ class Game:
         self.fall_timer = 0
         self.lock_timer = 0
         if not self.valid(self.current):
-            self.game_over = True
+            if self.zen:
+                self.grid = [[None] * COLS for _ in range(ROWS)]
+            else:
+                self.game_over = True
             if self.on_gameover: self.on_gameover()
 
     def _resolve_clear(self):
