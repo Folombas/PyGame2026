@@ -115,6 +115,8 @@ def handle_events():
                 elif e.key == pygame.K_UP:    game.rotate(1)
                 elif e.key == pygame.K_z:     game.rotate(-1)
                 elif e.key == pygame.K_SPACE: game.hard_drop()
+                elif e.key == pygame.K_c:
+                    if game.hold_piece(): audio.play('rotate')
         elif state == PAUSE:
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE or e.key == pygame.K_p:

@@ -268,7 +268,19 @@ def draw_hud(surf, game, sidebar_x, t):
     if game.combo > 1:
         c = F_H2.render(f"COMBO x{game.combo}", True, GOLD)
         surf.blit(c, c.get_rect(midtop=(x + 100, HEIGHT - 110)))
+    # HOLD
+    hb = pygame.Rect(x, y + 145, 200, 105)
+    pygame.draw.rect(surf, (22, 20, 40), hb, border_radius=12)
+    pygame.draw.rect(surf, GOLD, hb, 2, border_radius=12)
+    hl = F_SMALL.render("HOLD (C)", True, MUTED)
+    surf.blit(hl, (x + 12, y + 150))
+    if game.hold:
+        hc = COLORS[game.hold]
+        hs = SHAPES[game.hold]
+        dim = game.hold_used
+        col = tuple(c // 2 for c in hc) if dim else hc
+        draw_piece_mini(surf, hs, col, hb.centerx, hb.centery + 12, cell=20)
     # Controls hint
-    hint = F_TINY.render("← → move   ↑ rotate   ↓ soft   SPACE hard   P pause",
+    hint = F_TINY.render("← → move  ↑ rotate  ↓ soft  SPACE hard  C hold  P pause",
                          True, MUTED)
     surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 8)))

@@ -44,6 +44,8 @@ class Game:
         self.lock_timer = 0.0
         self.clearing = []
         self.clear_timer = 0.0
+        self.hold = None
+        self.hold_used = False
 
     def _spawn(self):
         if not self.bag:
@@ -129,6 +131,7 @@ class Game:
             self.combo = 0
 
         if self.on_lock: self.on_lock()
+        self.hold_used = False
         self.current = self.next
         self.next = self._spawn()
         self.fall_timer = 0
@@ -163,6 +166,20 @@ class Game:
                 if self.lock_timer >= 400:
                     self.lock()
                     self.lock_timer = 0
+
+    def hold_piece(self):
+        if self.hold_used:
+            return False
+        if self.hold is None:
+            self.hold = self.current.kind
+            self.current = self.next
+            self.next = self._spawn()
+        else:
+            h = self.hold
+            self.hold = self.current.kind
+            self.current = Piece(h)
+        self.hold_used = True
+        return True
 
     def ghost_y(self):
         g = 0
