@@ -38,3 +38,8 @@ SHAPES = {
 
 SCORES_FILE = 'data/scores.json'
 META_FILE   = 'data/meta.json'
+
+
+# --- Assets ---
+ASSETS_DIR = "assets"
+BLOCK_SPRITES_DIR = "assets/blocks"

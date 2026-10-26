@@ -7,6 +7,7 @@ from meta import (load_meta, save_meta, load_scores, save_score,
                   update_persistent, get_daily_quests, update_daily)
 import ui
 import audio
+from graphics import BlockRenderer
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
@@ -19,6 +20,7 @@ state = MENU
 
 game = Game()
 fx = Effects()
+renderer = BlockRenderer()
 stars = ui.Starfield(S.WIDTH, S.HEIGHT, n=80)
 meta = load_meta()
 quests = get_daily_quests()
@@ -184,9 +186,13 @@ def draw_playfield_target(surf):
             col = game.grid[y][x]
             if col:
                 flash = y in game.clearing
-                pygame.draw.rect(surf, (255, 255, 255) if flash else col,
-                                 (board_x + x*S.CELL, board_y + y*S.CELL,
-                                  S.CELL, S.CELL), border_radius=3)
+                if flash:
+                    pygame.draw.rect(surf, (255, 255, 255),
+                                     (board_x + x*S.CELL, board_y + y*S.CELL,
+                                      S.CELL, S.CELL), border_radius=3)
+                else:
+                    kind = next((k for k, v in S.COLORS.items() if v == col), "I")
+                    renderer.draw_block(surf, board_x + x*S.CELL, board_y + y*S.CELL, kind)
     if not game.game_over and not game.clearing:
         gy = game.ghost_y()
         p = game.current
@@ -196,7 +202,7 @@ def draw_playfield_target(surf):
                          p.color, ghost=True)
         for xx, yy in p.cells():
             if yy >= 0:
-                ui.draw_cell(surf, board_x + xx*S.CELL, board_y + yy*S.CELL, p.color)
+                renderer.draw_block(surf, board_x + xx*S.CELL, board_y + yy*S.CELL, p.kind)
 
 def handle_game_over():
     global meta, state, last_unlock, last_unlock_t

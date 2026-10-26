@@ -4,6 +4,14 @@ from settings import *
 
 pygame.font.init()
 def _font(size, bold=False):
+    # Пытаемся загрузить Russo One из assets
+    import os
+    font_path = os.path.join('assets', 'Russo_One.ttf')
+    if os.path.exists(font_path):
+        try:
+            return pygame.font.Font(font_path, size)
+        except Exception:
+            pass
     for name in ('Inter', 'Segoe UI', 'DejaVu Sans', 'Arial'):
         try:
             return pygame.font.SysFont(name, size, bold=bold)
