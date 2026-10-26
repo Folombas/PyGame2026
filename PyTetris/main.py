@@ -38,6 +38,10 @@ def set_state(s):
     global state
     state = s
     audio.play('menu')
+    if s in (PLAY, PAUSE):
+        audio.play_music()
+    else:
+        audio.stop_music()
 
 # Callbacks from game
 def cb_move():    audio.play('move')
