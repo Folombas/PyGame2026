@@ -140,16 +140,16 @@ def draw_grid_bg(surf, board_x, board_y):
             pygame.draw.rect(surf, GRID,
                              (board_x + x*CELL, board_y + y*CELL, CELL, CELL), 1)
 
-def draw_cell(surf, px, py, color, glow=0.0, ghost=False):
-    r = pygame.Rect(px + 1, py + 1, CELL - 2, CELL - 2)
+def draw_cell(surf, px, py, color, glow=0.0, ghost=False, size=CELL):
+    r = pygame.Rect(px + 1, py + 1, size - 2, size - 2)
     if ghost:
-        pygame.draw.rect(surf, (*color, ), r, 1, border_radius=4)
+        pygame.draw.rect(surf, color, r, 1, border_radius=4)
         return
     if glow > 0.05:
-        g = pygame.Surface((CELL + 8, CELL + 8), pygame.SRCALPHA)
+        g = pygame.Surface((size + 8, size + 8), pygame.SRCALPHA)
         for i in range(4, 0, -1):
             a = int(60 * glow * (5 - i) / 4)
-            pygame.draw.rect(g, (*color, a), (4 - i, 4 - i, CELL + 2*i, CELL + 2*i),
+            pygame.draw.rect(g, (*color, a), (4 - i, 4 - i, size + 2*i, size + 2*i),
                              border_radius=4 + i)
         surf.blit(g, (px - 4, py - 4))
     pygame.draw.rect(surf, color, r, border_radius=4)
@@ -163,7 +163,7 @@ def draw_piece_mini(surf, shape, color, cx, cy, cell=22):
     for y, row in enumerate(shape):
         for x, v in enumerate(row):
             if v:
-                draw_cell(surf, ox + x*cell, oy + y*cell, color)
+                draw_cell(surf, ox + x*cell, oy + y*cell, color, size=cell)
 
 def draw_text_center(surf, text, y, font, color=TEXT):
     s = font.render(text, True, color)
