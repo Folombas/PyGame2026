@@ -41,7 +41,12 @@ def set_state(s):
 def cb_move():    audio.play('move')
 def cb_rotate():  audio.play('rotate')
 def cb_lock():    audio.play('lock')
-def cb_levelup(lvl): audio.play('levelup')
+def cb_levelup(lvl):
+    audio.play('levelup')
+    fx.kick(9.0)
+    for _y in range(0, S.ROWS, 4):
+        colors = list(S.COLORS.values())
+        fx.burst_row(board_y + _y * S.CELL, board_x, S.CELL, S.COLS, colors)
 
 def cb_clear(rows, count):
     audio.play('tetris' if count == 4 else 'clear')
