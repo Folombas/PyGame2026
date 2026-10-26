@@ -1,0 +1,171 @@
+import random
+from settings import COLS, ROWS, SHAPES, COLORS
+
+class Piece:
+    def __init__(self, kind):
+        self.kind = kind
+        self.shape = [row[:] for row in SHAPES[kind]]
+        self.color = COLORS[kind]
+        self.x = COLS // 2 - len(self.shape[0]) // 2
+        self.y = -len(self.shape)
+
+    def cells(self, dx=0, dy=0, shape=None):
+        s = shape if shape is not None else self.shape
+        for yy, row in enumerate(s):
+            for xx, v in enumerate(row):
+                if v:
+                    yield self.x + xx + dx, self.y + yy + dy
+
+class Game:
+    LINE_SCORE = {1: 100, 2: 300, 3: 500, 4: 800}
+
+    def __init__(self):
+        self.on_clear = None    # callback(rows, count)
+        self.on_lock = None
+        self.on_rotate = None
+        self.on_move = None
+        self.on_gameover = None
+        self.on_levelup = None
+        self.reset()
+
+    def reset(self):
+        self.grid = [[None] * COLS for _ in range(ROWS)]
+        self.bag = []
+        self.current = self._spawn()
+        self.next = self._spawn()
+        self.score = 0
+        self.lines = 0
+        self.level = 1
+        self.combo = 0
+        self.max_combo = 0
+        self.pieces = 0
+        self.game_over = False
+        self.fall_timer = 0.0
+        self.lock_timer = 0.0
+        self.clearing = []
+        self.clear_timer = 0.0
+
+    def _spawn(self):
+        if not self.bag:
+            self.bag = list(SHAPES.keys())
+            random.shuffle(self.bag)
+        return Piece(self.bag.pop())
+
+    def fall_ms(self):
+        return max(70, 600 - (self.level - 1) * 55)
+
+    def valid(self, p, dx=0, dy=0, shape=None):
+        for gx, gy in p.cells(dx, dy, shape):
+            if gx < 0 or gx >= COLS or gy >= ROWS:
+                return False
+            if gy >= 0 and self.grid[gy][gx] is not None:
+                return False
+        return True
+
+    def move(self, dx):
+        if self.valid(self.current, dx=dx):
+            self.current.x += dx
+            if self.on_move: self.on_move()
+            return True
+        return False
+
+    def rotate(self, direction=1):
+        old = self.current.shape
+        if direction == 1:
+            new = [list(r) for r in zip(*old[::-1])]
+        else:
+            new = [list(r) for r in zip(*old)][::-1]
+        for dx, dy in [(0,0),(-1,0),(1,0),(0,-1),(-2,0),(2,0),(-1,-1),(1,-1)]:
+            if self.valid(self.current, dx, dy, new):
+                self.current.x += dx
+                self.current.y += dy
+                self.current.shape = new
+                if self.on_rotate: self.on_rotate()
+                return True
+        return False
+
+    def soft_drop(self):
+        if self.valid(self.current, dy=1):
+            self.current.y += 1
+            self.score += 1
+            self.fall_timer = 0
+            return True
+        return False
+
+    def hard_drop(self):
+        d = 0
+        while self.valid(self.current, dy=1):
+            self.current.y += 1
+            d += 1
+        self.score += d * 2
+        self.lock()
+        return d
+
+    def lock(self):
+        self.pieces += 1
+        for gx, gy in self.current.cells():
+            if gy < 0:
+                self.game_over = True
+                if self.on_gameover: self.on_gameover()
+                return
+            self.grid[gy][gx] = self.current.color
+
+        full = [y for y in range(ROWS) if all(c is not None for c in self.grid[y])]
+        if full:
+            self.lines += len(full)
+            self.score += self.LINE_SCORE[len(full)] * self.level
+            self.combo += 1
+            self.max_combo = max(self.max_combo, self.combo)
+            if self.combo > 1:
+                self.score += 50 * self.combo * self.level
+            self.clearing = full
+            self.clear_timer = 220.0
+            if self.on_clear: self.on_clear(full, len(full))
+            new_level = 1 + self.lines // 10
+            if new_level > self.level:
+                self.level = new_level
+                if self.on_levelup: self.on_levelup(self.level)
+        else:
+            self.combo = 0
+
+        if self.on_lock: self.on_lock()
+        self.current = self.next
+        self.next = self._spawn()
+        self.fall_timer = 0
+        self.lock_timer = 0
+        if not self.valid(self.current):
+            self.game_over = True
+            if self.on_gameover: self.on_gameover()
+
+    def _resolve_clear(self):
+        kept = [row for i, row in enumerate(self.grid) if i not in self.clearing]
+        while len(kept) < ROWS:
+            kept.insert(0, [None] * COLS)
+        self.grid = kept
+        self.clearing = []
+
+    def update(self, dt):
+        if self.game_over:
+            return
+        if self.clearing:
+            self.clear_timer -= dt
+            if self.clear_timer <= 0:
+                self._resolve_clear()
+            return
+
+        self.fall_timer += dt
+        if self.fall_timer >= self.fall_ms():
+            self.fall_timer = 0
+            if self.valid(self.current, dy=1):
+                self.current.y += 1
+            else:
+                self.lock_timer += self.fall_ms()
+                if self.lock_timer >= 400:
+                    self.lock()
+                    self.lock_timer = 0
+
+    def ghost_y(self):
+        g = 0
+        while self.valid(self.current, dy=g + 1):
+            g += 1
+        return self.current.y + g
