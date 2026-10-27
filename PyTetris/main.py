@@ -218,7 +218,7 @@ def draw_game(t, dt):
 
 def draw_playfield_target(surf):
     ui.draw_playfield_frame(surf, board_x, board_y)
-    ui.draw_grid_bg(surf, board_x, board_y)
+    ui.draw_grid_bg(surf, board_x, board_y, t)
     for y in range(S.ROWS):
         for x in range(S.COLS):
             col = game.grid[y][x]

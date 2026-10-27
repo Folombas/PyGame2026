@@ -134,10 +134,12 @@ def draw_playfield_frame(surf, board_x, board_y):
                      (board_x - 4, board_y - 4, BOARD_W + 8, BOARD_H + 8),
                      2, border_radius=10)
 
-def draw_grid_bg(surf, board_x, board_y):
+def draw_grid_bg(surf, board_x, board_y, t=0):
+    offset = int(math.sin(t / 500.0) * 10)
+    col = (26 + offset, 22 + offset, 44 + offset)
     for y in range(ROWS):
         for x in range(COLS):
-            pygame.draw.rect(surf, GRID,
+            pygame.draw.rect(surf, col,
                              (board_x + x*CELL, board_y + y*CELL, CELL, CELL), 1)
 
 def draw_cell(surf, px, py, color, glow=0.0, ghost=False, size=CELL):
