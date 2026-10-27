@@ -169,12 +169,17 @@ def draw_text_center(surf, text, y, font, color=TEXT):
     s = font.render(text, True, color)
     surf.blit(s, s.get_rect(center=(WIDTH // 2, y)))
 
-def draw_menu(surf, buttons, t, stars):
+def draw_menu(surf, buttons, t, stars, meta=None):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     stars.draw(surf)
     draw_title(surf, "PYTETRIS", 110, t)
     s = F_MED.render("★ Neon Edition ★", True, ACCENT)
     surf.blit(s, s.get_rect(center=(WIDTH // 2, 180)))
+    if meta:
+        total = meta.get('total_lines', 0)
+        best = meta.get('best_score', 0)
+        stat = F_SMALL.render(f"Total Lines: {total}   |   Best Score: {best}", True, MUTED)
+        surf.blit(stat, stat.get_rect(center=(WIDTH // 2, HEIGHT - 40)))
     for b in buttons:
         b.draw(surf)
 

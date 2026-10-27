@@ -251,7 +251,7 @@ while running:
 
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
-        ui.draw_menu(screen, menu_buttons, t, stars)
+        ui.draw_menu(screen, menu_buttons, t, stars, meta)
         stars.update(dt)
     elif state == PLAY:
         if game.game_over:
