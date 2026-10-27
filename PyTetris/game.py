@@ -41,6 +41,7 @@ class Game:
         self.max_combo = 0
         self.pieces = 0
         self.game_over = False
+        self.b2b = False
         self.fall_timer = 0.0
         self.lock_timer = 0.0
         self.clearing = []
@@ -121,6 +122,13 @@ class Game:
             self.max_combo = max(self.max_combo, self.combo)
             if self.combo > 1:
                 self.score += 50 * self.combo * self.level
+            
+            if len(full) == 4:
+                if getattr(self, 'b2b', False):
+                    self.score += int(self.LINE_SCORE[4] * 0.5 * self.level)
+                self.b2b = True
+            else:
+                self.b2b = False
             self.clearing = full
             self.clear_timer = 220.0
             if self.on_clear: self.on_clear(full, len(full))

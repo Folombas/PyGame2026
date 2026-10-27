@@ -272,6 +272,9 @@ def draw_hud(surf, game, sidebar_x, t):
     surf.blit(lab, (x + 12, y + 12))
     draw_piece_mini(surf, game.next.shape, game.next.color,
                     nb.centerx, nb.centery + 10, cell=20)
+    if getattr(game, 'b2b', False):
+        b = F_SMALL.render("B2B", True, GOLD)
+        surf.blit(b, (x, y + 260))
     # Combo
     if game.combo > 1:
         c = F_H2.render(f"COMBO x{game.combo}", True, GOLD)
