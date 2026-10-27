@@ -28,3 +28,6 @@
 
 ## Музыка
 - "Funky Chiptune" by Eric Matyas (www.soundimage.org) — CC BY 4.0
+
+- 🔗 B2B (Back-to-Back) бонусы за подряд идущие Тетрисы
+- 🌫️ Плавные fade-переходы и динамическая сетка
