@@ -186,8 +186,7 @@ def draw_menu(surf, buttons, t, stars, meta=None):
 def draw_pause(surf):
     draw_overlay(surf, 170)
     draw_text_center(surf, "PAUSED", HEIGHT // 2 - 40, F_TITLE, ACCENT)
-    draw_text_center(surf, "ESC — resume   |   Q — quit to menu",
-                     HEIGHT // 2 + 40, F_MED, MUTED)
+
 
 def draw_leaderboard(surf, scores, best):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))

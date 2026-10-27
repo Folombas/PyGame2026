@@ -115,6 +115,11 @@ menu_buttons = [
     ui.Button("QUIT",          S.WIDTH // 2, 620, 280, 54, quit_game, accent=S.DANGER),
 ]
 
+pause_buttons = [
+    ui.Button("RESUME", S.WIDTH // 2, S.HEIGHT // 2 + 40, 240, 54, lambda: set_state(PLAY)),
+    ui.Button("MENU",   S.WIDTH // 2, S.HEIGHT // 2 + 110, 240, 54, lambda: set_state(MENU), accent=S.ACCENT2)
+]
+
 over_buttons = [
     ui.Button("RESTART", S.WIDTH // 2, S.HEIGHT // 2 + 90, 240, 60, start_game),
     ui.Button("MENU",    S.WIDTH // 2, S.HEIGHT // 2 + 170, 240, 60, back_to_menu, accent=S.ACCENT2),
@@ -149,6 +154,7 @@ def handle_events():
                 elif e.key == pygame.K_c:
                     if game.hold_piece(): audio.play('rotate')
         elif state == PAUSE:
+            for b in pause_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE or e.key == pygame.K_p:
                     set_state(PLAY)
@@ -284,6 +290,8 @@ while running:
     elif state == PAUSE:
         draw_game(t, dt)
         ui.draw_pause(screen)
+        for b in pause_buttons: b.update(dt, mouse)
+        for b in pause_buttons: b.draw(screen)
         fx.update(dt)
     elif state == OVER:
         for b in over_buttons: b.update(dt, mouse)
