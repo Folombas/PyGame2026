@@ -135,7 +135,8 @@ def handle_events():
             audio.toggle_mute(muted)
 
         if transition_alpha > 0:
-        transition_alpha = max(0, transition_alpha - fade_speed)
+
+            transition_alpha = max(0, transition_alpha - fade_speed)
     if flash_timer > 0:
         flash_timer -= dt
 
