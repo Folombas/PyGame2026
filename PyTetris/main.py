@@ -30,6 +30,7 @@ run_time = 0.0
 last_unlock = None
 last_unlock_t = 0
 muted = False
+is_new_high = False
 
 # Frames
 board_x = 20
@@ -236,7 +237,8 @@ def draw_playfield_target(surf):
                 renderer.draw_block(surf, board_x + xx*S.CELL, board_y + yy*S.CELL, p.kind)
 
 def handle_game_over():
-    global meta, state, last_unlock, last_unlock_t
+    global meta, state, last_unlock, last_unlock_t, is_new_high
+    is_new_high = game.score > meta.get('best_score', 0)
     save_score(game.score)
     newly = check_run(meta, game, run_time)
     update_persistent(meta, game, run_time)
@@ -250,6 +252,9 @@ def draw_over():
     draw_playfield_target(screen)
     ui.draw_overlay(screen, 190)
     ui.draw_text_center(screen, "GAME OVER", S.HEIGHT // 2 - 120, ui.F_TITLE, S.DANGER)
+    if is_new_high:
+        h = ui.F_H1.render("NEW HIGH SCORE!", True, S.GOLD)
+        screen.blit(h, h.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2 - 200)))
     ui.draw_text_center(screen, f"Score: {game.score}   Lines: {game.lines}   Level: {game.level}",
                         S.HEIGHT // 2 - 30, ui.F_H2, S.TEXT)
     for b in over_buttons: b.draw(screen)
