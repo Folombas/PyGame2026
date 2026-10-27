@@ -179,6 +179,9 @@ def draw_playfield():
 
 def draw_game(t, dt):
     screen.fill(S.BG)
+    if muted:
+        m = ui.F_SMALL.render("MUTED", True, S.DANGER)
+        screen.blit(m, (S.WIDTH - 70, 10))
     # offset for shake
     ox, oy = fx.offset()
     prev_surf = screen
