@@ -46,7 +46,12 @@ def set_state(s):
 # Callbacks from game
 def cb_move():    audio.play('move')
 def cb_rotate():  audio.play('rotate')
-def cb_lock():    audio.play('lock')
+def cb_lock():
+    audio.play('lock')
+    for gx, gy in game.current.cells():
+        if gy >= 0:
+            fx.burst(board_x + gx*S.CELL + S.CELL/2, board_y + gy*S.CELL + S.CELL/2, game.current.color, count=6)
+    fx.kick(3.0)
 def cb_levelup(lvl):
     audio.play('levelup')
     fx.kick(9.0)
