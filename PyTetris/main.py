@@ -14,56 +14,59 @@ pygame.display.set_caption("PyTetris — Neon Edition")
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 clock = pygame.time.Clock()
 
-# State
+# Состояния
 MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY = range(7)
 state = MENU
 transition_alpha = 0
 fade_speed = 15
+flash_timer = 0
+is_new_high = False
+muted = False
 
 game = Game()
 fx = Effects()
-renderer = BlockRenderer()
 stars = ui.Starfield(S.WIDTH, S.HEIGHT, n=80)
 meta = load_meta()
-quests = get_daily_quests()
 run_time = 0.0
 last_unlock = None
 last_unlock_t = 0
-muted = False
-is_new_high = False
 
-# Frames
+renderer = BlockRenderer()
+
+# Координаты
 board_x = 20
 board_y = 20
 sidebar_x = board_x + S.BOARD_W + 30
 
 def set_state(s):
-    global state
+    global state, transition_alpha
     state = s
     audio.play('menu')
     if s in (PLAY, PAUSE):
         audio.play_music()
     else:
         audio.stop_music()
-    global transition_alpha
     transition_alpha = 255
 
-# Callbacks from game
+# --- КОЛЛБЕКИ ИГРЫ ---
 def cb_move():    audio.play('move')
+
 def cb_rotate():  audio.play('rotate')
+
 def cb_lock():
     audio.play('lock')
     for gx, gy in game.current.cells():
         if gy >= 0:
-            fx.burst(board_x + gx*S.CELL + S.CELL/2, board_y + gy*S.CELL + S.CELL/2, game.current.color, count=6)
+            fx.burst(board_x + gx * S.CELL + S.CELL / 2, 
+                     board_y + gy * S.CELL + S.CELL / 2, 
+                     game.current.color, count=6)
     fx.kick(3.0)
-flash_timer = 0
+
 def cb_levelup(lvl):
     global flash_timer
     audio.play('levelup')
     fx.kick(9.0)
     flash_timer = 300
-    fx.kick(9.0)
     for _y in range(0, S.ROWS, 4):
         colors = list(S.COLORS.values())
         fx.burst_row(board_y + _y * S.CELL, board_x, S.CELL, S.COLS, colors)
@@ -71,15 +74,12 @@ def cb_levelup(lvl):
 def cb_clear(rows, count):
     audio.play('tetris' if count == 4 else 'clear')
     for y in rows:
-        px = board_x
-        py = board_y + y * S.CELL
-        colors = [S.COLORS[k] for k in S.COLORS]
-        fx.burst_row(py, px, S.CELL, S.COLS, colors)
+        colors = list(S.COLORS.values())
+        fx.burst_row(board_y + y * S.CELL, board_x, S.CELL, S.COLS, colors)
     fx.kick(6.0 if count < 4 else 12.0)
-    global meta
+    global meta, last_unlock, last_unlock_t
     res = on_line_clear(meta, count)
     if res:
-        global last_unlock, last_unlock_t
         last_unlock = res
         last_unlock_t = pygame.time.get_ticks()
 
@@ -93,7 +93,7 @@ game.on_clear = cb_clear
 game.on_levelup = cb_levelup
 game.on_gameover = cb_gameover
 
-# Buttons
+# --- КНОПКИ ---
 def start_game(zen=False):
     global run_time
     game.reset(zen=zen)
@@ -104,7 +104,8 @@ def back_to_menu():
     set_state(MENU)
 
 def quit_game():
-    pygame.quit(); sys.exit()
+    pygame.quit()
+    sys.exit()
 
 menu_buttons = [
     ui.Button("PLAY",          S.WIDTH // 2, 270, 280, 54, lambda: start_game(False)),
@@ -125,27 +126,22 @@ over_buttons = [
     ui.Button("MENU",    S.WIDTH // 2, S.HEIGHT // 2 + 170, 240, 60, back_to_menu, accent=S.ACCENT2),
 ]
 
+# --- ОБРАБОТКА СОБЫТИЙ ---
 def handle_events():
     global state, muted
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
-            pygame.quit(); sys.exit()
+            pygame.quit()
+            sys.exit()
         if e.type == pygame.KEYDOWN and e.key == pygame.K_m:
             muted = not muted
             audio.toggle_mute(muted)
 
-        if transition_alpha > 0:
-
-            transition_alpha = max(0, transition_alpha - fade_speed)
-    if flash_timer > 0:
-        flash_timer -= dt
-
-    if state == MENU:
+        if state == MENU:
             for b in menu_buttons: b.handle(e)
         elif state == PLAY:
             if e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_ESCAPE or e.key == pygame.K_p:
-                    set_state(PAUSE)
+                if e.key == pygame.K_ESCAPE or e.key == pygame.K_p: set_state(PAUSE)
                 elif e.key == pygame.K_LEFT:  game.move(-1)
                 elif e.key == pygame.K_RIGHT: game.move(1)
                 elif e.key == pygame.K_DOWN:  game.soft_drop()
@@ -157,69 +153,18 @@ def handle_events():
         elif state == PAUSE:
             for b in pause_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_ESCAPE or e.key == pygame.K_p:
-                    set_state(PLAY)
-                elif e.key == pygame.K_q:
-                    set_state(MENU)
+                if e.key == pygame.K_ESCAPE or e.key == pygame.K_p: set_state(PLAY)
+                elif e.key == pygame.K_q: set_state(MENU)
         elif state == OVER:
             for b in over_buttons: b.handle(e)
         elif state in (SCORES, ACHS, DAILY):
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                 set_state(MENU)
 
-def draw_playfield():
-    ui.draw_playfield_frame(screen, board_x, board_y)
-    ui.draw_grid_bg(screen, board_x, board_y)
-    # locked cells
-    for y in range(S.ROWS):
-        for x in range(S.COLS):
-            col = game.grid[y][x]
-            if col:
-                flash = y in game.clearing
-                pygame.draw.rect(screen, (255, 255, 255) if flash else col,
-                                 (board_x + x*S.CELL, board_y + y*S.CELL,
-                                  S.CELL, S.CELL), border_radius=3)
-    # ghost
-    if not game.game_over and not game.clearing:
-        gy = game.ghost_y()
-        p = game.current
-        for xx, yy in p.cells():
-            dy = gy - p.y
-            ui.draw_cell(screen, board_x + xx*S.CELL, board_y + (yy+dy)*S.CELL,
-                         p.color, ghost=True)
-        for xx, yy in p.cells():
-            if yy >= 0:
-                ui.draw_cell(screen, board_x + xx*S.CELL, board_y + yy*S.CELL, p.color)
-
-def draw_game(t, dt):
-    screen.fill(S.BG)
-    if flash_timer > 0:
-        fl = pygame.Surface((S.WIDTH, S.HEIGHT))
-        fl.fill((255, 255, 255))
-        fl.set_alpha(int(200 * (flash_timer / 300.0)))
-        screen.blit(fl, (0, 0))
-    if muted:
-        m = ui.F_SMALL.render("MUTED", True, S.DANGER)
-        screen.blit(m, (S.WIDTH - 70, 10))
-    # offset for shake
-    ox, oy = fx.offset()
-    prev_surf = screen
-    if ox or oy:
-        tmp = pygame.Surface((S.WIDTH, S.HEIGHT))
-        tmp.fill(S.BG)
-        draw_playfield_target(tmp)
-        ui.draw_hud(tmp, game, sidebar_x, t)
-        fx.draw(tmp)
-        screen.fill(S.BG)
-        screen.blit(tmp, (ox, oy))
-    else:
-        draw_playfield_target(screen)
-        ui.draw_hud(screen, game, sidebar_x, t)
-        fx.draw(screen)
-
+# --- ОТРИСОВКА ---
 def draw_playfield_target(surf):
     ui.draw_playfield_frame(surf, board_x, board_y)
-    ui.draw_grid_bg(surf, board_x, board_y, t)
+    ui.draw_grid_bg(surf, board_x, board_y, pygame.time.get_ticks())
     for y in range(S.ROWS):
         for x in range(S.COLS):
             col = game.grid[y][x]
@@ -242,6 +187,32 @@ def draw_playfield_target(surf):
         for xx, yy in p.cells():
             if yy >= 0:
                 renderer.draw_block(surf, board_x + xx*S.CELL, board_y + yy*S.CELL, p.kind)
+
+def draw_game(t, dt):
+    screen.fill(S.BG)
+    ox, oy = fx.offset()
+    if ox or oy:
+        tmp = pygame.Surface((S.WIDTH, S.HEIGHT))
+        tmp.fill(S.BG)
+        draw_playfield_target(tmp)
+        ui.draw_hud(tmp, game, sidebar_x, t)
+        fx.draw(tmp)
+        screen.fill(S.BG)
+        screen.blit(tmp, (ox, oy))
+    else:
+        draw_playfield_target(screen)
+        ui.draw_hud(screen, game, sidebar_x, t)
+        fx.draw(screen)
+        
+    if muted:
+        m = ui.F_SMALL.render("MUTED", True, S.DANGER)
+        screen.blit(m, (S.WIDTH - 70, 10))
+        
+    if flash_timer > 0:
+        fl = pygame.Surface((S.WIDTH, S.HEIGHT))
+        fl.fill((255, 255, 255))
+        fl.set_alpha(int(200 * (flash_timer / 300.0)))
+        screen.blit(fl, (0, 0))
 
 def handle_game_over():
     global meta, state, last_unlock, last_unlock_t, is_new_high
@@ -266,7 +237,7 @@ def draw_over():
                         S.HEIGHT // 2 - 30, ui.F_H2, S.TEXT)
     for b in over_buttons: b.draw(screen)
 
-# ---- Main loop ----
+# --- ГЛАВНЫЙ ЦИКЛ ---
 running = True
 while running:
     dt = clock.tick(S.FPS)
@@ -275,7 +246,6 @@ while running:
 
     handle_events()
 
-    # Таймеры визуальных эффектов
     if transition_alpha > 0:
         transition_alpha = max(0, transition_alpha - fade_speed)
     if flash_timer > 0:
@@ -311,7 +281,6 @@ while running:
     elif state == DAILY:
         ui.draw_dailies(screen, meta, get_daily_quests())
 
-    # Плашка достижений
     if last_unlock and t - last_unlock_t < 2500:
         fade = max(0.0, 1.0 - (t - last_unlock_t) / 2500.0)
         name = next((a['name'] for a in ACHIEVEMENTS if a['id'] == last_unlock), last_unlock)
@@ -321,7 +290,6 @@ while running:
     elif last_unlock:
         last_unlock = None
 
-    # Плавный переход (Fade)
     if transition_alpha > 0:
         fs = pygame.Surface((S.WIDTH, S.HEIGHT))
         fs.fill((0, 0, 0))
