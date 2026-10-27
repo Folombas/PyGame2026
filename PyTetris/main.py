@@ -17,6 +17,8 @@ clock = pygame.time.Clock()
 # State
 MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY = range(7)
 state = MENU
+transition_alpha = 0
+fade_speed = 15
 
 game = Game()
 fx = Effects()
@@ -42,6 +44,8 @@ def set_state(s):
         audio.play_music()
     else:
         audio.stop_music()
+    global transition_alpha
+    transition_alpha = 255
 
 # Callbacks from game
 def cb_move():    audio.play('move')
@@ -120,7 +124,10 @@ def handle_events():
             muted = not muted
             audio.toggle_mute(muted)
 
-        if state == MENU:
+        if transition_alpha > 0:
+        transition_alpha = max(0, transition_alpha - fade_speed)
+
+    if state == MENU:
             for b in menu_buttons: b.handle(e)
         elif state == PLAY:
             if e.type == pygame.KEYDOWN:
@@ -280,6 +287,12 @@ while running:
         screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 10)))
     elif last_unlock:
         last_unlock = None
+
+    if transition_alpha > 0:
+        fs = pygame.Surface((S.WIDTH, S.HEIGHT))
+        fs.fill((0, 0, 0))
+        fs.set_alpha(transition_alpha)
+        screen.blit(fs, (0, 0))
 
     pygame.display.flip()
 
