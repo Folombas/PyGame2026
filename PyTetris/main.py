@@ -275,6 +275,12 @@ while running:
 
     handle_events()
 
+    # Таймеры визуальных эффектов
+    if transition_alpha > 0:
+        transition_alpha = max(0, transition_alpha - fade_speed)
+    if flash_timer > 0:
+        flash_timer -= dt
+
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
@@ -305,17 +311,17 @@ while running:
     elif state == DAILY:
         ui.draw_dailies(screen, meta, get_daily_quests())
 
-    # Toast on unlock
+    # Плашка достижений
     if last_unlock and t - last_unlock_t < 2500:
         fade = max(0.0, 1.0 - (t - last_unlock_t) / 2500.0)
-        name = next((a['name'] for a in ACHIEVEMENTS if a['id'] == last_unlock),
-                    last_unlock)
-        toast = ui.F_H2.render(f"★ Achievement unlocked: {name}", True, S.GOLD)
+        name = next((a['name'] for a in ACHIEVEMENTS if a['id'] == last_unlock), last_unlock)
+        toast = ui.F_H2.render(f"* Achievement unlocked: {name}", True, S.GOLD)
         toast.set_alpha(int(255 * fade))
         screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 10)))
     elif last_unlock:
         last_unlock = None
 
+    # Плавный переход (Fade)
     if transition_alpha > 0:
         fs = pygame.Surface((S.WIDTH, S.HEIGHT))
         fs.fill((0, 0, 0))
@@ -325,3 +331,4 @@ while running:
     pygame.display.flip()
 
 pygame.quit()
+sys.exit()
