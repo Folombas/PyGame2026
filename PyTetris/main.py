@@ -56,8 +56,12 @@ def cb_lock():
         if gy >= 0:
             fx.burst(board_x + gx*S.CELL + S.CELL/2, board_y + gy*S.CELL + S.CELL/2, game.current.color, count=6)
     fx.kick(3.0)
+flash_timer = 0
 def cb_levelup(lvl):
+    global flash_timer
     audio.play('levelup')
+    fx.kick(9.0)
+    flash_timer = 300
     fx.kick(9.0)
     for _y in range(0, S.ROWS, 4):
         colors = list(S.COLORS.values())
@@ -126,6 +130,8 @@ def handle_events():
 
         if transition_alpha > 0:
         transition_alpha = max(0, transition_alpha - fade_speed)
+    if flash_timer > 0:
+        flash_timer -= dt
 
     if state == MENU:
             for b in menu_buttons: b.handle(e)
@@ -179,6 +185,11 @@ def draw_playfield():
 
 def draw_game(t, dt):
     screen.fill(S.BG)
+    if flash_timer > 0:
+        fl = pygame.Surface((S.WIDTH, S.HEIGHT))
+        fl.fill((255, 255, 255))
+        fl.set_alpha(int(200 * (flash_timer / 300.0)))
+        screen.blit(fl, (0, 0))
     if muted:
         m = ui.F_SMALL.render("MUTED", True, S.DANGER)
         screen.blit(m, (S.WIDTH - 70, 10))
