@@ -144,6 +144,8 @@ def handle_events():
         if e.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        if e.type == pygame.MOUSEBUTTONDOWN:
+            audio.play('ui_click')
         if e.type == pygame.KEYDOWN and e.key == pygame.K_m:
             muted = not muted
             audio.toggle_mute(muted)
