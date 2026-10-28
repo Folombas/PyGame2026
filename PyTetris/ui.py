@@ -504,17 +504,19 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
     # Скорость падения
     sp_txt = F_MED.render("Speed", True, TEXT)
     surf.blit(sp_txt, (rect.x + 40, y))
-    speed_slider.rect.x = rect.x + 200
-    speed_slider.update_handle()
-    speed_slider.draw(surf)
+    if speed_slider:
+        speed_slider.rect.x = rect.x + 200
+        speed_slider.update_handle()
+        speed_slider.draw(surf)
     y += 60
 
     # Сетка
     gr_txt = F_MED.render("Grid", True, TEXT)
     surf.blit(gr_txt, (rect.x + 40, y))
-    grid_toggle.rect.x = rect.right - 100
-    grid_toggle.rect.y = y - 5
-    grid_toggle.draw(surf)
+    if grid_toggle:
+        grid_toggle.rect.x = rect.right - 100
+        grid_toggle.rect.y = y - 5
+        grid_toggle.draw(surf)
 
     # Кнопка назад
     back_btn.draw(surf)

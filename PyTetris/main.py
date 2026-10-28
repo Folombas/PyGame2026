@@ -90,7 +90,7 @@ def rebuild_menu():
     sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
     ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
     shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
-    speed_slider = ui.Slider(S.WIDTH // 2 - 100, 480, 200, 10, 1.0)
+    speed_slider = ui.Slider(S.WIDTH // 2 - 100, 480, 200, 10, 0.5)
     grid_toggle = ui.Toggle(S.WIDTH // 2 + 50, 540, 60, 26, True)
 
 def start_game(zen=False):
@@ -220,7 +220,8 @@ def handle_events():
 # --- ОТРИСОВКА ---
 def draw_playfield_target(surf):
     ui.draw_playfield_frame(surf, board_x, board_y)
-    ui.draw_grid_bg(surf, board_x, board_y, pygame.time.get_ticks())
+    if getattr(game, 'show_grid', True):
+        ui.draw_grid_bg(surf, board_x, board_y, pygame.time.get_ticks())
     for y in range(S.ROWS):
         for x in range(S.COLS):
             col = game.grid[y][x]
@@ -307,14 +308,13 @@ while running:
     if flash_timer > 0:
         flash_timer -= dt
 
-    # Регулировка громкости
-    if volume_slider:
-        pygame.mixer.music.set_volume(volume_slider.val)
-        audio.set_sfx_volume(sfx_slider.val)
-        fx.enable_shake = shake_toggle.state
-        game.show_ghost = ghost_toggle.state
-        game.fall_speed_mult = speed_slider.val
-        game.show_grid = grid_toggle.state
+    # Регулировка настроек
+    if volume_slider: pygame.mixer.music.set_volume(volume_slider.val)
+    if sfx_slider: audio.set_sfx_volume(sfx_slider.val)
+    if shake_toggle: fx.enable_shake = shake_toggle.state
+    if ghost_toggle: game.show_ghost = ghost_toggle.state
+    if speed_slider: game.fall_speed_mult = max(0.1, speed_slider.val * 2.0)
+    if grid_toggle: game.show_grid = grid_toggle.state
 
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
