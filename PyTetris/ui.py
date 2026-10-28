@@ -235,7 +235,7 @@ def draw_menu(surf, buttons, t, stars, meta=None):
 
 def draw_pause(surf):
     draw_overlay(surf, 170)
-    draw_text_center(surf, "PAUSED", HEIGHT // 2 - 40, F_TITLE, ACCENT)
+    draw_text_center(surf, locale.t("paused"), HEIGHT // 2 - 40, F_TITLE, ACCENT)
 
 
 def draw_leaderboard(surf, scores, best):

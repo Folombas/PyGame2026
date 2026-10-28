@@ -280,9 +280,9 @@ def draw_over():
     screen.fill(S.BG)
     draw_playfield_target(screen)
     ui.draw_overlay(screen, 190)
-    ui.draw_text_center(screen, "GAME OVER", S.HEIGHT // 2 - 120, ui.F_TITLE, S.DANGER)
+    ui.draw_text_center(screen, locale.t("game_over"), S.HEIGHT // 2 - 120, ui.F_TITLE, S.DANGER)
     if is_new_high:
-        h = ui.F_H1.render("NEW HIGH SCORE!", True, S.GOLD)
+        h = ui.F_H1.render(locale.t("new_high"), True, S.GOLD)
         screen.blit(h, h.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2 - 200)))
     ui.draw_text_center(screen, f"Score: {game.score}   Lines: {game.lines}   Level: {game.level}",
                         S.HEIGHT // 2 - 30, ui.F_H2, S.TEXT)
