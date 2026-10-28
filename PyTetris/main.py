@@ -310,11 +310,11 @@ while running:
 
     # Регулировка настроек
     if volume_slider: pygame.mixer.music.set_volume(volume_slider.val)
-    if sfx_slider: audio.set_sfx_volume(sfx_slider.val)
-    if shake_toggle: fx.enable_shake = shake_toggle.state
-    if ghost_toggle: game.show_ghost = ghost_toggle.state
+    if sfx_slider: if sfx_slider: audio.set_sfx_volume(sfx_slider.val)
+    if shake_toggle: if shake_toggle: fx.enable_shake = shake_toggle.state
+    if ghost_toggle: if ghost_toggle: game.show_ghost = ghost_toggle.state
     if speed_slider: game.fall_speed_mult = max(0.1, speed_slider.val * 2.0)
-    if grid_toggle: game.show_grid = grid_toggle.state
+    if grid_toggle: if grid_toggle: game.show_grid = grid_toggle.state
 
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)

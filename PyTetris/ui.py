@@ -100,17 +100,33 @@ class Starfield:
             pygame.draw.circle(surf, (a, a, min(255, a + 40)), (int(x), int(y)), 1)
 
 def draw_title(surf, text, y, t):
-    """Animated glowing title."""
     wave = math.sin(t / 400) * 4
-    glow = F_TITLE.render(text, True, ACCENT2)
+    base_font = F_TITLE
+    main_surf = base_font.render(text, True, TEXT)
+    
+    # Если текст слишком длинный (например, "ДОСТИЖЕНИЯ"), уменьшаем его
+    if main_surf.get_width() > WIDTH - 40:
+        scale = (WIDTH - 40) / main_surf.get_width()
+        new_w = int(main_surf.get_width() * scale)
+        new_h = int(main_surf.get_height() * scale)
+        main_surf = pygame.transform.smoothscale(main_surf, (new_w, new_h))
+    
+    glow_base = base_font.render(text, True, ACCENT2)
+    if glow_base.get_width() > WIDTH - 40:
+        glow_base = pygame.transform.smoothscale(glow_base, main_surf.get_size())
+    
     for i, a in [(6, 25), (3, 45), (1, 90)]:
-        s = F_TITLE.render(text, True, (*ACCENT2, a))
+        s = glow_base.copy()
         s.set_alpha(a)
         surf.blit(s, s.get_rect(center=(WIDTH // 2 + i, y + wave)))
-    main = F_TITLE.render(text, True, TEXT)
-    surf.blit(main, main.get_rect(center=(WIDTH // 2, y + wave)))
+        
+    surf.blit(main_surf, main_surf.get_rect(center=(WIDTH // 2, y + wave)))
+    
+    acc_base = base_font.render(text, True, ACCENT)
+    if acc_base.get_width() > WIDTH - 40:
+        acc_base = pygame.transform.smoothscale(acc_base, main_surf.get_size())
     for i, a in [(3, 60), (1, 120)]:
-        s = F_TITLE.render(text, True, ACCENT)
+        s = acc_base.copy()
         s.set_alpha(a)
         surf.blit(s, s.get_rect(center=(WIDTH // 2 - i, y + wave)))
 
@@ -521,9 +537,7 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
     # Кнопка назад
     back_btn.draw(surf)
 
-def draw_hud(surf, game, sidebar_x, t):
-    # Score / level / lines
-    draw_text_center  # silence lint
+def draw_hud(surf, game, sidebar_x, t, meta):
     x = sidebar_x
     y = 40
     labels = [(locale.t("score"), str(game.score), ACCENT),
@@ -534,7 +548,27 @@ def draw_hud(surf, game, sidebar_x, t):
         surf.blit(l, (x, y))
         v = F_H2.render(val, True, col)
         surf.blit(v, (x, y + 18))
-        y += 78
+        y += 70
+
+    player_level = meta.get('player_level', 1)
+    xp = meta.get('xp', 0)
+    xp_needed = meta.get('xp_needed', 100)
+    rank_lab = F_SMALL.render(locale.t("rank"), True, MUTED)
+    surf.blit(rank_lab, (x, y))
+    rank_val = F_H2.render(str(player_level), True, ACCENT)
+    surf.blit(rank_val, (x, y + 18))
+    
+    bar_x = x + 50
+    bar_y = y + 25
+    bar_w, bar_h = 140, 12
+    pygame.draw.rect(surf, (40, 36, 70), (bar_x, bar_y, bar_w, bar_h), border_radius=6)
+    fill = min(1.0, xp / xp_needed) if xp_needed else 0
+    if fill > 0:
+        pygame.draw.rect(surf, ACCENT, (bar_x, bar_y, int(bar_w * fill), bar_h), border_radius=6)
+    xp_txt = F_TINY.render(f"{xp}/{xp_needed}", True, MUTED)
+    surf.blit(xp_txt, (bar_x + bar_w + 5, bar_y - 2))
+    y += 70
+
     # Next
     nb = pygame.Rect(x, y + 6, 200, 130)
     pygame.draw.rect(surf, (22, 20, 40), nb, border_radius=12)
@@ -543,26 +577,26 @@ def draw_hud(surf, game, sidebar_x, t):
     surf.blit(lab, (x + 12, y + 12))
     draw_piece_mini(surf, game.next.shape, game.next.color,
                     nb.centerx, nb.centery + 10, cell=20)
-    if getattr(game, 'b2b', False):
-        b = F_SMALL.render("B2B", True, GOLD)
-        surf.blit(b, (x, y + 260))
-    # Combo
-    if game.combo > 1:
-        c = F_H2.render(f"COMBO x{game.combo}", True, GOLD)
-        surf.blit(c, c.get_rect(midtop=(x + 100, HEIGHT - 110)))
+    
+    y += 150
+    
     # HOLD
-    hb = pygame.Rect(x, y + 145, 200, 105)
+    hb = pygame.Rect(x, y, 200, 105)
     pygame.draw.rect(surf, (22, 20, 40), hb, border_radius=12)
     pygame.draw.rect(surf, GOLD, hb, 2, border_radius=12)
     hl = F_SMALL.render(locale.t("hold") + " (C)", True, MUTED)
-    surf.blit(hl, (x + 12, y + 150))
+    surf.blit(hl, (x + 12, y + 6))
     if game.hold:
         hc = COLORS[game.hold]
         hs = SHAPES[game.hold]
         dim = game.hold_used
         col = tuple(c // 2 for c in hc) if dim else hc
         draw_piece_mini(surf, hs, col, hb.centerx, hb.centery + 12, cell=20)
-    # Controls hint
-    hint = F_TINY.render("← → move  ↑ rotate  ↓ soft  SPACE hard  C hold  P pause",
-                         True, MUTED)
+
+    if game.combo > 1:
+        c = F_H2.render(f"COMBO x{game.combo}", True, GOLD)
+        surf.blit(c, c.get_rect(midtop=(x + 100, HEIGHT - 110)))
+    
+    hint = F_TINY.render(locale.t("controls"), True, MUTED)
     surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 8)))
+
