@@ -163,6 +163,76 @@ def draw_daily_icon(surf, x, y, size, quest_type, done, color=ACCENT):
 # ---------- Экранные оверлеи и панели ----------
 
 
+
+class Toggle:
+    def __init__(self, x, y, w, h, initial=False, callback=None):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.state = initial
+        self.callback = callback
+        self.anim = 1.0 if initial else 0.0
+        self.hovered = False
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEMOTION:
+            self.hovered = self.rect.collidepoint(event.pos)
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.rect.collidepoint(event.pos):
+                self.state = not self.state
+                if self.callback:
+                    self.callback(self.state)
+
+    def update(self, dt):
+        target = 1.0 if self.state else 0.0
+        self.anim += (target - self.anim) * min(1.0, dt / 80.0)
+
+    def draw(self, surf):
+        color = ACCENT if self.state else (60, 60, 80)
+        if self.hovered:
+            color = tuple(min(255, c + 30) for c in color)
+        
+        pygame.draw.rect(surf, color, self.rect, border_radius=self.rect.h // 2)
+        
+        # Кружочек
+        r = self.rect.h - 8
+        cx = self.rect.x + 4 + int(self.anim * (self.rect.w - r - 8)) + r // 2
+        cy = self.rect.centery
+        pygame.draw.circle(surf, (255, 255, 255), (cx, cy), r // 2)
+
+class Slider:
+    def __init__(self, x, y, w, h, val=0.5, callback=None):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.val = val
+        self.callback = callback
+        self.dragging = False
+        self.update_handle()
+
+    def update_handle(self):
+        self.handle_rect = pygame.Rect(self.rect.x + int(self.val * self.rect.w) - 8, self.rect.y - 6, 16, self.rect.h + 12)
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.handle_rect.collidepoint(event.pos) or self.rect.collidepoint(event.pos):
+                self.dragging = True
+                self._update_val(event.pos[0])
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.dragging = False
+        elif event.type == pygame.MOUSEMOTION and self.dragging:
+            self._update_val(event.pos[0])
+
+    def _update_val(self, mx):
+        self.val = max(0.0, min(1.0, (mx - self.rect.x) / self.rect.w))
+        self.update_handle()
+        if self.callback:
+            self.callback(self.val)
+
+    def draw(self, surf):
+        pygame.draw.rect(surf, (40, 36, 70), self.rect, border_radius=5)
+        fill_w = int(self.val * self.rect.w)
+        if fill_w > 0:
+            pygame.draw.rect(surf, ACCENT, (self.rect.x, self.rect.y, fill_w, self.rect.h), border_radius=5)
+        pygame.draw.rect(surf, TEXT, self.handle_rect, border_radius=8)
+        pygame.draw.rect(surf, ACCENT, self.handle_rect, 2, border_radius=8)
+
 class VolumeSlider:
     def __init__(self, x, y, w, h):
         self.rect = pygame.Rect(x, y, w, h)
@@ -270,7 +340,7 @@ def draw_menu(surf, buttons, t, stars, meta=None):
         total = meta.get('total_lines', 0)
         best = meta.get('best_score', 0)
         stat = F_SMALL.render(f"{locale.t('total_lines')}: {total}   |   {locale.t('best_score')}: {best}", True, MUTED)
-        surf.blit(stat, stat.get_rect(center=(WIDTH // 2, 140)))
+        surf.blit(stat, stat.get_rect(center=(WIDTH // 2, 148)))
     # Панель для кнопок
     panel_rect = pygame.Rect(WIDTH // 2 - 150, 185, 300, 400)
     pygame.draw.rect(surf, (12, 10, 24, 200), panel_rect, border_radius=20)
