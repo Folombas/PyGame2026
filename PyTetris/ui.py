@@ -426,6 +426,30 @@ def draw_dailies(surf, meta, quests):
         surf.blit(stat, (rect.right - 40 - stat.get_width(), y + 2))
 
 
+
+def draw_collection(surf, meta):
+    vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
+    draw_title(surf, locale.t("collection"), 70, pygame.time.get_ticks())
+    rect = pygame.Rect(WIDTH // 2 - 280, 140, 560, 420)
+    panel(surf, rect, accent=GOLD)
+    level = meta.get('player_level', 1)
+    unlocked_count = min(5, level - 1)  # Например, 5 карточек
+    for i in range(5):
+        x = rect.x + 40 + (i % 3) * 180
+        y = rect.y + 50 + (i // 3) * 180
+        card_rect = pygame.Rect(x, y, 140, 160)
+        if i < unlocked_count:
+            # Рисуем карточку (упрощённо)
+            pygame.draw.rect(surf, (30, 30, 60), card_rect, border_radius=10)
+            pygame.draw.rect(surf, GOLD, card_rect, 2, border_radius=10)
+            txt = F_SMALL.render(f"Card {i+1}", True, TEXT)
+            surf.blit(txt, txt.get_rect(center=(card_rect.centerx, card_rect.centery)))
+        else:
+            pygame.draw.rect(surf, (20, 20, 40), card_rect, border_radius=10)
+            pygame.draw.rect(surf, (60, 60, 80), card_rect, 2, border_radius=10)
+            lock = F_H2.render("?", True, MUTED)
+            surf.blit(lock, lock.get_rect(center=card_rect.center))
+
 def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, back_btn):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     draw_title(surf, locale.t("settings"), 70, pygame.time.get_ticks())

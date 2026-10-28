@@ -14,7 +14,7 @@ TRANSLATIONS = {
         "achd4": "Chain 5+ line clears", "achd5": "Reach level 5", "achd6": "Reach level 10",
         "achd7": "Reach 5000 points", "achd8": "Reach 20000 points", "achd9": "Survive 5 minutes in one run",
         "achd10": "Clear 50 lines total",
-        "settings": "SETTINGS", "back": "BACK", "music": "Music Vol", "sfx": "SFX Vol", 
+        "settings": "SETTINGS", "collection": "COLLECTION", "back": "BACK", "music": "Music Vol", "sfx": "SFX Vol", 
         "ghost": "Ghost Piece", "shake": "Screen Shake",
         "d_lines": "Clear {target} lines today", "d_score": "Score {target} points", "d_time": "Play for {target} minutes today"
     },
@@ -32,7 +32,7 @@ TRANSLATIONS = {
         "achd4": "Сделайте комбо из 5+ линий", "achd5": "Достигните 5 уровня", "achd6": "Достигните 10 уровня",
         "achd7": "Наберите 5000 очков", "achd8": "Наберите 20000 очков", "achd9": "Продержитесь 5 минут за игру",
         "achd10": "Соберите 50 линий всего",
-        "settings": "НАСТРОЙКИ", "back": "НАЗАД", "music": "Гром. музыки", "sfx": "Гром. звуков", 
+        "settings": "НАСТРОЙКИ", "collection": "КОЛЛЕКЦИЯ", "back": "НАЗАД", "music": "Гром. музыки", "sfx": "Гром. звуков", 
         "ghost": "Призрак фигуры", "shake": "Тряска экрана",
         "d_lines": "Соберите {target} линий сегодня", "d_score": "Наберите {target} очков", "d_time": "Играйте {target} минут сегодня"
     }

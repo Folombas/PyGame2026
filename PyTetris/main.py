@@ -16,7 +16,7 @@ screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 clock = pygame.time.Clock()
 
 # Состояния
-MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS = range(8)
+MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION = range(9)
 state = MENU
 transition_alpha = 0
 fade_speed = 15
@@ -75,8 +75,9 @@ def rebuild_menu():
         ui.Button(locale.t("ach"),   S.WIDTH // 2, 350, 240, 40, lambda: set_state(ACHS), accent=S.ACCENT2),
         ui.Button(locale.t("daily"), S.WIDTH // 2, 395, 240, 40, lambda: set_state(DAILY), accent=S.ACCENT),
         ui.Button(locale.t("settings"),S.WIDTH // 2, 440, 240, 40, lambda: set_state(SETTINGS), accent=S.ACCENT),
-        ui.Button(locale.t("lang"),  S.WIDTH // 2, 485, 240, 40, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),  S.WIDTH // 2, 530, 240, 40, quit_game, accent=S.DANGER),
+        ui.Button(locale.t("collection"), S.WIDTH // 2, 485, 240, 40, lambda: set_state(COLLECTION), accent=S.GOLD),
+        ui.Button(locale.t("lang"),  S.WIDTH // 2, 530, 240, 40, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),  S.WIDTH // 2, 575, 240, 40, quit_game, accent=S.DANGER),
     ]
     if volume_slider is None:
         volume_slider = ui.Slider(S.WIDTH // 2 - 100, 590, 200, 10, 0.4)
@@ -204,7 +205,7 @@ def handle_events():
             if sfx_slider: sfx_slider.handle_event(e)
             if ghost_toggle: ghost_toggle.handle_event(e)
             if shake_toggle: shake_toggle.handle_event(e)
-        elif state in (SCORES, ACHS, DAILY):
+        elif state in (SCORES, ACHS, DAILY, COLLECTION):
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                 set_state(MENU)
 
@@ -334,6 +335,8 @@ while running:
         for obj in (sfx_slider, ghost_toggle, shake_toggle):
             if obj and hasattr(obj, 'update'): obj.update(dt)
         ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle, settings_back)
+    elif state == COLLECTION:
+        ui.draw_collection(screen, meta)
     elif state == SCORES:
         ui.draw_leaderboard(screen, load_scores(), meta.get('best_score', 0))
     elif state == ACHS:
