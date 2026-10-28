@@ -7,8 +7,8 @@ from meta import (load_meta, save_meta, load_scores, save_score,
                   update_persistent, get_daily_quests, update_daily)
 import ui
 import audio
-from graphics import BlockRenderer
 import i18n as locale
+from graphics import BlockRenderer
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
@@ -32,13 +32,16 @@ locale.LANG = meta.get('lang', 'en')
 run_time = 0.0
 last_unlock = None
 last_unlock_t = 0
-
 renderer = BlockRenderer()
 
 # Координаты
 board_x = 20
 board_y = 20
 sidebar_x = board_x + S.BOARD_W + 30
+
+# Глобальные UI элементы
+menu_buttons = []
+volume_slider = None
 
 def set_state(s):
     global state, transition_alpha
@@ -50,9 +53,42 @@ def set_state(s):
         audio.stop_music()
     transition_alpha = 255
 
+def toggle_lang():
+    global meta
+    meta['lang'] = 'ru' if locale.LANG == 'en' else 'en'
+    locale.LANG = meta['lang']
+    save_meta(meta)
+    rebuild_menu()
+
+def rebuild_menu():
+    global menu_buttons, volume_slider
+    menu_buttons = [
+        ui.Button(locale.t("play"),  S.WIDTH // 2, 215, 240, 45, lambda: start_game(False)),
+        ui.Button(locale.t("zen"),   S.WIDTH // 2, 268, 240, 45, lambda: start_game(True), accent=S.GOLD),
+        ui.Button(locale.t("lb"),    S.WIDTH // 2, 321, 240, 45, lambda: set_state(SCORES), accent=S.GOLD),
+        ui.Button(locale.t("ach"),   S.WIDTH // 2, 374, 240, 45, lambda: set_state(ACHS), accent=S.ACCENT2),
+        ui.Button(locale.t("daily"), S.WIDTH // 2, 427, 240, 45, lambda: set_state(DAILY), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),  S.WIDTH // 2, 480, 240, 45, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),  S.WIDTH // 2, 533, 240, 45, quit_game, accent=S.DANGER),
+    ]
+    if volume_slider is None:
+        volume_slider = ui.VolumeSlider(S.WIDTH // 2 - 100, 600, 200, 10)
+
+def start_game(zen=False):
+    global run_time
+    game.reset(zen=zen)
+    run_time = 0.0
+    set_state(PLAY)
+
+def back_to_menu():
+    set_state(MENU)
+
+def quit_game():
+    pygame.quit()
+    sys.exit()
+
 # --- КОЛЛБЕКИ ИГРЫ ---
 def cb_move():    audio.play('move')
-
 def cb_rotate():  audio.play('rotate')
 
 def cb_lock():
@@ -95,68 +131,17 @@ game.on_clear = cb_clear
 game.on_levelup = cb_levelup
 game.on_gameover = cb_gameover
 
-# --- КНОПКИ ---
-def toggle_lang():
-    global meta
-    meta['lang'] = 'ru' if locale.LANG == 'en' else 'en'
-    locale.LANG = meta['lang']
-    save_meta(meta)
-    rebuild_menu()
-
-def rebuild_menu():
-    
-    btn_data = [
-        (locale.t("play"), lambda: start_game(False), 200),
-        (locale.t("zen"), lambda: start_game(True), 250),
-        (locale.t("lb"), lambda: set_state(SCORES), 300),
-        (locale.t("ach"), lambda: set_state(ACHS), 350),
-        (locale.t("daily"), lambda: set_state(DAILY), 400),
-        (locale.t("lang"), toggle_lang, 450),
-        (locale.t("quit"), quit_game, 500),
-    ]
-    for text, cb, y_pos in btn_data:
-        b.place(S.WIDTH // 2 - 100, y_pos)
-        b.command = cb
-
-    volume_slider.place(S.WIDTH // 2 - 100, 550)
-    volume_slider.set_value(40)
-
-def start_game(zen=False):
-    global run_time
-    game.reset(zen=zen)
-    run_time = 0.0
-    set_state(PLAY)
-
-def back_to_menu():
-    set_state(MENU)
-
-def quit_game():
-    pygame.quit()
-    sys.exit()
-
-# Современные кнопки
-volume_slider.place(S.WIDTH // 2 - 125, 630)
-btn_data = [
-    ("PLAY", lambda: start_game(False), 230),
-    ("ZEN MODE", lambda: start_game(True), 295),
-    ("LEADERBOARD", lambda: set_state(SCORES), 360),
-    ("ACHIEVEMENTS", lambda: set_state(ACHS), 425),
-    ("DAILY QUESTS", lambda: set_state(DAILY), 490),
-    ("QUIT", quit_game, 555),
-]
-for text, cb, y_pos in btn_data:
-    b.place(S.WIDTH // 2 - 100, y_pos)
-    b.command = cb
-
 pause_buttons = [
-    ui.Button("RESUME", S.WIDTH // 2, S.HEIGHT // 2 + 40, 240, 54, lambda: set_state(PLAY)),
-    ui.Button("MENU",   S.WIDTH // 2, S.HEIGHT // 2 + 110, 240, 54, lambda: set_state(MENU), accent=S.ACCENT2)
+    ui.Button(locale.t("resume"), S.WIDTH // 2, S.HEIGHT // 2 + 40, 240, 54, lambda: set_state(PLAY)),
+    ui.Button(locale.t("menu"),   S.WIDTH // 2, S.HEIGHT // 2 + 110, 240, 54, lambda: set_state(MENU), accent=S.ACCENT2)
 ]
 
 over_buttons = [
-    ui.Button("RESTART", S.WIDTH // 2, S.HEIGHT // 2 + 90, 240, 60, start_game),
-    ui.Button("MENU",    S.WIDTH // 2, S.HEIGHT // 2 + 170, 240, 60, back_to_menu, accent=S.ACCENT2),
+    ui.Button(locale.t("restart"), S.WIDTH // 2, S.HEIGHT // 2 + 90, 240, 60, start_game),
+    ui.Button(locale.t("menu"),    S.WIDTH // 2, S.HEIGHT // 2 + 170, 240, 60, back_to_menu, accent=S.ACCENT2),
 ]
+
+rebuild_menu()
 
 # --- ОБРАБОТКА СОБЫТИЙ ---
 def handle_events():
@@ -165,16 +150,13 @@ def handle_events():
         if e.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if e.type == pygame.MOUSEBUTTONDOWN:
-            audio.play('ui_click')
-            mx, my = e.pos
-            for _ in range(10):
-                fx.burst(mx, my, (255, 200, 100), count=2)
         if e.type == pygame.KEYDOWN and e.key == pygame.K_m:
             muted = not muted
             audio.toggle_mute(muted)
 
         if state == MENU:
+            for b in menu_buttons: b.handle(e)
+            if volume_slider: volume_slider.handle_event(e)
         elif state == PLAY:
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE or e.key == pygame.K_p: set_state(PAUSE)
@@ -269,15 +251,13 @@ def draw_over():
     if is_new_high:
         h = ui.F_H1.render(locale.t("new_high"), True, S.GOLD)
         screen.blit(h, h.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2 - 200)))
-    ui.draw_text_center(screen, f"Score: {game.score}   Lines: {game.lines}   Level: {game.level}",
+    ui.draw_text_center(screen, f"{locale.t('score')}: {game.score}   {locale.t('lines')}: {game.lines}   {locale.t('level')}: {game.level}",
                         S.HEIGHT // 2 - 30, ui.F_H2, S.TEXT)
     for b in over_buttons: b.draw(screen)
 
 # --- ГЛАВНЫЙ ЦИКЛ ---
 running = True
 while running:
-    if volume_slider:
-        pygame.mixer.music.set_volume(volume_slider.val)
     dt = clock.tick(S.FPS)
     t = pygame.time.get_ticks()
     mouse = pygame.mouse.get_pos()
@@ -289,13 +269,14 @@ while running:
     if flash_timer > 0:
         flash_timer -= dt
 
+    # Регулировка громкости
+    if volume_slider:
+        pygame.mixer.music.set_volume(volume_slider.val)
+
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
         if volume_slider: volume_slider.draw(screen)
-        stars.update(dt)
-        fx.update(dt)
-        fx.draw(screen)
         stars.update(dt)
     elif state == PLAY:
         if game.game_over:
@@ -325,8 +306,8 @@ while running:
 
     if last_unlock and t - last_unlock_t < 2500:
         fade = max(0.0, 1.0 - (t - last_unlock_t) / 2500.0)
-        name = next((a['name'] for a in ACHIEVEMENTS if a['id'] == last_unlock), last_unlock)
-        toast = ui.F_H2.render(f"* Achievement unlocked: {name}", True, S.GOLD)
+        name = next((a['name_key'] for a in ACHIEVEMENTS if a['id'] == last_unlock), last_unlock)
+        toast = ui.F_H2.render(f"* {locale.t('ach')}: {locale.t(name)}", True, S.GOLD)
         toast.set_alpha(int(255 * fade))
         screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 10)))
     elif last_unlock:
