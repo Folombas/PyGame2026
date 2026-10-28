@@ -391,9 +391,10 @@ def draw_leaderboard(surf, scores, best):
 
 def draw_achievements(surf, meta, ach_list):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_title(surf, "ACHIEVEMENTS", 70, pygame.time.get_ticks())
+    draw_title(surf, locale.t("ach"), 70, pygame.time.get_ticks())
     unlocked = meta.get('unlocked', {})
-    rect = pygame.Rect(WIDTH // 2 - 280, 140, 560, 520)
+    rect = pygame.Rect(0, 0, 560, 520)
+    rect.center = (WIDTH // 2, HEIGHT // 2 + 20)
     panel(surf, rect, accent=ACCENT2)
     for i, a in enumerate(ach_list):
         y = rect.y + 40 + i * 60
