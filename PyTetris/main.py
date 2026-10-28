@@ -8,6 +8,7 @@ from meta import (load_meta, save_meta, load_scores, save_score,
 import ui
 import audio
 from graphics import BlockRenderer
+import locale
 import easypygamewidgets as epw
 
 pygame.init()
@@ -29,6 +30,7 @@ game = Game()
 fx = Effects()
 stars = ui.Starfield(S.WIDTH, S.HEIGHT, n=80)
 meta = load_meta()
+locale.LANG = meta.get('lang', 'en')
 run_time = 0.0
 last_unlock = None
 last_unlock_t = 0
@@ -96,6 +98,38 @@ game.on_levelup = cb_levelup
 game.on_gameover = cb_gameover
 
 # --- КНОПКИ ---
+def toggle_lang():
+    global meta
+    meta['lang'] = 'ru' if locale.LANG == 'en' else 'en'
+    locale.LANG = meta['lang']
+    save_meta(meta)
+    rebuild_menu()
+
+def rebuild_menu():
+    global epw_buttons, volume_slider
+    if hasattr(epw, 'widgets'):
+        epw.widgets.clear()
+    
+    epw_buttons = []
+    btn_data = [
+        (locale.t("play"), lambda: start_game(False), 200),
+        (locale.t("zen"), lambda: start_game(True), 250),
+        (locale.t("lb"), lambda: set_state(SCORES), 300),
+        (locale.t("ach"), lambda: set_state(ACHS), 350),
+        (locale.t("daily"), lambda: set_state(DAILY), 400),
+        (locale.t("lang"), toggle_lang, 450),
+        (locale.t("quit"), quit_game, 500),
+    ]
+    for text, cb, y_pos in btn_data:
+        b = epw.Button(text=text)
+        b.place(S.WIDTH // 2 - 100, y_pos)
+        b.command = cb
+        epw_buttons.append(b)
+
+    volume_slider = epw.Slider(text="", start=0, end=100, width=200)
+    volume_slider.place(S.WIDTH // 2 - 100, 550)
+    volume_slider.set_value(40)
+
 def start_game(zen=False):
     global run_time
     game.reset(zen=zen)
