@@ -1,17 +1,18 @@
 import json, os, hashlib, datetime
+import locale
 from settings import META_FILE, SCORES_FILE
 
 ACHIEVEMENTS = [
-    {'id': 'first_clear', 'name': 'First Blood',   'desc': 'Clear your first line'},
-    {'id': 'tetris',      'name': 'TETRIS!',       'desc': 'Clear 4 lines at once'},
-    {'id': 'combo3',      'name': 'Combo x3',      'desc': 'Chain 3+ line clears'},
-    {'id': 'combo5',      'name': 'Combo Machine', 'desc': 'Chain 5+ line clears'},
-    {'id': 'level5',      'name': 'Rising Star',   'desc': 'Reach level 5'},
-    {'id': 'level10',     'name': 'Ascended',      'desc': 'Reach level 10'},
-    {'id': 'score5k',     'name': 'High Scorer',   'desc': 'Reach 5000 points'},
-    {'id': 'score20k',    'name': 'Legend',        'desc': 'Reach 20000 points'},
-    {'id': 'marathon',    'name': 'Marathon',      'desc': 'Survive 5 minutes in one run'},
-    {'id': 'lines50',     'name': 'Line Master',   'desc': 'Clear 50 lines total'},
+    {'id': 'first_clear', 'name_key': 'ach1',  'desc_key': 'achd1'},
+    {'id': 'tetris',      'name_key': 'ach2',  'desc_key': 'achd2'},
+    {'id': 'combo3',      'name_key': 'ach3',  'desc_key': 'achd3'},
+    {'id': 'combo5',      'name_key': 'ach4',  'desc_key': 'achd4'},
+    {'id': 'level5',      'name_key': 'ach5',  'desc_key': 'achd5'},
+    {'id': 'level10',     'name_key': 'ach6',  'desc_key': 'achd6'},
+    {'id': 'score5k',     'name_key': 'ach7',  'desc_key': 'achd7'},
+    {'id': 'score20k',    'name_key': 'ach8',  'desc_key': 'achd8'},
+    {'id': 'marathon',    'name_key': 'ach9',  'desc_key': 'achd9'},
+    {'id': 'lines50',     'name_key': 'ach10', 'desc_key': 'achd10'},
 ]
 
 def _default_meta():
@@ -103,13 +104,15 @@ def today_key():
 def get_daily_quests():
     day = datetime.date.today()
     h = int(hashlib.md5(day.isoformat().encode()).hexdigest(), 16)
+    t1 = 15 + (h % 16)
+    t2 = 2000 + (h % 6) * 500
     return [
-        {'id': 'daily_lines',   'type': 'lines', 'target': 15 + (h % 16),
-         'desc': f"Clear {15 + (h % 16)} lines today"},
-        {'id': 'daily_score',   'type': 'score', 'target': 2000 + (h % 6) * 500,
-         'desc': f"Score {2000 + (h % 6) * 500} points"},
-        {'id': 'daily_play',    'type': 'time',  'target': 180,
-         'desc': "Play for 3 minutes today"},
+        {'id': 'daily_lines', 'type': 'lines', 'target': t1,
+         'desc': locale.t('d_lines', target=t1)},
+        {'id': 'daily_score', 'type': 'score', 'target': t2,
+         'desc': locale.t('d_score', target=t2)},
+        {'id': 'daily_play',  'type': 'time',  'target': 180,
+         'desc': locale.t('d_time', target=3)},
     ]
 
 def daily_progress(meta):
