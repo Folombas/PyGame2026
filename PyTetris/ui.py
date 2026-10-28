@@ -228,8 +228,8 @@ def draw_menu(surf, buttons, t, stars, meta=None):
     if meta:
         total = meta.get('total_lines', 0)
         best = meta.get('best_score', 0)
-        stat = F_SMALL.render(f"Total Lines: {total}   |   Best Score: {best}", True, MUTED)
-        surf.blit(stat, stat.get_rect(center=(WIDTH // 2, HEIGHT - 20)))
+        stat = F_SMALL.render(f"{locale.t('total_lines')}: {total}   |   {locale.t('best_score')}: {best}", True, MUTED)
+        surf.blit(stat, stat.get_rect(center=(WIDTH // 2, 140)))
     for b in buttons:
         b.draw(surf)
 
