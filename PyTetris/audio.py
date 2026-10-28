@@ -83,3 +83,7 @@ def stop_music():
 
 # Загружаем музыку при импорте
 load_music()
+
+def set_sfx_volume(vol):
+    for snd in SOUNDS.values():
+        snd.set_volume(vol)
