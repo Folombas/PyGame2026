@@ -293,8 +293,9 @@ running = True
 while running:
     # Регулировка громкости
     try:
-        vol = volume_slider.get_value() / 100.0
-        pygame.mixer.music.set_volume(vol)
+        if volume_slider:
+            vol = volume_slider.get_value() / 100.0
+            pygame.mixer.music.set_volume(vol)
     except:
         pass
     dt = clock.tick(S.FPS)
