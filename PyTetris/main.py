@@ -110,6 +110,8 @@ def quit_game():
     sys.exit()
 
 # Современные кнопки
+volume_slider = epw.Slider(text="Volume", start=0, end=100, width=250)
+volume_slider.place(S.WIDTH // 2 - 125, 680)
 epw_buttons = []
 btn_data = [
     ("PLAY", lambda: start_game(False), 270),
@@ -250,6 +252,12 @@ def draw_over():
 # --- ГЛАВНЫЙ ЦИКЛ ---
 running = True
 while running:
+    # Регулировка громкости
+    try:
+        vol = volume_slider.get_value() / 100.0
+        pygame.mixer.music.set_volume(vol)
+    except:
+        pass
     dt = clock.tick(S.FPS)
     t = pygame.time.get_ticks()
     mouse = pygame.mouse.get_pos()
@@ -263,7 +271,8 @@ while running:
 
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
-        ui.draw_menu(screen, menu_buttons, t, stars, meta)
+        ui.draw_menu(screen, [], t, stars, meta)
+        epw.flip()
         stars.update(dt)
     elif state == PLAY:
         if game.game_over:
