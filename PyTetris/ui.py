@@ -239,19 +239,23 @@ def draw_pause(surf):
 def draw_leaderboard(surf, scores, best):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     draw_title(surf, "LEADERBOARD", 90, pygame.time.get_ticks())
-    rect = pygame.Rect(WIDTH // 2 - 220, 170, 440, 470)
+    rect = pygame.Rect(WIDTH // 2 - 240, 170, 480, 470)
     panel(surf, rect, accent=GOLD)
     if not scores:
         s = F_MED.render("No scores yet — play to set one!", True, MUTED)
         surf.blit(s, s.get_rect(center=(rect.centerx, rect.centery)))
         return
+    medal_colors = [(255, 215, 0), (192, 192, 192), (205, 127, 50)]
     for i, sc in enumerate(scores[:10]):
-        y = rect.y + 80 + i * 36
+        y = rect.y + 80 + i * 38
         color = GOLD if i == 0 else TEXT
+        # Медаль для топ-3
+        if i < 3:
+            pygame.draw.circle(surf, medal_colors[i], (rect.x + 50, y + 14), 12)
         rank = F_MED.render(f"{i+1:>2}.", True, color)
-        surf.blit(rank, (rect.x + 40, y))
+        surf.blit(rank, (rect.x + 80, y))
         num = F_MED.render(f"{sc}", True, color)
-        surf.blit(num, (rect.x + 100, y))
+        surf.blit(num, (rect.x + 140, y))
     if best:
         s = F_SMALL.render(f"Personal best: {best}", True, ACCENT)
         surf.blit(s, s.get_rect(center=(WIDTH // 2, HEIGHT - 40)))
