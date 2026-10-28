@@ -148,6 +148,8 @@ pause_buttons = [
     ui.Button(locale.t("menu"),   S.WIDTH // 2, S.HEIGHT // 2 + 110, 240, 54, lambda: set_state(MENU), accent=S.ACCENT2)
 ]
 
+settings_back = ui.Button(locale.t("back"), S.WIDTH // 2, S.HEIGHT - 60, 200, 45, lambda: set_state(MENU))
+
 over_buttons = [
     ui.Button(locale.t("restart"), S.WIDTH // 2, S.HEIGHT // 2 + 90, 240, 60, start_game),
     ui.Button(locale.t("menu"),    S.WIDTH // 2, S.HEIGHT // 2 + 170, 240, 60, back_to_menu, accent=S.ACCENT2),
@@ -187,6 +189,11 @@ def handle_events():
                 elif e.key == pygame.K_q: set_state(MENU)
         elif state == OVER:
             for b in over_buttons: b.handle(e)
+        elif state == SETTINGS:
+            settings_back.handle(e)
+            if sfx_slider: sfx_slider.handle_event(e)
+            if ghost_toggle: ghost_toggle.handle_event(e)
+            if shake_toggle: shake_toggle.handle_event(e)
         elif state in (SCORES, ACHS, DAILY):
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                 set_state(MENU)
@@ -207,7 +214,7 @@ def draw_playfield_target(surf):
                 else:
                     kind = next((k for k, v in S.COLORS.items() if v == col), "I")
                     renderer.draw_block(surf, board_x + x*S.CELL, board_y + y*S.CELL, kind)
-    if not game.game_over and not game.clearing:
+    if not game.game_over and not game.clearing and game.show_ghost:
         gy = game.ghost_y()
         p = game.current
         for xx, yy in p.cells():
@@ -284,6 +291,9 @@ while running:
     # Регулировка громкости
     if volume_slider:
         pygame.mixer.music.set_volume(volume_slider.val)
+        audio.set_sfx_volume(sfx_slider.val)
+        fx.enable_shake = shake_toggle.state
+        game.show_ghost = ghost_toggle.state
 
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
@@ -309,6 +319,11 @@ while running:
         for b in over_buttons: b.update(dt, mouse)
         draw_over()
         fx.update(dt)
+    elif state == SETTINGS:
+        settings_back.update(dt, mouse)
+        for obj in (sfx_slider, ghost_toggle, shake_toggle):
+            if obj and hasattr(obj, 'update'): obj.update(dt)
+        ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle, settings_back)
     elif state == SCORES:
         ui.draw_leaderboard(screen, load_scores(), meta.get('best_score', 0))
     elif state == ACHS:
