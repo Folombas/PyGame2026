@@ -8,10 +8,12 @@ from meta import (load_meta, save_meta, load_scores, save_score,
 import ui
 import audio
 from graphics import BlockRenderer
+import easypygamewidgets as epw
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
+epw.link_pygame_window(screen)
 clock = pygame.time.Clock()
 
 # Состояния
@@ -107,14 +109,21 @@ def quit_game():
     pygame.quit()
     sys.exit()
 
-menu_buttons = [
-    ui.Button("PLAY",          S.WIDTH // 2, 270, 280, 54, lambda: start_game(False)),
-    ui.Button("ZEN MODE",      S.WIDTH // 2, 340, 280, 54, lambda: start_game(True), accent=S.GOLD),
-    ui.Button("LEADERBOARD",   S.WIDTH // 2, 410, 280, 54, lambda: set_state(SCORES), accent=S.GOLD),
-    ui.Button("ACHIEVEMENTS",  S.WIDTH // 2, 480, 280, 54, lambda: set_state(ACHS),   accent=S.ACCENT2),
-    ui.Button("DAILY QUESTS",  S.WIDTH // 2, 550, 280, 54, lambda: set_state(DAILY),  accent=S.ACCENT),
-    ui.Button("QUIT",          S.WIDTH // 2, 620, 280, 54, quit_game, accent=S.DANGER),
+# Современные кнопки
+epw_buttons = []
+btn_data = [
+    ("PLAY", lambda: start_game(False), 270),
+    ("ZEN MODE", lambda: start_game(True), 340),
+    ("LEADERBOARD", lambda: set_state(SCORES), 410),
+    ("ACHIEVEMENTS", lambda: set_state(ACHS), 480),
+    ("DAILY QUESTS", lambda: set_state(DAILY), 550),
+    ("QUIT", quit_game, 620),
 ]
+for text, cb, y_pos in btn_data:
+    b = epw.Button(text=text)
+    b.place(S.WIDTH // 2 - 140, y_pos)
+    b.command = cb
+    epw_buttons.append(b)
 
 pause_buttons = [
     ui.Button("RESUME", S.WIDTH // 2, S.HEIGHT // 2 + 40, 240, 54, lambda: set_state(PLAY)),
@@ -138,7 +147,8 @@ def handle_events():
             audio.toggle_mute(muted)
 
         if state == MENU:
-            for b in menu_buttons: b.handle(e)
+            # Обработка событий для epw происходит централизованно
+            epw.handle_event(e)
         elif state == PLAY:
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE or e.key == pygame.K_p: set_state(PAUSE)
