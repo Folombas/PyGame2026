@@ -45,6 +45,9 @@ volume_slider = None
 sfx_slider = None
 ghost_toggle = None
 shake_toggle = None
+sfx_slider = None
+ghost_toggle = None
+shake_toggle = None
 
 def set_state(s):
     global state, transition_alpha
