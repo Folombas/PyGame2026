@@ -363,13 +363,24 @@ def draw_leaderboard(surf, scores, best):
         s = F_MED.render("No scores yet — play to set one!", True, MUTED)
         surf.blit(s, s.get_rect(center=(rect.centerx, rect.centery)))
         return
-    medal_colors = [(255, 215, 0), (192, 192, 192), (205, 127, 50)]
+    # Пытаемся загрузить медали из assets/medals
+    medal_imgs = []
+    try:
+        for name in ("medal_gold.png", "medal_silver.png", "medal_bronze.png"):
+            img = pygame.image.load(f"assets/medals/{name}").convert_alpha()
+            img = pygame.transform.scale(img, (24, 24))
+            medal_imgs.append(img)
+    except:
+        medal_imgs = []
+
     for i, sc in enumerate(scores[:10]):
         y = rect.y + 80 + i * 38
         color = GOLD if i == 0 else TEXT
-        # Медаль для топ-3
         if i < 3:
-            pygame.draw.circle(surf, medal_colors[i], (rect.x + 50, y + 14), 12)
+            if len(medal_imgs) == 3:
+                surf.blit(medal_imgs[i], (rect.x + 30, y))
+            else:
+                pygame.draw.circle(surf, (255, 215, 0) if i==0 else (192,192,192) if i==1 else (205,127,50), (rect.x + 50, y + 14), 12)
         rank = F_MED.render(f"{i+1:>2}.", True, color)
         surf.blit(rank, (rect.x + 80, y))
         num = F_MED.render(f"{sc}", True, color)
