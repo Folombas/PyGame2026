@@ -232,13 +232,13 @@ def draw_game(t, dt):
         tmp = pygame.Surface((S.WIDTH, S.HEIGHT))
         tmp.fill(S.BG)
         draw_playfield_target(tmp)
-        ui.draw_hud(tmp, game, sidebar_x, t)
+        ui.draw_hud(tmp, game, sidebar_x, t, meta)
         fx.draw(tmp)
         screen.fill(S.BG)
         screen.blit(tmp, (ox, oy))
     else:
         draw_playfield_target(screen)
-        ui.draw_hud(screen, game, sidebar_x, t)
+        ui.draw_hud(screen, game, sidebar_x, t, meta)
         fx.draw(screen)
         
     if muted:
