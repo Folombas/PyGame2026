@@ -36,6 +36,7 @@ class Particle:
 class Effects:
     def __init__(self):
         self.particles = []
+        self.enable_shake = True
         self.shake = 0.0
 
     def burst(self, x, y, color, count=14):
@@ -48,7 +49,8 @@ class Effects:
                        random.choice(colors), count=5)
 
     def kick(self, power=6.0):
-        self.shake = max(self.shake, power)
+        if self.enable_shake:
+            self.shake = max(self.shake, power)
 
     def update(self, dt):
         f = dt / 16.67

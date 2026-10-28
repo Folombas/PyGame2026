@@ -30,6 +30,7 @@ class Game:
 
     def reset(self, zen=False):
         self.zen = zen
+        self.show_ghost = True
         self.grid = [[None] * COLS for _ in range(ROWS)]
         self.bag = []
         self.current = self._spawn()
