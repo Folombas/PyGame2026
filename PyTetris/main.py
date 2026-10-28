@@ -16,7 +16,7 @@ screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 clock = pygame.time.Clock()
 
 # Состояния
-MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY = range(7)
+MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS = range(8)
 state = MENU
 transition_alpha = 0
 fade_speed = 15
@@ -42,6 +42,9 @@ sidebar_x = board_x + S.BOARD_W + 30
 # Глобальные UI элементы
 menu_buttons = []
 volume_slider = None
+sfx_slider = None
+ghost_toggle = None
+shake_toggle = None
 
 def set_state(s):
     global state, transition_alpha
@@ -63,16 +66,22 @@ def toggle_lang():
 def rebuild_menu():
     global menu_buttons, volume_slider
     menu_buttons = [
-        ui.Button(locale.t("play"),  S.WIDTH // 2, 215, 240, 45, lambda: start_game(False)),
-        ui.Button(locale.t("zen"),   S.WIDTH // 2, 268, 240, 45, lambda: start_game(True), accent=S.GOLD),
-        ui.Button(locale.t("lb"),    S.WIDTH // 2, 321, 240, 45, lambda: set_state(SCORES), accent=S.GOLD),
-        ui.Button(locale.t("ach"),   S.WIDTH // 2, 374, 240, 45, lambda: set_state(ACHS), accent=S.ACCENT2),
-        ui.Button(locale.t("daily"), S.WIDTH // 2, 427, 240, 45, lambda: set_state(DAILY), accent=S.ACCENT),
-        ui.Button(locale.t("lang"),  S.WIDTH // 2, 480, 240, 45, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),  S.WIDTH // 2, 533, 240, 45, quit_game, accent=S.DANGER),
+        ui.Button(locale.t("play"),  S.WIDTH // 2, 215, 240, 40, lambda: start_game(False)),
+        ui.Button(locale.t("zen"),   S.WIDTH // 2, 260, 240, 40, lambda: start_game(True), accent=S.GOLD),
+        ui.Button(locale.t("lb"),    S.WIDTH // 2, 305, 240, 40, lambda: set_state(SCORES), accent=S.GOLD),
+        ui.Button(locale.t("ach"),   S.WIDTH // 2, 350, 240, 40, lambda: set_state(ACHS), accent=S.ACCENT2),
+        ui.Button(locale.t("daily"), S.WIDTH // 2, 395, 240, 40, lambda: set_state(DAILY), accent=S.ACCENT),
+        ui.Button(locale.t("settings"),S.WIDTH // 2, 440, 240, 40, lambda: set_state(SETTINGS), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),  S.WIDTH // 2, 485, 240, 40, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),  S.WIDTH // 2, 530, 240, 40, quit_game, accent=S.DANGER),
     ]
     if volume_slider is None:
-        volume_slider = ui.VolumeSlider(S.WIDTH // 2 - 100, 600, 200, 10)
+        volume_slider = ui.Slider(S.WIDTH // 2 - 100, 590, 200, 10, 0.4)
+
+    global sfx_slider, ghost_toggle, shake_toggle
+    sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
+    ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
+    shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
 
 def start_game(zen=False):
     global run_time
