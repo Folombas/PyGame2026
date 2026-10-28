@@ -185,7 +185,7 @@ def handle_events():
         elif state == PAUSE:
             for b in pause_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_ESCAPE or e.key == pygame.K_p: set_state(PLAY)
+                if e.key == pygame.K_ESCAPE or e.key == pygame.K_p or e.key == pygame.K_q: set_state(PLAY)
                 elif e.key == pygame.K_q: set_state(MENU)
         elif state == OVER:
             for b in over_buttons: b.handle(e)
