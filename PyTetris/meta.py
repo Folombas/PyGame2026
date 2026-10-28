@@ -17,7 +17,8 @@ ACHIEVEMENTS = [
 
 def _default_meta():
     return {'unlocked': {}, 'total_lines': 0, 'best_score': 0,
-            'total_playtime': 0.0, 'dailies': {}}
+            'total_playtime': 0.0, 'dailies': {},
+            'player_level': 1, 'xp': 0, 'xp_needed': 100}
 
 def _ensure_dir():
     os.makedirs(os.path.dirname(META_FILE), exist_ok=True)

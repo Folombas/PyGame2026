@@ -128,6 +128,16 @@ def cb_clear(rows, count):
         fx.burst_row(board_y + y * S.CELL, board_x, S.CELL, S.COLS, colors)
     fx.kick(6.0 if count < 4 else 12.0)
     global meta, last_unlock, last_unlock_t
+    # Начисляем опыт
+    meta['xp'] = meta.get('xp', 0) + count * 10
+    while meta['xp'] >= meta.get('xp_needed', 100):
+        meta['xp'] -= meta['xp_needed']
+        meta['player_level'] = meta.get('player_level', 1) + 1
+        meta['xp_needed'] = int(meta['xp_needed'] * 1.5)
+        audio.play('levelup')
+        fx.kick(9.0)
+    save_meta(meta)
+
     res = on_line_clear(meta, count)
     if res:
         last_unlock = res
