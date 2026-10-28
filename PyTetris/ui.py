@@ -132,6 +132,32 @@ def draw_achievement_icon(surf, x, y, size, unlocked, color=GOLD):
         # Затемнение
         pygame.draw.rect(surf, (0, 0, 0, 100), rect, border_radius=8)
 
+
+def draw_daily_icon(surf, x, y, size, quest_type, done, color=ACCENT):
+    """Рисует иконку для ежедневного задания."""
+    rect = pygame.Rect(x, y, size, size)
+    pygame.draw.rect(surf, (22, 20, 40), rect, border_radius=6)
+    pygame.draw.rect(surf, color if done else (80, 80, 100), rect, 2, border_radius=6)
+    # Простые символы для типов
+    cx, cy = x + size // 2, y + size // 2
+    if quest_type == 'lines':
+        # Полоски
+        for i in range(3):
+            pygame.draw.line(surf, color if done else (100, 100, 120), (cx - 10, cy - 8 + i*8), (cx + 10, cy - 8 + i*8), 2)
+    elif quest_type == 'score':
+        # Звезда
+        points = []
+        for i in range(10):
+            angle = math.pi / 2 + i * math.pi / 5
+            r = 10 if i % 2 == 0 else 5
+            points.append((cx + r * math.cos(angle), cy - r * math.sin(angle)))
+        pygame.draw.polygon(surf, color if done else (100, 100, 120), points)
+    elif quest_type == 'time':
+        # Часы
+        pygame.draw.circle(surf, color if done else (100, 100, 120), (cx, cy), 10, 2)
+        pygame.draw.line(surf, color if done else (100, 100, 120), (cx, cy), (cx, cy - 8), 2)
+        pygame.draw.line(surf, color if done else (100, 100, 120), (cx, cy), (cx + 6, cy), 2)
+
 # ---------- Экранные оверлеи и панели ----------
 
 def draw_overlay(surf, alpha=190):
@@ -258,7 +284,8 @@ def draw_dailies(surf, meta, quests):
         cur = p.get(q['type'], 0)
         tgt = q['target']
         done = cur >= tgt
-        bar = pygame.Rect(rect.x + 30, y + 60, rect.w - 60, 18)
+        draw_daily_icon(surf, rect.x + 30, y, 36, q['type'], done)
+        bar = pygame.Rect(rect.x + 80, y + 50, rect.w - 120, 18)
         pygame.draw.rect(surf, (40, 36, 70), bar, border_radius=9)
         fill = min(1.0, cur / tgt) if tgt else 0
         if fill > 0:
@@ -267,7 +294,7 @@ def draw_dailies(surf, meta, quests):
                              (bar.x, bar.y, fw, bar.h), border_radius=9)
         pygame.draw.rect(surf, ACCENT, bar, 2, border_radius=9)
         title = F_H2.render(q['desc'], True, TEXT)
-        surf.blit(title, (rect.x + 30, y))
+        surf.blit(title, (rect.x + 80, y))
         stat = F_SMALL.render(
             f"{cur:.0f} / {tgt}" if q['type'] != 'time'
             else f"{int(cur)}s / {tgt}s",
