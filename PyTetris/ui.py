@@ -1,7 +1,7 @@
 import math, random
 import pygame
 from settings import *
-import locale
+import i18n as locale
 
 pygame.font.init()
 def _font(size, bold=False):

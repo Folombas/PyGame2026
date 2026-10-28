@@ -8,7 +8,7 @@ from meta import (load_meta, save_meta, load_scores, save_score,
 import ui
 import audio
 from graphics import BlockRenderer
-import locale
+import i18n as locale
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
@@ -104,11 +104,7 @@ def toggle_lang():
     rebuild_menu()
 
 def rebuild_menu():
-    global epw_buttons, volume_slider
-    if hasattr(epw, 'widgets'):
-        epw.widgets.clear()
     
-    epw_buttons = []
     btn_data = [
         (locale.t("play"), lambda: start_game(False), 200),
         (locale.t("zen"), lambda: start_game(True), 250),
@@ -119,12 +115,9 @@ def rebuild_menu():
         (locale.t("quit"), quit_game, 500),
     ]
     for text, cb, y_pos in btn_data:
-        b = epw.Button(text=text)
         b.place(S.WIDTH // 2 - 100, y_pos)
         b.command = cb
-        epw_buttons.append(b)
 
-    volume_slider = epw.Slider(text="", start=0, end=100, width=200)
     volume_slider.place(S.WIDTH // 2 - 100, 550)
     volume_slider.set_value(40)
 
@@ -142,9 +135,7 @@ def quit_game():
     sys.exit()
 
 # Современные кнопки
-volume_slider = epw.Slider(text="Volume", start=0, end=100, width=250)
 volume_slider.place(S.WIDTH // 2 - 125, 630)
-epw_buttons = []
 btn_data = [
     ("PLAY", lambda: start_game(False), 230),
     ("ZEN MODE", lambda: start_game(True), 295),
@@ -154,10 +145,8 @@ btn_data = [
     ("QUIT", quit_game, 555),
 ]
 for text, cb, y_pos in btn_data:
-    b = epw.Button(text=text)
     b.place(S.WIDTH // 2 - 100, y_pos)
     b.command = cb
-    epw_buttons.append(b)
 
 pause_buttons = [
     ui.Button("RESUME", S.WIDTH // 2, S.HEIGHT // 2 + 40, 240, 54, lambda: set_state(PLAY)),
@@ -186,8 +175,6 @@ def handle_events():
             audio.toggle_mute(muted)
 
         if state == MENU:
-            # Обработка событий для epw происходит централизованно
-            epw.handle_event(e)
         elif state == PLAY:
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE or e.key == pygame.K_p: set_state(PAUSE)

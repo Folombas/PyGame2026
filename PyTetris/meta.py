@@ -1,5 +1,5 @@
 import json, os, hashlib, datetime
-import locale
+import i18n as locale
 from settings import META_FILE, SCORES_FILE
 
 ACHIEVEMENTS = [
