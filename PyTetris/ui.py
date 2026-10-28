@@ -162,6 +162,47 @@ def draw_daily_icon(surf, x, y, size, quest_type, done, color=ACCENT):
 
 # ---------- Экранные оверлеи и панели ----------
 
+
+class VolumeSlider:
+    def __init__(self, x, y, w, h):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.val = 0.4
+        self.dragging = False
+        self.update_handle()
+
+    def update_handle(self):
+        self.handle_rect = pygame.Rect(self.rect.x + int(self.val * self.rect.w) - 8, self.rect.y - 6, 16, self.rect.h + 12)
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.handle_rect.collidepoint(event.pos) or self.rect.collidepoint(event.pos):
+                self.dragging = True
+                self._update_val(event.pos[0])
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.dragging = False
+        elif event.type == pygame.MOUSEMOTION and self.dragging:
+            self._update_val(event.pos[0])
+
+    def _update_val(self, mx):
+        self.val = max(0.0, min(1.0, (mx - self.rect.x) / self.rect.w))
+        self.update_handle()
+
+    def draw(self, surf):
+        # Текст
+        vol_text = F_SMALL.render(f"VOL: {int(self.val * 100)}%", True, MUTED)
+        surf.blit(vol_text, (self.rect.centerx - vol_text.get_width()//2, self.rect.y - 25))
+        
+        # Дорожка
+        pygame.draw.rect(surf, (40, 36, 70), self.rect, border_radius=5)
+        # Заполнение
+        fill_w = int(self.val * self.rect.w)
+        if fill_w > 0:
+            pygame.draw.rect(surf, ACCENT, (self.rect.x, self.rect.y, fill_w, self.rect.h), border_radius=5)
+        # Ползунок
+        pygame.draw.rect(surf, TEXT, self.handle_rect, border_radius=8)
+        pygame.draw.rect(surf, ACCENT, self.handle_rect, 2, border_radius=8)
+
+
 def draw_overlay(surf, alpha=190):
     o = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
     o.fill((0, 0, 0, alpha))

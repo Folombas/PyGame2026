@@ -9,12 +9,10 @@ import ui
 import audio
 from graphics import BlockRenderer
 import locale
-import easypygamewidgets as epw
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
-epw.link_pygame_window(screen)
 clock = pygame.time.Clock()
 
 # Состояния
@@ -291,13 +289,8 @@ def draw_over():
 # --- ГЛАВНЫЙ ЦИКЛ ---
 running = True
 while running:
-    # Регулировка громкости
-    try:
-        if volume_slider:
-            vol = volume_slider.get_value() / 100.0
-            pygame.mixer.music.set_volume(vol)
-    except:
-        pass
+    if volume_slider:
+        pygame.mixer.music.set_volume(volume_slider.val)
     dt = clock.tick(S.FPS)
     t = pygame.time.get_ticks()
     mouse = pygame.mouse.get_pos()
@@ -312,7 +305,7 @@ while running:
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
-        epw.flip()
+        if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
         fx.update(dt)
         fx.draw(screen)
