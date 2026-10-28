@@ -1,6 +1,7 @@
 import math, random
 import pygame
 from settings import *
+import locale
 
 pygame.font.init()
 def _font(size, bold=False):
@@ -313,9 +314,9 @@ def draw_hud(surf, game, sidebar_x, t):
     draw_text_center  # silence lint
     x = sidebar_x
     y = 40
-    labels = [("SCORE", str(game.score), ACCENT),
-              ("LEVEL", str(game.level), ACCENT2),
-              ("LINES", str(game.lines), GOLD)]
+    labels = [(locale.t("score"), str(game.score), ACCENT),
+              (locale.t("level"), str(game.level), ACCENT2),
+              (locale.t("lines"), str(game.lines), GOLD)]
     for label, val, col in labels:
         l = F_SMALL.render(label, True, MUTED)
         surf.blit(l, (x, y))
@@ -326,7 +327,7 @@ def draw_hud(surf, game, sidebar_x, t):
     nb = pygame.Rect(x, y + 6, 200, 130)
     pygame.draw.rect(surf, (22, 20, 40), nb, border_radius=12)
     pygame.draw.rect(surf, ACCENT2, nb, 2, border_radius=12)
-    lab = F_SMALL.render("NEXT", True, MUTED)
+    lab = F_SMALL.render(locale.t("next"), True, MUTED)
     surf.blit(lab, (x + 12, y + 12))
     draw_piece_mini(surf, game.next.shape, game.next.color,
                     nb.centerx, nb.centery + 10, cell=20)
@@ -341,7 +342,7 @@ def draw_hud(surf, game, sidebar_x, t):
     hb = pygame.Rect(x, y + 145, 200, 105)
     pygame.draw.rect(surf, (22, 20, 40), hb, border_radius=12)
     pygame.draw.rect(surf, GOLD, hb, 2, border_radius=12)
-    hl = F_SMALL.render("HOLD (C)", True, MUTED)
+    hl = F_SMALL.render(locale.t("hold") + " (C)", True, MUTED)
     surf.blit(hl, (x + 12, y + 150))
     if game.hold:
         hc = COLORS[game.hold]
