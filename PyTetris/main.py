@@ -111,19 +111,19 @@ def quit_game():
 
 # Современные кнопки
 volume_slider = epw.Slider(text="Volume", start=0, end=100, width=250)
-volume_slider.place(S.WIDTH // 2 - 125, 680)
+volume_slider.place(S.WIDTH // 2 - 125, 630)
 epw_buttons = []
 btn_data = [
-    ("PLAY", lambda: start_game(False), 270),
-    ("ZEN MODE", lambda: start_game(True), 340),
-    ("LEADERBOARD", lambda: set_state(SCORES), 410),
-    ("ACHIEVEMENTS", lambda: set_state(ACHS), 480),
-    ("DAILY QUESTS", lambda: set_state(DAILY), 550),
-    ("QUIT", quit_game, 620),
+    ("PLAY", lambda: start_game(False), 230),
+    ("ZEN MODE", lambda: start_game(True), 295),
+    ("LEADERBOARD", lambda: set_state(SCORES), 360),
+    ("ACHIEVEMENTS", lambda: set_state(ACHS), 425),
+    ("DAILY QUESTS", lambda: set_state(DAILY), 490),
+    ("QUIT", quit_game, 555),
 ]
 for text, cb, y_pos in btn_data:
     b = epw.Button(text=text)
-    b.place(S.WIDTH // 2 - 140, y_pos)
+    b.place(S.WIDTH // 2 - 100, y_pos)
     b.command = cb
     epw_buttons.append(b)
 
