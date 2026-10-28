@@ -273,9 +273,9 @@ def draw_achievements(surf, meta, ach_list):
         done = a['id'] in unlocked
         color = ACCENT if done else MUTED
         draw_achievement_icon(surf, rect.x + 20, y, 40, done)
-        name = F_MED.render(a['name'], True, color)
+        name = F_MED.render(locale.t(a['name_key']), True, color)
         surf.blit(name, (rect.x + 80, y + 2))
-        desc = F_SMALL.render(a['desc'], True, (180, 180, 220) if done else (110, 110, 140))
+        desc = F_SMALL.render(locale.t(a['desc_key']), True, (180, 180, 220) if done else (110, 110, 140))
         surf.blit(desc, (rect.x + 80, y + 26))
 
 def draw_dailies(surf, meta, quests):
