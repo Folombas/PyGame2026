@@ -310,7 +310,8 @@ while running:
         flash_timer -= dt
 
     if state == MENU:
-        ui.draw_menu(screen, [], t, stars, meta)
+        for b in menu_buttons: b.update(dt, mouse)
+        ui.draw_menu(screen, menu_buttons, t, stars, meta)
         epw.flip()
         stars.update(dt)
         fx.update(dt)

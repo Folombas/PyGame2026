@@ -231,7 +231,7 @@ def draw_menu(surf, buttons, t, stars, meta=None):
         stat = F_SMALL.render(f"{locale.t('total_lines')}: {total}   |   {locale.t('best_score')}: {best}", True, MUTED)
         surf.blit(stat, stat.get_rect(center=(WIDTH // 2, 140)))
     # Панель для кнопок
-    panel_rect = pygame.Rect(WIDTH // 2 - 160, 170, 320, 420)
+    panel_rect = pygame.Rect(WIDTH // 2 - 150, 185, 300, 400)
     pygame.draw.rect(surf, (12, 10, 24, 200), panel_rect, border_radius=20)
     pygame.draw.rect(surf, ACCENT, panel_rect, 1, border_radius=20)
 
