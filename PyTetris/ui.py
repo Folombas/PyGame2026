@@ -296,7 +296,7 @@ def draw_dailies(surf, meta, quests):
         tgt = q['target']
         done = cur >= tgt
         draw_daily_icon(surf, rect.x + 30, y, 36, q['type'], done)
-        bar = pygame.Rect(rect.x + 80, y + 50, rect.w - 120, 18)
+        bar = pygame.Rect(rect.x + 80, y + 35, rect.w - 140, 18)
         pygame.draw.rect(surf, (40, 36, 70), bar, border_radius=9)
         global daily_anim
         target_fill = min(1.0, cur / tgt) if tgt else 0
@@ -306,13 +306,13 @@ def draw_dailies(surf, meta, quests):
             pygame.draw.rect(surf, ACCENT if not done else GOLD,
                              (bar.x, bar.y, fw, bar.h), border_radius=9)
         pygame.draw.rect(surf, ACCENT, bar, 2, border_radius=9)
-        title = F_H2.render(q['desc'], True, TEXT)
+        title = F_MED.render(q['desc'], True, TEXT)
         surf.blit(title, (rect.x + 80, y))
         stat = F_SMALL.render(
             f"{cur:.0f} / {tgt}" if q['type'] != 'time'
             else f"{int(cur)}s / {tgt}s",
             True, GOLD if done else MUTED)
-        surf.blit(stat, (rect.right - 30 - stat.get_width(), y + 2))
+        surf.blit(stat, (rect.right - 40 - stat.get_width(), y + 2))
 
 def draw_hud(surf, game, sidebar_x, t):
     # Score / level / lines
