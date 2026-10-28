@@ -146,6 +146,9 @@ def handle_events():
             sys.exit()
         if e.type == pygame.MOUSEBUTTONDOWN:
             audio.play('ui_click')
+            mx, my = e.pos
+            for _ in range(10):
+                fx.burst(mx, my, (255, 200, 100), count=2)
         if e.type == pygame.KEYDOWN and e.key == pygame.K_m:
             muted = not muted
             audio.toggle_mute(muted)
@@ -275,6 +278,8 @@ while running:
         for b in menu_buttons: b.update(dt, mouse)
         ui.draw_menu(screen, [], t, stars, meta)
         epw.flip()
+        fx.update(dt)
+        fx.draw(screen)
         stars.update(dt)
     elif state == PLAY:
         if game.game_over:
