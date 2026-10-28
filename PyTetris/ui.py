@@ -112,6 +112,26 @@ def draw_title(surf, text, y, t):
         s.set_alpha(a)
         surf.blit(s, s.get_rect(center=(WIDTH // 2 - i, y + wave)))
 
+
+def draw_achievement_icon(surf, x, y, size, unlocked, color=GOLD):
+    """Рисует неоновую иконку достижения."""
+    rect = pygame.Rect(x, y, size, size)
+    # Фон
+    pygame.draw.rect(surf, (22, 20, 40), rect, border_radius=8)
+    # Рамка
+    pygame.draw.rect(surf, color if unlocked else (80, 80, 100), rect, 2, border_radius=8)
+    # Звёздочка внутри
+    cx, cy = x + size // 2, y + size // 2
+    points = []
+    for i in range(10):
+        angle = math.pi / 2 + i * math.pi / 5
+        r = size // 3 if i % 2 == 0 else size // 6
+        points.append((cx + r * math.cos(angle), cy - r * math.sin(angle)))
+    pygame.draw.polygon(surf, color if unlocked else (100, 100, 120), points)
+    if not unlocked:
+        # Затемнение
+        pygame.draw.rect(surf, (0, 0, 0, 100), rect, border_radius=8)
+
 # ---------- Экранные оверлеи и панели ----------
 
 def draw_overlay(surf, alpha=190):
@@ -217,16 +237,14 @@ def draw_achievements(surf, meta, ach_list):
     rect = pygame.Rect(WIDTH // 2 - 280, 140, 560, 520)
     panel(surf, rect, accent=ACCENT2)
     for i, a in enumerate(ach_list):
-        y = rect.y + 40 + i * 48
+        y = rect.y + 40 + i * 60
         done = a['id'] in unlocked
         color = ACCENT if done else MUTED
-        mark = "★" if done else "☆"
-        m = F_MED.render(mark, True, color)
-        surf.blit(m, (rect.x + 20, y))
+        draw_achievement_icon(surf, rect.x + 20, y, 40, done)
         name = F_MED.render(a['name'], True, color)
-        surf.blit(name, (rect.x + 60, y))
+        surf.blit(name, (rect.x + 80, y + 2))
         desc = F_SMALL.render(a['desc'], True, (180, 180, 220) if done else (110, 110, 140))
-        surf.blit(desc, (rect.x + 60, y + 24))
+        surf.blit(desc, (rect.x + 80, y + 26))
 
 def draw_dailies(surf, meta, quests):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
