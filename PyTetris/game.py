@@ -31,6 +31,8 @@ class Game:
     def reset(self, zen=False):
         self.zen = zen
         self.show_ghost = True
+        self.fall_speed_mult = 1.0
+        self.show_grid = True
         self.grid = [[None] * COLS for _ in range(ROWS)]
         self.bag = []
         self.current = self._spawn()
@@ -170,7 +172,7 @@ class Game:
             return
 
         self.fall_timer += dt
-        if self.fall_timer >= self.fall_ms():
+        if self.fall_timer >= self.fall_ms() / self.fall_speed_mult:
             self.fall_timer = 0
             if self.valid(self.current, dy=1):
                 self.current.y += 1

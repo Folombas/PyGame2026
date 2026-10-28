@@ -461,7 +461,7 @@ def draw_collection(surf, meta):
             lock = F_H2.render("?", True, MUTED)
             surf.blit(lock, lock.get_rect(center=card_rect.center))
 
-def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, back_btn):
+def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, back_btn):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     draw_title(surf, locale.t("settings"), 70, pygame.time.get_ticks())
     rect = pygame.Rect(WIDTH // 2 - 240, 140, 480, 400)
@@ -498,7 +498,23 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, ba
     shake_toggle.rect.x = rect.right - 100
     shake_toggle.rect.y = y - 5
     shake_toggle.draw(surf)
-    
+    y += 60
+
+    # Скорость падения
+    sp_txt = F_MED.render("Speed", True, TEXT)
+    surf.blit(sp_txt, (rect.x + 40, y))
+    speed_slider.rect.x = rect.x + 200
+    speed_slider.update_handle()
+    speed_slider.draw(surf)
+    y += 60
+
+    # Сетка
+    gr_txt = F_MED.render("Grid", True, TEXT)
+    surf.blit(gr_txt, (rect.x + 40, y))
+    grid_toggle.rect.x = rect.right - 100
+    grid_toggle.rect.y = y - 5
+    grid_toggle.draw(surf)
+
     # Кнопка назад
     back_btn.draw(surf)
 

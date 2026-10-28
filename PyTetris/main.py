@@ -45,9 +45,13 @@ volume_slider = None
 sfx_slider = None
 ghost_toggle = None
 shake_toggle = None
+speed_slider = None
+grid_toggle = None
 sfx_slider = None
 ghost_toggle = None
 shake_toggle = None
+speed_slider = None
+grid_toggle = None
 
 def set_state(s):
     global state, transition_alpha
@@ -86,6 +90,8 @@ def rebuild_menu():
     sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
     ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
     shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
+    speed_slider = ui.Slider(S.WIDTH // 2 - 100, 480, 200, 10, 1.0)
+    grid_toggle = ui.Toggle(S.WIDTH // 2 + 50, 540, 60, 26, True)
 
 def start_game(zen=False):
     global run_time
@@ -205,6 +211,8 @@ def handle_events():
             if sfx_slider: sfx_slider.handle_event(e)
             if ghost_toggle: ghost_toggle.handle_event(e)
             if shake_toggle: shake_toggle.handle_event(e)
+            if speed_slider: speed_slider.handle_event(e)
+            if grid_toggle: grid_toggle.handle_event(e)
         elif state in (SCORES, ACHS, DAILY, COLLECTION):
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                 set_state(MENU)
@@ -305,6 +313,8 @@ while running:
         audio.set_sfx_volume(sfx_slider.val)
         fx.enable_shake = shake_toggle.state
         game.show_ghost = ghost_toggle.state
+        game.fall_speed_mult = speed_slider.val
+        game.show_grid = grid_toggle.state
 
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
@@ -334,7 +344,7 @@ while running:
         settings_back.update(dt, mouse)
         for obj in (sfx_slider, ghost_toggle, shake_toggle):
             if obj and hasattr(obj, 'update'): obj.update(dt)
-        ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle, settings_back)
+        ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, settings_back)
     elif state == COLLECTION:
         ui.draw_collection(screen, meta)
     elif state == SCORES:
