@@ -25,6 +25,7 @@ F_H2     = _font(30, bold=True)
 F_MED    = _font(22)
 F_SMALL  = _font(17)
 F_TINY   = _font(14)
+daily_anim = 0.0
 
 class Button:
     def __init__(self, label, cx, cy, w, h, on_click, accent=ACCENT):
@@ -291,9 +292,11 @@ def draw_dailies(surf, meta, quests):
         draw_daily_icon(surf, rect.x + 30, y, 36, q['type'], done)
         bar = pygame.Rect(rect.x + 80, y + 50, rect.w - 120, 18)
         pygame.draw.rect(surf, (40, 36, 70), bar, border_radius=9)
-        fill = min(1.0, cur / tgt) if tgt else 0
-        if fill > 0:
-            fw = int(bar.w * fill)
+        global daily_anim
+        target_fill = min(1.0, cur / tgt) if tgt else 0
+        daily_anim += (target_fill - daily_anim) * 0.1
+        if daily_anim > 0.01:
+            fw = int(bar.w * daily_anim)
             pygame.draw.rect(surf, ACCENT if not done else GOLD,
                              (bar.x, bar.y, fw, bar.h), border_radius=9)
         pygame.draw.rect(surf, ACCENT, bar, 2, border_radius=9)
