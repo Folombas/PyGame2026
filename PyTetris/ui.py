@@ -502,61 +502,63 @@ def draw_collection(surf, meta):
 
 def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, back_btn):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_title(surf, locale.t("settings"), 70, pygame.time.get_ticks())
-    rect = pygame.Rect(WIDTH // 2 - 240, 140, 480, 400)
+    draw_title(surf, locale.t("settings"), 60, pygame.time.get_ticks())
+    rect = pygame.Rect(WIDTH // 2 - 250, 120, 500, 420)
     panel(surf, rect, accent=ACCENT)
     
     y = rect.y + 40
     # Музыка
-    m_txt = F_MED.render(locale.t("music"), True, TEXT)
-    surf.blit(m_txt, (rect.x + 40, y))
-    music_slider.rect.x = rect.x + 200
-    music_slider.update_handle()
-    music_slider.draw(surf)
-    y += 60
+    surf.blit(F_MED.render(locale.t("music"), True, TEXT), (rect.x + 40, y))
+    if music_slider:
+        music_slider.rect.x = rect.x + 240
+        music_slider.rect.y = y + 8
+        music_slider.update_handle()
+        music_slider.draw(surf)
+    y += 55
     
     # Звуки
-    s_txt = F_MED.render(locale.t("sfx"), True, TEXT)
-    surf.blit(s_txt, (rect.x + 40, y))
-    sfx_slider.rect.x = rect.x + 200
-    sfx_slider.update_handle()
-    sfx_slider.draw(surf)
-    y += 80
+    surf.blit(F_MED.render(locale.t("sfx"), True, TEXT), (rect.x + 40, y))
+    if sfx_slider:
+        sfx_slider.rect.x = rect.x + 240
+        sfx_slider.rect.y = y + 8
+        sfx_slider.update_handle()
+        sfx_slider.draw(surf)
+    y += 65
     
     # Призрак
-    g_txt = F_MED.render(locale.t("ghost"), True, TEXT)
-    surf.blit(g_txt, (rect.x + 40, y))
-    ghost_toggle.rect.x = rect.right - 100
-    ghost_toggle.rect.y = y - 5
-    ghost_toggle.draw(surf)
-    y += 60
+    surf.blit(F_MED.render(locale.t("ghost"), True, TEXT), (rect.x + 40, y))
+    if ghost_toggle:
+        ghost_toggle.rect.x = rect.right - 100
+        ghost_toggle.rect.y = y
+        ghost_toggle.draw(surf)
+    y += 55
     
     # Тряска
-    sh_txt = F_MED.render(locale.t("shake"), True, TEXT)
-    surf.blit(sh_txt, (rect.x + 40, y))
-    shake_toggle.rect.x = rect.right - 100
-    shake_toggle.rect.y = y - 5
-    shake_toggle.draw(surf)
-    y += 60
-
-    # Скорость падения
-    sp_txt = F_MED.render("Speed", True, TEXT)
-    surf.blit(sp_txt, (rect.x + 40, y))
+    surf.blit(F_MED.render(locale.t("shake"), True, TEXT), (rect.x + 40, y))
+    if shake_toggle:
+        shake_toggle.rect.x = rect.right - 100
+        shake_toggle.rect.y = y
+        shake_toggle.draw(surf)
+    y += 65
+    
+    # Скорость
+    surf.blit(F_MED.render("Скорость", True, TEXT), (rect.x + 40, y))
     if speed_slider:
-        speed_slider.rect.x = rect.x + 200
+        speed_slider.rect.x = rect.x + 240
+        speed_slider.rect.y = y + 8
         speed_slider.update_handle()
         speed_slider.draw(surf)
-    y += 60
-
+    y += 55
+    
     # Сетка
-    gr_txt = F_MED.render("Grid", True, TEXT)
-    surf.blit(gr_txt, (rect.x + 40, y))
+    surf.blit(F_MED.render("Сетка", True, TEXT), (rect.x + 40, y))
     if grid_toggle:
         grid_toggle.rect.x = rect.right - 100
-        grid_toggle.rect.y = y - 5
+        grid_toggle.rect.y = y
         grid_toggle.draw(surf)
-
+    
     # Кнопка назад
+    back_btn.rect.y = HEIGHT - 70
     back_btn.draw(surf)
 
 def draw_hud(surf, game, sidebar_x, t, meta):
