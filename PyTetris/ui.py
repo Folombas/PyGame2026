@@ -568,9 +568,13 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
 def draw_hud(surf, game, sidebar_x, t, meta):
     x = sidebar_x
     y = 40
-    labels = [(locale.t("score"), str(game.score), ACCENT),
-              (locale.t("level"), str(game.level), ACCENT2),
-              (locale.t("lines"), str(game.lines), GOLD)]
+    if getattr(game, 'mode', 'classic') == 'sprint':
+        labels = [(locale.t("time"), f"{game.elapsed_time/1000:.1f}s", ACCENT),
+                  (locale.t("goal"), f"{game.lines}/40", GOLD)]
+    else:
+        labels = [(locale.t("score"), str(game.score), ACCENT),
+                  (locale.t("level"), str(game.level), ACCENT2),
+                  (locale.t("lines"), str(game.lines), GOLD)]
     for label, val, col in labels:
         l = F_SMALL.render(label, True, MUTED)
         surf.blit(l, (x, y))
