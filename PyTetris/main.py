@@ -23,6 +23,7 @@ fade_speed = 15
 flash_timer = 0
 is_new_high = False
 muted = False
+is_fullscreen = False
 
 game = Game()
 fx = Effects()
@@ -47,6 +48,15 @@ ghost_toggle = None
 shake_toggle = None
 speed_slider = None
 grid_toggle = None
+
+
+def toggle_fullscreen():
+    global is_fullscreen, screen
+    is_fullscreen = not is_fullscreen
+    if is_fullscreen:
+        screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+    else:
+        screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 
 def set_state(s):
     global state, transition_alpha
@@ -174,6 +184,8 @@ def handle_events():
         if e.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+        if e.type == pygame.KEYDOWN and e.key == pygame.K_F11:
+            toggle_fullscreen()
         if e.type == pygame.KEYDOWN and e.key == pygame.K_m:
             muted = not muted
             audio.toggle_mute(muted)
