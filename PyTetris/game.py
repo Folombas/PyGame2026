@@ -35,6 +35,7 @@ class Game:
         self.zen = zen
         self.mode = mode
         self.elapsed_time = 0.0
+        self.freeze_timer = 0
         self.show_ghost = True
         self.fall_speed_mult = 1.0
         self.show_grid = True
@@ -179,6 +180,8 @@ class Game:
             return
         if self.mode == 'sprint':
             self.elapsed_time += dt
+        if self.freeze_timer > 0:
+            self.freeze_timer -= dt
         if self.clearing:
             self.clear_timer -= dt
             if self.clear_timer <= 0:
@@ -186,7 +189,8 @@ class Game:
             return
 
         self.fall_timer += dt
-        if self.fall_timer >= self.fall_ms() / self.fall_speed_mult:
+        speed_mod = 2.0 if self.freeze_timer > 0 else 1.0
+        if self.fall_timer >= self.fall_ms() / (self.fall_speed_mult * speed_mod):
             self.fall_timer = 0
             if self.valid(self.current, dy=1):
                 self.current.y += 1
