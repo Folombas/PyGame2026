@@ -36,8 +36,8 @@ last_unlock_t = 0
 renderer = BlockRenderer()
 
 # Координаты
-board_x = 20
-board_y = 20
+board_x = 30
+board_y = 80
 sidebar_x = board_x + S.BOARD_W + 30
 
 # Глобальные UI элементы
