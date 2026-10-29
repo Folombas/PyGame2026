@@ -6,6 +6,8 @@ class Piece:
         self.kind = kind
         self.shape = [row[:] for row in SHAPES[kind]]
         self.color = COLORS[kind]
+        import random
+        self.powerup = random.choices([None, 'bomb', 'freeze', 'clear'], weights=[80, 8, 6, 6])[0]
         self.x = COLS // 2 - len(self.shape[0]) // 2
         self.y = -len(self.shape)
 
