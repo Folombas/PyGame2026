@@ -68,18 +68,18 @@ def toggle_lang():
 def rebuild_menu():
     global menu_buttons, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle
     menu_buttons = [
-        ui.Button(locale.t("play"),  S.WIDTH // 2, 215, 240, 40, lambda: start_game(False)),
-        ui.Button(locale.t("zen"),   S.WIDTH // 2, 260, 240, 40, lambda: start_game(True), accent=S.GOLD),
-        ui.Button(locale.t("lb"),    S.WIDTH // 2, 305, 240, 40, lambda: set_state(SCORES), accent=S.GOLD),
-        ui.Button(locale.t("ach"),   S.WIDTH // 2, 350, 240, 40, lambda: set_state(ACHS), accent=S.ACCENT2),
-        ui.Button(locale.t("daily"), S.WIDTH // 2, 395, 240, 40, lambda: set_state(DAILY), accent=S.ACCENT),
-        ui.Button(locale.t("settings"),S.WIDTH // 2, 440, 240, 40, lambda: set_state(SETTINGS), accent=S.ACCENT),
-        ui.Button(locale.t("lang"),  S.WIDTH // 2, 485, 240, 40, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),  S.WIDTH // 2, 530, 240, 40, quit_game, accent=S.DANGER),
+        ui.Button(locale.t("play"),  S.WIDTH // 2, 195, 240, 36, lambda: start_game(False)),
+        ui.Button(locale.t("zen"),   S.WIDTH // 2, 240, 240, 36, lambda: start_game(True), accent=S.GOLD),
+        ui.Button(locale.t("lb"),    S.WIDTH // 2, 285, 240, 36, lambda: set_state(SCORES), accent=S.GOLD),
+        ui.Button(locale.t("ach"),   S.WIDTH // 2, 330, 240, 36, lambda: set_state(ACHS), accent=S.ACCENT2),
+        ui.Button(locale.t("daily"), S.WIDTH // 2, 375, 240, 36, lambda: set_state(DAILY), accent=S.ACCENT),
+        ui.Button(locale.t("settings"),S.WIDTH // 2, 420, 240, 36, lambda: set_state(SETTINGS), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),  S.WIDTH // 2, 465, 240, 36, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),  S.WIDTH // 2, 510, 240, 36, quit_game, accent=S.DANGER),
     ]
     
     if volume_slider is None:
-        volume_slider = ui.Slider(S.WIDTH // 2 - 100, 590, 200, 10, 0.4)
+        volume_slider = ui.Slider(S.WIDTH // 2 - 100, 585, 200, 10, 0.4)
         sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
         ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
         shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
