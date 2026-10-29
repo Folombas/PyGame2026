@@ -300,13 +300,24 @@ class VolumeSlider:
         pygame.draw.rect(surf, ACCENT, self.handle_rect, 2, border_radius=8)
 
 
+
+def draw_gradient_panel(surf, rect, color1, color2):
+    for i in range(rect.h):
+        t = i / rect.h
+        col = (
+            int(color1[0] * (1 - t) + color2[0] * t),
+            int(color1[1] * (1 - t) + color2[1] * t),
+            int(color1[2] * (1 - t) + color2[2] * t),
+        )
+        pygame.draw.line(surf, col, (rect.x, rect.y + i), (rect.right, rect.y + i))
+
 def draw_overlay(surf, alpha=190):
     o = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
     o.fill((0, 0, 0, alpha))
     surf.blit(o, (0, 0))
 
 def panel(surf, rect, title=None, accent=ACCENT):
-    pygame.draw.rect(surf, (22, 20, 40), rect, border_radius=16)
+    draw_gradient_panel(surf, rect, (22, 20, 40), (10, 8, 24))
     pygame.draw.rect(surf, accent, rect, 2, border_radius=16)
     if title:
         t = F_H1.render(title, True, accent)
