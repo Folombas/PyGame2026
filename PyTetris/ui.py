@@ -26,6 +26,17 @@ F_H2     = _font(30, bold=True)
 F_MED    = _font(22)
 F_SMALL  = _font(17)
 F_TINY   = _font(14)
+
+def load_skin(name):
+    try:
+        img = pygame.image.load(f"assets/ui/{name}").convert_alpha()
+        return img
+    except:
+        return None
+
+# Загружаем скины
+btn_skin = load_skin("neon_ui_basic.png")
+
 daily_anim = 0.0
 
 class Button:
