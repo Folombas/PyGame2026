@@ -25,6 +25,7 @@ class Game:
         self.on_rotate = None
         self.on_move = None
         self.on_gameover = None
+        self.on_win = None
         self.on_levelup = None
         self.reset()
 
@@ -141,6 +142,9 @@ class Game:
             if new_level > self.level:
                 self.level = new_level
                 if self.on_levelup: self.on_levelup(self.level)
+            if self.mode == 'sprint' and self.lines >= 40:
+                self.win = True
+                if self.on_win: self.on_win()
         else:
             self.combo = 0
 
