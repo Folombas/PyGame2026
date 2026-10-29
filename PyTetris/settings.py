@@ -43,3 +43,7 @@ META_FILE   = 'data/meta.json'
 # --- Assets ---
 ASSETS_DIR = "assets"
 BLOCK_SPRITES_DIR = "assets/blocks"
+
+
+# Sprint Mode
+SPRINT_GOAL = 40
