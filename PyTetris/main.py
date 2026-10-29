@@ -337,6 +337,8 @@ while running:
     elif state == PLAY:
         if game.game_over:
             handle_game_over()
+        elif game.win:
+            handle_game_over() # Переиспользуем экран проигрыша для победы
         else:
             game.update(dt)
             run_time += dt / 1000.0
