@@ -12,6 +12,11 @@ import i18n as locale
 from graphics import BlockRenderer
 
 pygame.init()
+try:
+    bg_clip = VideoFileClip('assets/backgrounds/neon_loop.mp4')
+    bg_frames = [pygame.image.fromstring(f, (S.WIDTH, S.HEIGHT), 'RGB') for f in bg_clip.iter_frames()]
+except:
+    bg_frames = []
 pygame.display.set_caption("PyTetris — Neon Edition")
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 clock = pygame.time.Clock()
@@ -323,7 +328,11 @@ while running:
 
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
-        ui.draw_menu(screen, menu_buttons, t, stars, meta)
+                if bg_frames:
+            frame_idx = (t // 40) % len(bg_frames)
+            screen.blit(bg_frames[frame_idx], (0, 0))
+        else:
+            ui.draw_menu(screen, menu_buttons, t, stars, meta)
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
     elif state == PLAY:
