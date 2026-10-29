@@ -28,8 +28,10 @@ class Game:
         self.on_levelup = None
         self.reset()
 
-    def reset(self, zen=False):
+    def reset(self, zen=False, mode='classic'):
         self.zen = zen
+        self.mode = mode
+        self.elapsed_time = 0.0
         self.show_ghost = True
         self.fall_speed_mult = 1.0
         self.show_grid = True
@@ -163,8 +165,10 @@ class Game:
         self.clearing = []
 
     def update(self, dt):
-        if self.game_over:
+        if self.game_over or self.win:
             return
+        if self.mode == 'sprint':
+            self.elapsed_time += dt
         if self.clearing:
             self.clear_timer -= dt
             if self.clear_timer <= 0:
