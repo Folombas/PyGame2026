@@ -591,10 +591,10 @@ def draw_hud(surf, game, sidebar_x, t, meta):
         pygame.draw.rect(surf, ACCENT, (bar_x, bar_y, int(bar_w * fill), bar_h), border_radius=6)
     xp_txt = F_TINY.render(f"{xp}/{xp_needed}", True, MUTED)
     surf.blit(xp_txt, (bar_x + bar_w + 5, bar_y - 2))
-    y += 70
+    y += 60
 
     # Next
-    nb = pygame.Rect(x, y + 6, 200, 130)
+    nb = pygame.Rect(x, y, 200, 110)
     pygame.draw.rect(surf, (22, 20, 40), nb, border_radius=12)
     pygame.draw.rect(surf, ACCENT2, nb, 2, border_radius=12)
     lab = F_SMALL.render(locale.t("next"), True, MUTED)
@@ -602,10 +602,10 @@ def draw_hud(surf, game, sidebar_x, t, meta):
     draw_piece_mini(surf, game.next.shape, game.next.color,
                     nb.centerx, nb.centery + 10, cell=20)
     
-    y += 150
+    y += 125
     
     # HOLD
-    hb = pygame.Rect(x, y, 200, 105)
+    hb = pygame.Rect(x, y, 200, 90)
     pygame.draw.rect(surf, (22, 20, 40), hb, border_radius=12)
     pygame.draw.rect(surf, GOLD, hb, 2, border_radius=12)
     hl = F_SMALL.render(locale.t("hold") + " (C)", True, MUTED)
@@ -615,11 +615,11 @@ def draw_hud(surf, game, sidebar_x, t, meta):
         hs = SHAPES[game.hold]
         dim = game.hold_used
         col = tuple(c // 2 for c in hc) if dim else hc
-        draw_piece_mini(surf, hs, col, hb.centerx, hb.centery + 12, cell=20)
+        draw_piece_mini(surf, hs, col, hb.centerx, hb.centery + 5, cell=20)
 
     if game.combo > 1:
         c = F_H2.render(f"COMBO x{game.combo}", True, GOLD)
-        surf.blit(c, c.get_rect(midtop=(x + 100, HEIGHT - 110)))
+        surf.blit(c, c.get_rect(midtop=(x + 100, HEIGHT - 80)))
     
     hint = F_TINY.render(locale.t("controls"), True, MUTED)
     surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 8)))
