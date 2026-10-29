@@ -310,12 +310,13 @@ while running:
 
     handle_events()
 
+    # Таймеры эффектов
     if transition_alpha > 0:
         transition_alpha = max(0, transition_alpha - fade_speed)
     if flash_timer > 0:
         flash_timer -= dt
 
-    # Регулировка настроек
+    # Применяем настройки (защита от None)
     if volume_slider: pygame.mixer.music.set_volume(volume_slider.val)
     if sfx_slider: audio.set_sfx_volume(sfx_slider.val)
     if shake_toggle: fx.enable_shake = shake_toggle.state
@@ -325,19 +326,7 @@ while running:
 
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
-                if bg_frames:
-            frame_idx = (t // 40) % len(bg_frames)
-            screen.blit(bg_frames[frame_idx], (0, 0))
-        else:
-                    if bg_frames:
-            frame_idx = (t // 40) % len(bg_frames)
-            screen.blit(bg_frames[frame_idx], (0, 0))
-        else:
-                    if bg_frames:
-            frame_idx = (t // 40) % len(bg_frames)
-            screen.blit(bg_frames[frame_idx], (0, 0))
-        else:
-            ui.draw_menu(screen, menu_buttons, t, stars, meta)
+        ui.draw_menu(screen, menu_buttons, t, stars, meta)
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
     elif state == PLAY:
@@ -359,11 +348,6 @@ while running:
         for b in over_buttons: b.update(dt, mouse)
         draw_over()
         fx.update(dt)
-    elif state == SETTINGS:
-        settings_back.update(dt, mouse)
-        for obj in (sfx_slider, ghost_toggle, shake_toggle):
-            if obj and hasattr(obj, 'update'): obj.update(dt)
-        ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, settings_back)
     elif state == COLLECTION:
         ui.draw_collection(screen, meta)
     elif state == SCORES:
@@ -372,16 +356,23 @@ while running:
         ui.draw_achievements(screen, meta, ACHIEVEMENTS)
     elif state == DAILY:
         ui.draw_dailies(screen, meta, get_daily_quests())
+    elif state == SETTINGS:
+        settings_back.update(dt, mouse)
+        for obj in (sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle):
+            if obj and hasattr(obj, 'update'): obj.update(dt)
+        ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, settings_back)
 
+    # Плашка достижений
     if last_unlock and t - last_unlock_t < 2500:
         fade = max(0.0, 1.0 - (t - last_unlock_t) / 2500.0)
         name = next((a['name_key'] for a in ACHIEVEMENTS if a['id'] == last_unlock), last_unlock)
-        toast = ui.F_H2.render(f"* {locale.t('ach')}: {locale.t(name)}", True, S.GOLD)
+        toast = ui.F_H2.render(f"* {locale.t(name)}", True, S.GOLD)
         toast.set_alpha(int(255 * fade))
         screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 10)))
     elif last_unlock:
         last_unlock = None
 
+    # Fade-переход
     if transition_alpha > 0:
         fs = pygame.Surface((S.WIDTH, S.HEIGHT))
         fs.fill((0, 0, 0))
