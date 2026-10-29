@@ -36,6 +36,7 @@ class Game:
         self.mode = mode
         self.elapsed_time = 0.0
         self.freeze_timer = 0
+        self.garbage_timer = 10000
         self.show_ghost = True
         self.fall_speed_mult = 1.0
         self.show_grid = True
@@ -182,6 +183,11 @@ class Game:
             self.elapsed_time += dt
         if self.freeze_timer > 0:
             self.freeze_timer -= dt
+        if self.mode == 'survival' and not self.win and not self.game_over:
+            self.garbage_timer -= dt
+            if self.garbage_timer <= 0:
+                self.push_garbage()
+                self.garbage_timer = 10000
         if self.clearing:
             self.clear_timer -= dt
             if self.clear_timer <= 0:
