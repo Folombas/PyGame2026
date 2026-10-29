@@ -7,6 +7,7 @@ from meta import (load_meta, save_meta, load_scores, save_score,
                   update_persistent, get_daily_quests, update_daily)
 import ui
 import audio
+from PygameShader.bloom import bloom
 import i18n as locale
 from graphics import BlockRenderer
 
@@ -33,6 +34,7 @@ run_time = 0.0
 last_unlock = None
 last_unlock_t = 0
 renderer = BlockRenderer()
+bloom_surf = pygame.Surface((S.WIDTH, S.HEIGHT))
 
 # Координаты
 board_x = 20
@@ -247,6 +249,9 @@ def draw_playfield_target(surf):
 
 def draw_game(t, dt):
     screen.fill(S.BG)
+    # Применяем эффект свечения к игровому полю
+    bloom_surf.blit(screen, (0, 0))
+    bloom(bloom_surf, screen, threshold=200, smooth=3)
     ox, oy = fx.offset()
     if ox or oy:
         tmp = pygame.Surface((S.WIDTH, S.HEIGHT))
