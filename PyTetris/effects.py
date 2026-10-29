@@ -69,3 +69,18 @@ class Effects:
             return (random.uniform(-self.shake, self.shake),
                     random.uniform(-self.shake, self.shake))
         return (0, 0)
+
+def apply_bloom(surface, intensity=1.5):
+    """Нативный эффект свечения (Bloom) с использованием pygame-ce."""
+    try:
+        # Размываем поверхность (доступно в pygame-ce >= 2.4)
+        blurred = pygame.transform.gaussian_blur(surface, 6)
+        
+        # Если нужна большая интенсивность, можно накладывать несколько раз
+        # Накладываем размытие с аддитивным смешиванием
+        surface.blit(blurred, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+    except AttributeError:
+        # Запасной вариант для старых версий pygame (сглаживание через уменьшение/увеличение)
+        small = pygame.transform.smoothscale(surface, (surface.get_width()//4, surface.get_height()//4))
+        blurred = pygame.transform.smoothscale(small, (surface.get_width(), surface.get_height()))
+        surface.blit(blurred, (0, 0), special_flags=pygame.BLEND_RGB_ADD)

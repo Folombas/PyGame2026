@@ -1,7 +1,7 @@
 import sys, pygame
 import settings as S
 from game import Game
-from effects import Effects
+from effects import Effects, apply_bloom
 from meta import (load_meta, save_meta, load_scores, save_score,
                   ACHIEVEMENTS, check_run, on_line_clear,
                   update_persistent, get_daily_quests, update_daily)
@@ -9,7 +9,6 @@ import ui
 import audio
 import i18n as locale
 from graphics import BlockRenderer
-from BloomEffect.bloom import bloom
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
@@ -34,7 +33,6 @@ run_time = 0.0
 last_unlock = None
 last_unlock_t = 0
 renderer = BlockRenderer()
-bloom_surf = pygame.Surface((S.WIDTH, S.HEIGHT))
 
 # Координаты
 board_x = 20
@@ -265,6 +263,9 @@ def draw_game(t, dt):
         fl.fill((255, 255, 255))
         fl.set_alpha(int(200 * (flash_timer / 300.0)))
         screen.blit(fl, (0, 0))
+    
+    # Включаем нативный Bloom прямо перед отрисовкой!
+    apply_bloom(screen)
 
 def handle_game_over():
     global meta, state, last_unlock, last_unlock_t, is_new_high
@@ -315,6 +316,7 @@ while running:
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
+        apply_bloom(screen) # Блум в меню
     elif state == PLAY:
         if game.game_over:
             handle_game_over()
