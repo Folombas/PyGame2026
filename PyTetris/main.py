@@ -78,14 +78,15 @@ def toggle_lang():
 def rebuild_menu():
     global menu_buttons, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle
     menu_buttons = [
-        ui.Button(locale.t("play"),  S.WIDTH // 2, 220, 240, 36, lambda: start_game(False)),
-        ui.Button(locale.t("zen"),   S.WIDTH // 2, 265, 240, 36, lambda: start_game(True), accent=S.GOLD),
-        ui.Button(locale.t("lb"),    S.WIDTH // 2, 310, 240, 36, lambda: set_state(SCORES), accent=S.GOLD),
-        ui.Button(locale.t("ach"),   S.WIDTH // 2, 355, 240, 36, lambda: set_state(ACHS), accent=S.ACCENT2),
-        ui.Button(locale.t("daily"), S.WIDTH // 2, 400, 240, 36, lambda: set_state(DAILY), accent=S.ACCENT),
-        ui.Button(locale.t("settings"),S.WIDTH // 2, 445, 240, 36, lambda: set_state(SETTINGS), accent=S.ACCENT),
-        ui.Button(locale.t("lang"),  S.WIDTH // 2, 490, 240, 36, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),  S.WIDTH // 2, 535, 240, 36, quit_game, accent=S.DANGER),
+        ui.Button(locale.t("play"),  S.WIDTH // 2, 200, 240, 36, lambda: start_game(False, "classic")),
+        ui.Button(locale.t("sprint"),S.WIDTH // 2, 245, 240, 36, lambda: start_game(False, "sprint"), accent=S.GOLD),
+        ui.Button(locale.t("zen"),   S.WIDTH // 2, 290, 240, 36, lambda: start_game(True), accent=S.GOLD),
+        ui.Button(locale.t("lb"),    S.WIDTH // 2, 335, 240, 36, lambda: set_state(SCORES), accent=S.GOLD),
+        ui.Button(locale.t("ach"),   S.WIDTH // 2, 380, 240, 36, lambda: set_state(ACHS), accent=S.ACCENT2),
+        ui.Button(locale.t("daily"), S.WIDTH // 2, 425, 240, 36, lambda: set_state(DAILY), accent=S.ACCENT),
+        ui.Button(locale.t("settings"),S.WIDTH // 2, 470, 240, 36, lambda: set_state(SETTINGS), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),  S.WIDTH // 2, 515, 240, 36, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),  S.WIDTH // 2, 560, 240, 36, quit_game, accent=S.DANGER),
     ]
     
     if volume_slider is None:
@@ -96,9 +97,9 @@ def rebuild_menu():
         speed_slider = ui.Slider(S.WIDTH // 2 - 100, 480, 200, 10, 0.5)
         grid_toggle = ui.Toggle(S.WIDTH // 2 + 50, 540, 60, 26, True)
 
-def start_game(zen=False):
+def start_game(zen=False, mode='classic'):
     global run_time
-    game.reset(zen=zen)
+    game.reset(zen=zen, mode=mode)
     run_time = 0.0
     set_state(PLAY)
 
