@@ -1,4 +1,3 @@
 pygame>=2.6.1
 numpy>=1.26.0
-PygameShader==1.0.11
-PygameShader==1.0.11
+BloomEffect==1.0.2

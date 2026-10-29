@@ -7,9 +7,9 @@ from meta import (load_meta, save_meta, load_scores, save_score,
                   update_persistent, get_daily_quests, update_daily)
 import ui
 import audio
-from PygameShader.bloom import bloom
 import i18n as locale
 from graphics import BlockRenderer
+from BloomEffect.bloom import bloom
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
@@ -49,11 +49,6 @@ ghost_toggle = None
 shake_toggle = None
 speed_slider = None
 grid_toggle = None
-sfx_slider = None
-ghost_toggle = None
-shake_toggle = None
-speed_slider = None
-grid_toggle = None
 
 def set_state(s):
     global state, transition_alpha
@@ -73,7 +68,7 @@ def toggle_lang():
     rebuild_menu()
 
 def rebuild_menu():
-    global menu_buttons, volume_slider
+    global menu_buttons, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle
     menu_buttons = [
         ui.Button(locale.t("play"),  S.WIDTH // 2, 215, 240, 40, lambda: start_game(False)),
         ui.Button(locale.t("zen"),   S.WIDTH // 2, 260, 240, 40, lambda: start_game(True), accent=S.GOLD),
@@ -81,19 +76,17 @@ def rebuild_menu():
         ui.Button(locale.t("ach"),   S.WIDTH // 2, 350, 240, 40, lambda: set_state(ACHS), accent=S.ACCENT2),
         ui.Button(locale.t("daily"), S.WIDTH // 2, 395, 240, 40, lambda: set_state(DAILY), accent=S.ACCENT),
         ui.Button(locale.t("settings"),S.WIDTH // 2, 440, 240, 40, lambda: set_state(SETTINGS), accent=S.ACCENT),
-        ui.Button(locale.t("collection"), S.WIDTH // 2, 485, 240, 40, lambda: set_state(COLLECTION), accent=S.GOLD),
-        ui.Button(locale.t("lang"),  S.WIDTH // 2, 530, 240, 40, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),  S.WIDTH // 2, 575, 240, 40, quit_game, accent=S.DANGER),
+        ui.Button(locale.t("lang"),  S.WIDTH // 2, 485, 240, 40, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),  S.WIDTH // 2, 530, 240, 40, quit_game, accent=S.DANGER),
     ]
+    
     if volume_slider is None:
         volume_slider = ui.Slider(S.WIDTH // 2 - 100, 590, 200, 10, 0.4)
-
-    global sfx_slider, ghost_toggle, shake_toggle
-    sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
-    ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
-    shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
-    speed_slider = ui.Slider(S.WIDTH // 2 - 100, 480, 200, 10, 0.5)
-    grid_toggle = ui.Toggle(S.WIDTH // 2 + 50, 540, 60, 26, True)
+        sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
+        ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
+        shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
+        speed_slider = ui.Slider(S.WIDTH // 2 - 100, 480, 200, 10, 0.5)
+        grid_toggle = ui.Toggle(S.WIDTH // 2 + 50, 540, 60, 26, True)
 
 def start_game(zen=False):
     global run_time
@@ -136,8 +129,8 @@ def cb_clear(rows, count):
         colors = list(S.COLORS.values())
         fx.burst_row(board_y + y * S.CELL, board_x, S.CELL, S.COLS, colors)
     fx.kick(6.0 if count < 4 else 12.0)
+    
     global meta, last_unlock, last_unlock_t
-    # Начисляем опыт
     meta['xp'] = meta.get('xp', 0) + count * 10
     while meta['xp'] >= meta.get('xp_needed', 100):
         meta['xp'] -= meta['xp_needed']
@@ -162,12 +155,12 @@ game.on_clear = cb_clear
 game.on_levelup = cb_levelup
 game.on_gameover = cb_gameover
 
+settings_back = ui.Button(locale.t("back"), S.WIDTH // 2, S.HEIGHT - 60, 200, 45, lambda: set_state(MENU))
+
 pause_buttons = [
     ui.Button(locale.t("resume"), S.WIDTH // 2, S.HEIGHT // 2 + 40, 240, 54, lambda: set_state(PLAY)),
     ui.Button(locale.t("menu"),   S.WIDTH // 2, S.HEIGHT // 2 + 110, 240, 54, lambda: set_state(MENU), accent=S.ACCENT2)
 ]
-
-settings_back = ui.Button(locale.t("back"), S.WIDTH // 2, S.HEIGHT - 60, 200, 45, lambda: set_state(MENU))
 
 over_buttons = [
     ui.Button(locale.t("restart"), S.WIDTH // 2, S.HEIGHT // 2 + 90, 240, 60, start_game),
@@ -188,11 +181,9 @@ def handle_events():
             audio.toggle_mute(muted)
 
         if state == MENU:
-        for b in menu_buttons: b.update(dt, mouse)
-        ui.draw_menu(screen, menu_buttons, t, stars, meta)
-        if volume_slider: volume_slider.draw(screen)
-        stars.update(dt)
-    elif state == PLAY:
+            for b in menu_buttons: b.handle(e)
+            if volume_slider: volume_slider.handle_event(e)
+        elif state == PLAY:
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE or e.key == pygame.K_p: set_state(PAUSE)
                 elif e.key == pygame.K_LEFT:  game.move(-1)
@@ -206,7 +197,7 @@ def handle_events():
         elif state == PAUSE:
             for b in pause_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_ESCAPE or e.key == pygame.K_p or e.key == pygame.K_q: set_state(PLAY)
+                if e.key == pygame.K_ESCAPE or e.key == pygame.K_p: set_state(PLAY)
                 elif e.key == pygame.K_q: set_state(MENU)
         elif state == OVER:
             for b in over_buttons: b.handle(e)
@@ -251,9 +242,6 @@ def draw_playfield_target(surf):
 
 def draw_game(t, dt):
     screen.fill(S.BG)
-    # Применяем эффект свечения к игровому полю
-    bloom_surf.blit(screen, (0, 0))
-    bloom(bloom_surf, screen, threshold=200, smooth=3)
     ox, oy = fx.offset()
     if ox or oy:
         tmp = pygame.Surface((S.WIDTH, S.HEIGHT))
@@ -310,13 +298,11 @@ while running:
 
     handle_events()
 
-    # Таймеры эффектов
     if transition_alpha > 0:
         transition_alpha = max(0, transition_alpha - fade_speed)
     if flash_timer > 0:
         flash_timer -= dt
 
-    # Применяем настройки (защита от None)
     if volume_slider: pygame.mixer.music.set_volume(volume_slider.val)
     if sfx_slider: audio.set_sfx_volume(sfx_slider.val)
     if shake_toggle: fx.enable_shake = shake_toggle.state
@@ -362,7 +348,6 @@ while running:
             if obj and hasattr(obj, 'update'): obj.update(dt)
         ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, settings_back)
 
-    # Плашка достижений
     if last_unlock and t - last_unlock_t < 2500:
         fade = max(0.0, 1.0 - (t - last_unlock_t) / 2500.0)
         name = next((a['name_key'] for a in ACHIEVEMENTS if a['id'] == last_unlock), last_unlock)
@@ -372,7 +357,6 @@ while running:
     elif last_unlock:
         last_unlock = None
 
-    # Fade-переход
     if transition_alpha > 0:
         fs = pygame.Surface((S.WIDTH, S.HEIGHT))
         fs.fill((0, 0, 0))
