@@ -153,7 +153,10 @@ def cb_clear(rows, count):
         last_unlock = res
         last_unlock_t = pygame.time.get_ticks()
 
-def cb_gameover():
+def cb_win():
+    audio.play('levelup')
+
+
     audio.play('gameover')
 
 game.on_move = cb_move
@@ -162,6 +165,7 @@ game.on_lock = cb_lock
 game.on_clear = cb_clear
 game.on_levelup = cb_levelup
 game.on_gameover = cb_gameover
+game.on_win = cb_win
 
 settings_back = ui.Button(locale.t("back"), S.WIDTH // 2, S.HEIGHT - 60, 200, 45, lambda: set_state(MENU))
 
