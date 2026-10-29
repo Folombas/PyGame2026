@@ -6,10 +6,10 @@ class Piece:
         self.kind = kind
         self.shape = [row[:] for row in SHAPES[kind]]
         self.color = COLORS[kind]
-        import random
-        self.powerup = random.choices([None, 'bomb', 'freeze', 'clear'], weights=[80, 8, 6, 6])[0]
         self.x = COLS // 2 - len(self.shape[0]) // 2
         self.y = -len(self.shape)
+        # Пауэрапы: 80% шанс, что ничего не будет
+        self.powerup = random.choices([None, 'bomb', 'freeze', 'clear'], weights=[80, 8, 6, 6])[0]
 
     def cells(self, dx=0, dy=0, shape=None):
         s = shape if shape is not None else self.shape
@@ -22,24 +22,16 @@ class Game:
     LINE_SCORE = {1: 100, 2: 300, 3: 500, 4: 800}
 
     def __init__(self):
-        self.on_clear = None    # callback(rows, count)
+        self.on_clear = None
         self.on_lock = None
         self.on_rotate = None
         self.on_move = None
         self.on_gameover = None
-        self.on_win = None
         self.on_levelup = None
+        self.on_win = None
         self.reset()
 
     def reset(self, zen=False, mode='classic'):
-        self.zen = zen
-        self.mode = mode
-        self.elapsed_time = 0.0
-        self.freeze_timer = 0
-        self.garbage_timer = 10000
-        self.show_ghost = True
-        self.fall_speed_mult = 1.0
-        self.show_grid = True
         self.grid = [[None] * COLS for _ in range(ROWS)]
         self.powerup_grid = {}
         self.bag = []
@@ -52,13 +44,21 @@ class Game:
         self.max_combo = 0
         self.pieces = 0
         self.game_over = False
-        self.b2b = False
+        self.win = False
+        self.zen = zen
+        self.mode = mode
+        self.elapsed_time = 0.0
+        self.freeze_timer = 0
+        self.garbage_timer = 10000
         self.fall_timer = 0.0
         self.lock_timer = 0.0
         self.clearing = []
         self.clear_timer = 0.0
         self.hold = None
         self.hold_used = False
+        self.show_ghost = True
+        self.fall_speed_mult = 1.0
+        self.show_grid = True
 
     def _spawn(self):
         if not self.bag:
@@ -116,6 +116,20 @@ class Game:
         self.lock()
         return d
 
+    def hold_piece(self):
+        if self.hold_used:
+            return False
+        if self.hold is None:
+            self.hold = self.current.kind
+            self.current = self.next
+            self.next = self._spawn()
+        else:
+            h = self.hold
+            self.hold = self.current.kind
+            self.current = Piece(h)
+        self.hold_used = True
+        return True
+
     def lock(self):
         self.pieces += 1
         for gx, gy in self.current.cells():
@@ -142,13 +156,30 @@ class Game:
                 self.b2b = True
             else:
                 self.b2b = False
+                
+            # Активация пауэрапов
+            for (gx, gy), ptype in list(self.powerup_grid.items()):
+                if gy in full:
+                    if ptype == 'bomb':
+                        for by in range(max(0, gy-1), min(ROWS, gy+2)):
+                            for bx in range(max(0, gx-1), min(COLS, gx+2)):
+                                self.grid[by][bx] = None
+                    elif ptype == 'freeze':
+                        self.freeze_timer = 5000
+                    elif ptype == 'clear':
+                        for by in range(ROWS-1, ROWS-3, -1):
+                            self.grid[by] = [None] * COLS
+                    del self.powerup_grid[(gx, gy)]
+
             self.clearing = full
             self.clear_timer = 220.0
             if self.on_clear: self.on_clear(full, len(full))
+            
             new_level = 1 + self.lines // 10
             if new_level > self.level:
                 self.level = new_level
                 if self.on_levelup: self.on_levelup(self.level)
+                
             if self.mode == 'sprint' and self.lines >= 40:
                 self.win = True
                 if self.on_win: self.on_win()
@@ -162,11 +193,7 @@ class Game:
         self.fall_timer = 0
         self.lock_timer = 0
         if not self.valid(self.current):
-            if self.zen:
-                self.grid = [[None] * COLS for _ in range(ROWS)]
-        self.powerup_grid = {}
-            else:
-                self.game_over = True
+            self.game_over = True
             if self.on_gameover: self.on_gameover()
 
     def _resolve_clear(self):
@@ -176,18 +203,31 @@ class Game:
         self.grid = kept
         self.clearing = []
 
+    def push_garbage(self):
+        if any(cell is not None for cell in self.grid[0]):
+            self.game_over = True
+            if self.on_gameover: self.on_gameover()
+            return
+        self.grid.pop(0)
+        self.grid.append([(100, 100, 100)] * COLS)
+        self.current.y -= 1
+
     def update(self, dt):
         if self.game_over or self.win:
             return
+            
         if self.mode == 'sprint':
             self.elapsed_time += dt
+            
         if self.freeze_timer > 0:
             self.freeze_timer -= dt
+            
         if self.mode == 'survival' and not self.win and not self.game_over:
             self.garbage_timer -= dt
             if self.garbage_timer <= 0:
                 self.push_garbage()
                 self.garbage_timer = 10000
+
         if self.clearing:
             self.clear_timer -= dt
             if self.clear_timer <= 0:
@@ -206,30 +246,6 @@ class Game:
                     self.lock()
                     self.lock_timer = 0
 
-    def hold_piece(self):
-        if self.hold_used:
-            return False
-        if self.hold is None:
-            self.hold = self.current.kind
-            self.current = self.next
-            self.next = self._spawn()
-        else:
-            h = self.hold
-            self.hold = self.current.kind
-            self.current = Piece(h)
-        self.hold_used = True
-        return True
-
-
-    def push_garbage(self):
-        # Проверяем, не забит ли верх
-        if any(cell is not None for cell in self.grid[0]):
-            self.game_over = True
-            if self.on_gameover: self.on_gameover()
-            return
-        self.grid.pop(0)
-        self.grid.append([(100, 100, 100)] * COLS) # Серый мусор
-        self.current.y -= 1 # Сдвигаем текущую фигуру вверх
     def ghost_y(self):
         g = 0
         while self.valid(self.current, dy=g + 1):
