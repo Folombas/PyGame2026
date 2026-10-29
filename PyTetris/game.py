@@ -220,6 +220,16 @@ class Game:
         self.hold_used = True
         return True
 
+
+    def push_garbage(self):
+        # Проверяем, не забит ли верх
+        if any(cell is not None for cell in self.grid[0]):
+            self.game_over = True
+            if self.on_gameover: self.on_gameover()
+            return
+        self.grid.pop(0)
+        self.grid.append([(100, 100, 100)] * COLS) # Серый мусор
+        self.current.y -= 1 # Сдвигаем текущую фигуру вверх
     def ghost_y(self):
         g = 0
         while self.valid(self.current, dy=g + 1):
