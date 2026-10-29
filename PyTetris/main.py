@@ -155,6 +155,9 @@ def cb_clear(rows, count):
         last_unlock = res
         last_unlock_t = pygame.time.get_ticks()
 
+def cb_gameover():
+    audio.play('gameover')
+
 def cb_win():
     audio.play('levelup')
 
