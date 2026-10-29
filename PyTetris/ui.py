@@ -508,7 +508,7 @@ def draw_collection(surf, meta):
 def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, back_btn):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     draw_title(surf, locale.t("settings"), 60, pygame.time.get_ticks())
-    rect = pygame.Rect(WIDTH // 2 - 250, 120, 500, 420)
+    rect = pygame.Rect(WIDTH // 2 - 250, 130, 500, 440)
     panel(surf, rect, accent=ACCENT)
     
     y = rect.y + 40
@@ -519,7 +519,7 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
         music_slider.rect.y = y + 8
         music_slider.update_handle()
         music_slider.draw(surf)
-    y += 55
+    y += 60
     
     # Звуки
     surf.blit(F_MED.render(locale.t("sfx"), True, TEXT), (rect.x + 40, y))
@@ -528,7 +528,7 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
         sfx_slider.rect.y = y + 8
         sfx_slider.update_handle()
         sfx_slider.draw(surf)
-    y += 65
+    y += 70
     
     # Призрак
     surf.blit(F_MED.render(locale.t("ghost"), True, TEXT), (rect.x + 40, y))
@@ -536,7 +536,7 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
         ghost_toggle.rect.x = rect.right - 100
         ghost_toggle.rect.y = y
         ghost_toggle.draw(surf)
-    y += 55
+    y += 60
     
     # Тряска
     surf.blit(F_MED.render(locale.t("shake"), True, TEXT), (rect.x + 40, y))
@@ -544,7 +544,7 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
         shake_toggle.rect.x = rect.right - 100
         shake_toggle.rect.y = y
         shake_toggle.draw(surf)
-    y += 65
+    y += 70
     
     # Скорость
     surf.blit(F_MED.render("Скорость", True, TEXT), (rect.x + 40, y))
@@ -553,7 +553,7 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
         speed_slider.rect.y = y + 8
         speed_slider.update_handle()
         speed_slider.draw(surf)
-    y += 55
+    y += 60
     
     # Сетка
     surf.blit(F_MED.render("Сетка", True, TEXT), (rect.x + 40, y))
@@ -563,9 +563,8 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
         grid_toggle.draw(surf)
     
     # Кнопка назад
-    back_btn.rect.y = HEIGHT - 70
+    back_btn.rect.y = HEIGHT - 60
     back_btn.draw(surf)
-
 def draw_hud(surf, game, sidebar_x, t, meta):
     x = sidebar_x
     y = 40
