@@ -626,5 +626,5 @@ def draw_hud(surf, game, sidebar_x, t, meta):
         surf.blit(c, c.get_rect(midtop=(x + 100, HEIGHT - 80)))
     
     hint = F_TINY.render(locale.t("controls"), True, MUTED)
-    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 8)))
+    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 20)))
 
