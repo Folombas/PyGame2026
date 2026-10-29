@@ -568,7 +568,11 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
 def draw_hud(surf, game, sidebar_x, t, meta):
     x = sidebar_x
     y = 40
-    if getattr(game, 'mode', 'classic') == 'sprint':
+    if getattr(game, 'mode', 'classic') == 'survival':
+        labels = [(locale.t("score"), str(game.score), ACCENT),
+                  (locale.t("lines"), str(game.lines), GOLD),
+                  ("GARBAGE", f"{int(game.garbage_timer/1000)}s", S.DANGER)]
+    elif getattr(game, 'mode', 'classic') == 'sprint':
         labels = [(locale.t("time"), f"{game.elapsed_time/1000:.1f}s", ACCENT),
                   (locale.t("goal"), f"{game.lines}/40", GOLD)]
     else:
