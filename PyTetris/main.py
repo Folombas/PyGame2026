@@ -336,6 +336,10 @@ while running:
             frame_idx = (t // 40) % len(bg_frames)
             screen.blit(bg_frames[frame_idx], (0, 0))
         else:
+                    if bg_frames:
+            frame_idx = (t // 40) % len(bg_frames)
+            screen.blit(bg_frames[frame_idx], (0, 0))
+        else:
             ui.draw_menu(screen, menu_buttons, t, stars, meta)
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
