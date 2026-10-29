@@ -244,6 +244,11 @@ def draw_playfield_target(surf):
                 else:
                     kind = next((k for k, v in S.COLORS.items() if v == col), "I")
                     renderer.draw_block(surf, board_x + x*S.CELL, board_y + y*S.CELL, kind)
+                    if (x, y) in game.powerup_grid:
+                        ptype = game.powerup_grid[(x, y)]
+                        icon = {"bomb": "B", "freeze": "F", "clear": "C"}[ptype]
+                        itxt = ui.F_TINY.render(icon, True, (255, 255, 255))
+                        surf.blit(itxt, (board_x + x*S.CELL + 8, board_y + y*S.CELL + 8))
     if not game.game_over and not game.clearing and game.show_ghost:
         gy = game.ghost_y()
         p = game.current
