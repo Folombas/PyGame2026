@@ -429,21 +429,24 @@ def draw_leaderboard(surf, scores, best):
 
 def draw_achievements(surf, meta, ach_list):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_title(surf, locale.t("ach"), 70, pygame.time.get_ticks())
-    unlocked = meta.get('unlocked', {})
-    rect = pygame.Rect(0, 0, 560, 520)
-    rect.center = (WIDTH // 2, HEIGHT // 2 + 20)
+    draw_title(surf, locale.t("ach"), 50, pygame.time.get_ticks())
+    
+    # Панель достаточно большая для 10 ачивок
+    rect = pygame.Rect(WIDTH // 2 - 280, 120, 560, 580)
     panel(surf, rect, accent=ACCENT2)
+    
+    unlocked = meta.get('unlocked', {})
     for i, a in enumerate(ach_list):
-        y = rect.y + 40 + i * 60
+        y = rect.y + 30 + i * 52  # Шаг 52 пикселя, чтобы поместились все 10
         done = a['id'] in unlocked
         color = ACCENT if done else MUTED
-        draw_achievement_icon(surf, rect.x + 20, y, 40, done)
+        
+        draw_achievement_icon(surf, rect.x + 20, y, 36, done)
+        
         name = F_MED.render(locale.t(a['name_key']), True, color)
-        surf.blit(name, (rect.x + 80, y + 2))
+        surf.blit(name, (rect.x + 70, y))
         desc = F_SMALL.render(locale.t(a['desc_key']), True, (180, 180, 220) if done else (110, 110, 140))
-        surf.blit(desc, (rect.x + 80, y + 26))
-
+        surf.blit(desc, (rect.x + 70, y + 22))
 def draw_dailies(surf, meta, quests):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     draw_title(surf, "DAILY QUESTS", 70, pygame.time.get_ticks())
