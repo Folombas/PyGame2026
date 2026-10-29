@@ -49,7 +49,6 @@ shake_toggle = None
 speed_slider = None
 grid_toggle = None
 
-
 def toggle_fullscreen():
     global is_fullscreen, screen
     is_fullscreen = not is_fullscreen
@@ -78,20 +77,19 @@ def toggle_lang():
 def rebuild_menu():
     global menu_buttons, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle
     menu_buttons = [
-        ui.Button(locale.t("play"),  S.WIDTH // 2, 200, 240, 36, lambda: start_game(False, "classic")),
-        ui.Button(locale.t("sprint"),S.WIDTH // 2, 245, 240, 36, lambda: start_game(False, "sprint"), accent=S.GOLD),
-        ui.Button("SURVIVAL",      S.WIDTH // 2, 605, 240, 36, lambda: start_game(False, "survival"), accent=S.DANGER),
-        ui.Button(locale.t("zen"),   S.WIDTH // 2, 605, 240, 36, lambda: start_game(True), accent=S.GOLD),
-        ui.Button(locale.t("lb"),    S.WIDTH // 2, 605, 240, 36, lambda: set_state(SCORES), accent=S.GOLD),
-        ui.Button(locale.t("ach"),   S.WIDTH // 2, 605, 240, 36, lambda: set_state(ACHS), accent=S.ACCENT2),
-        ui.Button(locale.t("daily"), S.WIDTH // 2, 605, 240, 36, lambda: set_state(DAILY), accent=S.ACCENT),
-        ui.Button(locale.t("settings"),S.WIDTH // 2, 605, 240, 36, lambda: set_state(SETTINGS), accent=S.ACCENT),
-        ui.Button(locale.t("lang"),  S.WIDTH // 2, 605, 240, 36, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),  S.WIDTH // 2, 560, 240, 36, quit_game, accent=S.DANGER),
+        ui.Button(locale.t("play"),    S.WIDTH // 2, 180, 240, 36, lambda: start_game(False, "classic")),
+        ui.Button(locale.t("sprint"),  S.WIDTH // 2, 225, 240, 36, lambda: start_game(False, "sprint"), accent=S.GOLD),
+        ui.Button(locale.t("survival"),S.WIDTH // 2, 270, 240, 36, lambda: start_game(False, "survival"), accent=S.DANGER),
+        ui.Button(locale.t("zen"),     S.WIDTH // 2, 315, 240, 36, lambda: start_game(True, "classic"), accent=S.ACCENT2),
+        ui.Button(locale.t("lb"),      S.WIDTH // 2, 360, 240, 36, lambda: set_state(SCORES), accent=S.GOLD),
+        ui.Button(locale.t("ach"),     S.WIDTH // 2, 405, 240, 36, lambda: set_state(ACHS), accent=S.ACCENT2),
+        ui.Button(locale.t("daily"),   S.WIDTH // 2, 450, 240, 36, lambda: set_state(DAILY), accent=S.ACCENT),
+        ui.Button(locale.t("settings"),S.WIDTH // 2, 495, 240, 36, lambda: set_state(SETTINGS), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),    S.WIDTH // 2, 540, 240, 36, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),    S.WIDTH // 2, 585, 240, 36, quit_game, accent=S.DANGER),
     ]
-    
     if volume_slider is None:
-        volume_slider = ui.Slider(S.WIDTH // 2 - 100, 620, 200, 10, 0.4)
+        volume_slider = ui.Slider(S.WIDTH // 2 - 100, 640, 200, 10, 0.4)
         sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
         ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
         shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
@@ -161,9 +159,6 @@ def cb_gameover():
 def cb_win():
     audio.play('levelup')
 
-
-    audio.play('gameover')
-
 game.on_move = cb_move
 game.on_rotate = cb_rotate
 game.on_lock = cb_lock
@@ -180,7 +175,7 @@ pause_buttons = [
 ]
 
 over_buttons = [
-    ui.Button(locale.t("restart"), S.WIDTH // 2, S.HEIGHT // 2 + 90, 240, 60, start_game),
+    ui.Button(locale.t("restart"), S.WIDTH // 2, S.HEIGHT // 2 + 90, 240, 60, lambda: start_game(False, game.mode)),
     ui.Button(locale.t("menu"),    S.WIDTH // 2, S.HEIGHT // 2 + 170, 240, 60, back_to_menu, accent=S.ACCENT2),
 ]
 
@@ -248,11 +243,13 @@ def draw_playfield_target(surf):
                 else:
                     kind = next((k for k, v in S.COLORS.items() if v == col), "I")
                     renderer.draw_block(surf, board_x + x*S.CELL, board_y + y*S.CELL, kind)
+                    # Рисуем пауэрапы
                     if (x, y) in game.powerup_grid:
                         ptype = game.powerup_grid[(x, y)]
                         icon = {"bomb": "B", "freeze": "F", "clear": "C"}[ptype]
                         itxt = ui.F_TINY.render(icon, True, (255, 255, 255))
                         surf.blit(itxt, (board_x + x*S.CELL + 8, board_y + y*S.CELL + 8))
+                        
     if not game.game_over and not game.clearing and game.show_ghost:
         gy = game.ghost_y()
         p = game.current
@@ -290,7 +287,6 @@ def draw_game(t, dt):
         fl.set_alpha(int(200 * (flash_timer / 300.0)))
         screen.blit(fl, (0, 0))
     
-    # Включаем нативный Bloom прямо перед отрисовкой!
     apply_bloom(screen)
 
 def handle_game_over():
@@ -308,13 +304,16 @@ def draw_over():
     screen.fill(S.BG)
     draw_playfield_target(screen)
     ui.draw_overlay(screen, 190)
+    
     if getattr(game, 'win', False):
         ui.draw_text_center(screen, locale.t("win"), S.HEIGHT // 2 - 120, ui.F_TITLE, S.GOLD)
     else:
         ui.draw_text_center(screen, locale.t("game_over"), S.HEIGHT // 2 - 120, ui.F_TITLE, S.DANGER)
+        
     if is_new_high:
         h = ui.F_H1.render(locale.t("new_high"), True, S.GOLD)
         screen.blit(h, h.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2 - 200)))
+        
     ui.draw_text_center(screen, f"{locale.t('score')}: {game.score}   {locale.t('lines')}: {game.lines}   {locale.t('level')}: {game.level}",
                         S.HEIGHT // 2 - 30, ui.F_H2, S.TEXT)
     for b in over_buttons: b.draw(screen)
@@ -345,12 +344,12 @@ while running:
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
-        apply_bloom(screen) # Блум в меню
+        apply_bloom(screen)
     elif state == PLAY:
         if game.game_over:
             handle_game_over()
         elif game.win:
-            handle_game_over() # Переиспользуем экран проигрыша для победы
+            handle_game_over()
         else:
             game.update(dt)
             run_time += dt / 1000.0
