@@ -39,6 +39,7 @@ class Game:
         self.fall_speed_mult = 1.0
         self.show_grid = True
         self.grid = [[None] * COLS for _ in range(ROWS)]
+        self.powerup_grid = {}
         self.bag = []
         self.current = self._spawn()
         self.next = self._spawn()
@@ -121,6 +122,8 @@ class Game:
                 if self.on_gameover: self.on_gameover()
                 return
             self.grid[gy][gx] = self.current.color
+            if self.current.powerup:
+                self.powerup_grid[(gx, gy)] = self.current.powerup
 
         full = [y for y in range(ROWS) if all(c is not None for c in self.grid[y])]
         if full:
@@ -159,6 +162,7 @@ class Game:
         if not self.valid(self.current):
             if self.zen:
                 self.grid = [[None] * COLS for _ in range(ROWS)]
+        self.powerup_grid = {}
             else:
                 self.game_over = True
             if self.on_gameover: self.on_gameover()
