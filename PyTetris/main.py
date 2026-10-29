@@ -80,13 +80,14 @@ def rebuild_menu():
     menu_buttons = [
         ui.Button(locale.t("play"),  S.WIDTH // 2, 200, 240, 36, lambda: start_game(False, "classic")),
         ui.Button(locale.t("sprint"),S.WIDTH // 2, 245, 240, 36, lambda: start_game(False, "sprint"), accent=S.GOLD),
-        ui.Button(locale.t("zen"),   S.WIDTH // 2, 290, 240, 36, lambda: start_game(True), accent=S.GOLD),
-        ui.Button(locale.t("lb"),    S.WIDTH // 2, 335, 240, 36, lambda: set_state(SCORES), accent=S.GOLD),
-        ui.Button(locale.t("ach"),   S.WIDTH // 2, 380, 240, 36, lambda: set_state(ACHS), accent=S.ACCENT2),
-        ui.Button(locale.t("daily"), S.WIDTH // 2, 425, 240, 36, lambda: set_state(DAILY), accent=S.ACCENT),
-        ui.Button(locale.t("settings"),S.WIDTH // 2, 470, 240, 36, lambda: set_state(SETTINGS), accent=S.ACCENT),
-        ui.Button(locale.t("lang"),  S.WIDTH // 2, 515, 240, 36, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),  S.WIDTH // 2, 560, 240, 36, quit_game, accent=S.DANGER),
+        ui.Button("SURVIVAL",      S.WIDTH // 2, 605, 240, 36, lambda: start_game(False, "survival"), accent=S.DANGER),
+        ui.Button(locale.t("zen"),   S.WIDTH // 2, 605, 240, 36, lambda: start_game(True), accent=S.GOLD),
+        ui.Button(locale.t("lb"),    S.WIDTH // 2, 605, 240, 36, lambda: set_state(SCORES), accent=S.GOLD),
+        ui.Button(locale.t("ach"),   S.WIDTH // 2, 605, 240, 36, lambda: set_state(ACHS), accent=S.ACCENT2),
+        ui.Button(locale.t("daily"), S.WIDTH // 2, 605, 240, 36, lambda: set_state(DAILY), accent=S.ACCENT),
+        ui.Button(locale.t("settings"),S.WIDTH // 2, 605, 240, 36, lambda: set_state(SETTINGS), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),  S.WIDTH // 2, 605, 240, 36, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),  S.WIDTH // 2, 605, 240, 36, quit_game, accent=S.DANGER),
     ]
     
     if volume_slider is None:

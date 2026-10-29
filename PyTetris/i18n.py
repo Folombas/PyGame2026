@@ -1,7 +1,7 @@
 LANG = "en"
 TRANSLATIONS = {
     "en": {
-        "play": "PLAY", "sprint": "SPRINT", "time": "TIME", "goal": "GOAL", "win": "GOAL REACHED!", "zen": "ZEN MODE", "lb": "LEADERBOARD", "ach": "ACHIEVEMENTS",
+        "play": "PLAY", "sprint": "SPRINT", "survival": "SURVIVAL", "time": "TIME", "goal": "GOAL", "win": "GOAL REACHED!", "zen": "ZEN MODE", "lb": "LEADERBOARD", "ach": "ACHIEVEMENTS",
         "daily": "DAILY QUESTS", "lang": "LANGUAGE: EN", "quit": "QUIT",
         "score": "SCORE", "level": "LEVEL", "lines": "LINES", "next": "NEXT", "hold": "HOLD",
         "paused": "PAUSED", "game_over": "GAME OVER", "new_high": "NEW HIGH SCORE!",
@@ -19,7 +19,7 @@ TRANSLATIONS = {
         "d_lines": "Clear {target} lines today", "d_score": "Score {target} points", "d_time": "Play for {target} minutes today"
     },
     "ru": {
-        "play": "ИГРАТЬ", "sprint": "СПРИНТ", "time": "ВРЕМЯ", "goal": "ЦЕЛЬ", "win": "ЦЕЛЬ ДОСТИГНУТА!", "zen": "ДЗЕН", "lb": "РЕКОРДЫ", "ach": "ДОСТИЖЕНИЯ",
+        "play": "ИГРАТЬ", "sprint": "СПРИНТ", "survival": "МУСОР", "time": "ВРЕМЯ", "goal": "ЦЕЛЬ", "win": "ЦЕЛЬ ДОСТИГНУТА!", "zen": "ДЗЕН", "lb": "РЕКОРДЫ", "ach": "ДОСТИЖЕНИЯ",
         "daily": "ЗАДАНИЯ", "lang": "ЯЗЫК: RU", "quit": "ВЫХОД",
         "score": "СЧЕТ", "level": "УРОВЕНЬ", "lines": "ЛИНИИ", "next": "СЛЕД.", "hold": "ХОЛД",
         "paused": "ПАУЗА", "game_over": "ИГРА ОКОНЧЕНА", "new_high": "НОВЫЙ РЕКОРД!",
