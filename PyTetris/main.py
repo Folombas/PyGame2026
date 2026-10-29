@@ -87,7 +87,7 @@ def rebuild_menu():
         ui.Button(locale.t("daily"), S.WIDTH // 2, 605, 240, 36, lambda: set_state(DAILY), accent=S.ACCENT),
         ui.Button(locale.t("settings"),S.WIDTH // 2, 605, 240, 36, lambda: set_state(SETTINGS), accent=S.ACCENT),
         ui.Button(locale.t("lang"),  S.WIDTH // 2, 605, 240, 36, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),  S.WIDTH // 2, 605, 240, 36, quit_game, accent=S.DANGER),
+        ui.Button(locale.t("quit"),  S.WIDTH // 2, 560, 240, 36, quit_game, accent=S.DANGER),
     ]
     
     if volume_slider is None:
