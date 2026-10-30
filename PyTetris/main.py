@@ -1,4 +1,4 @@
-import sys, pygame
+import sys, pygame, random
 import settings as S
 from game import Game
 from effects import Effects, apply_bloom, FloatingText, Shockwave
@@ -319,6 +319,10 @@ def draw_over():
     screen.fill(S.BG)
     draw_playfield_target(screen)
     ui.draw_overlay(screen, 190)
+    if is_new_high:
+        # Салют из частиц
+        for _ in range(5):
+            fx.burst(S.WIDTH//2 + random.randint(-100, 100), S.HEIGHT//2 - 150, S.GOLD, count=10)
     
     if getattr(game, 'win', False):
         ui.draw_text_center(screen, locale.t("win"), S.HEIGHT // 2 - 120, ui.F_TITLE, S.GOLD)
