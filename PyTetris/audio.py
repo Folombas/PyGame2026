@@ -37,6 +37,8 @@ if _OK:
             'levelup':  _tone(550, 0.22, 0.30),
             'gameover': _tone(110, 0.60, 0.35, decay=2.0),
             'menu':     _tone(550, 0.06, 0.18, 'square'),
+            'combo':    _tone(880, 0.10, 0.25, 'square'),
+            'powerup':  _tone(1200, 0.20, 0.30, 'sine'),
             'ui_hover': _tone(880, 0.03, 0.10, 'sine'),
             'ui_click': _tone(660, 0.05, 0.20, 'square'),
         }
