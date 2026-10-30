@@ -127,3 +127,18 @@ class Shockwave:
                 pygame.draw.circle(surf, (*self.color[:3], a), (int(self.x), int(self.y)), int(self.radius), w)
             except TypeError:
                 pygame.draw.circle(surf, self.color, (int(self.x), int(self.y)), int(self.radius), w)
+
+
+def apply_bloom(surface, intensity=1.0):
+    """Нативный, но аккуратный эффект свечения."""
+    try:
+        # Уменьшаем радиус размытия с 6 до 2 (чтобы текст не превращался в кашу)
+        blurred = pygame.transform.gaussian_blur(surface, 2)
+        
+        # Делаем размытие полупрозрачным, чтобы оно не "выжигало" цвета
+        blurred.set_alpha(100) 
+        
+        # Накладываем с аддитивным смешиванием
+        surface.blit(blurred, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+    except AttributeError:
+        pass
