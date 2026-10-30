@@ -98,8 +98,8 @@ class Starfield:
         self.w, self.h = w, h
         self.stars = [[random.uniform(0, w), random.uniform(0, h),
                        random.uniform(0.2, 1.6)] for _ in range(n)]
-    def update(self, dt):
-        f = dt / 16.67
+    def update(self, dt, speed_mult=1.0):
+        f = (dt / 16.67) * speed_mult
         for s in self.stars:
             s[1] += s[2] * f
             if s[1] > self.h:

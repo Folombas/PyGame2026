@@ -358,7 +358,7 @@ while running:
         for b in menu_buttons: b.update(dt, mouse)
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
         if volume_slider: volume_slider.draw(screen)
-        stars.update(dt)
+        stars.update(dt, 1.0)
         apply_bloom(screen)
     elif state == PLAY:
         if game.game_over:
