@@ -332,8 +332,9 @@ def draw_playfield_frame(surf, board_x, board_y):
                      2, border_radius=10)
 
 def draw_grid_bg(surf, board_x, board_y, t=0):
-    offset = int(math.sin(t / 500.0) * 10)
-    col = (26 + offset, 22 + offset, 44 + offset)
+    # Пульсация с использованием синуса
+    pulse = math.sin(t / 300.0) * 15
+    col = (int(26 + pulse), int(22 + pulse), int(44 + pulse * 1.5))
     for y in range(ROWS):
         for x in range(COLS):
             pygame.draw.rect(surf, col,
