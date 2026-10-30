@@ -307,6 +307,9 @@ def draw_game(t, dt):
 def handle_game_over():
     global meta, state, last_unlock, last_unlock_t, is_new_high
     is_new_high = game.score > meta.get('best_score', 0)
+    if is_new_high:
+        for _ in range(10):
+            fx.burst(S.WIDTH//2 + random.randint(-150, 150), S.HEIGHT//2 - 100, S.GOLD, count=15)
     save_score(game.score)
     newly = check_run(meta, game, run_time)
     update_persistent(meta, game, run_time)
@@ -319,10 +322,6 @@ def draw_over():
     screen.fill(S.BG)
     draw_playfield_target(screen)
     ui.draw_overlay(screen, 190)
-    if is_new_high:
-        # Салют из частиц
-        for _ in range(5):
-            fx.burst(S.WIDTH//2 + random.randint(-100, 100), S.HEIGHT//2 - 150, S.GOLD, count=10)
     
     if getattr(game, 'win', False):
         ui.draw_text_center(screen, locale.t("win"), S.HEIGHT // 2 - 120, ui.F_TITLE, S.GOLD)

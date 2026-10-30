@@ -51,9 +51,16 @@ class Button:
         self.pulse = 0.0
 
     def update(self, dt, mouse):
+        was_hovered = self.hovered
         self.hovered = self.rect.collidepoint(mouse)
+        if self.hovered and not was_hovered:
+            try:
+                import audio
+                audio.play('menu')
+            except:
+                pass
         target = 1.0 if self.hovered else 0.0
-        self.pulse += (target - self.pulse) * min(1.0, dt / 120.0)
+        self.pulse += (target - self.pulse) * min(1.0, dt / 80.0)
 
     def handle(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
