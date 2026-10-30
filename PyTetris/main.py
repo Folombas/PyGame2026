@@ -1,7 +1,7 @@
 import sys, pygame
 import settings as S
 from game import Game
-from effects import Effects, apply_bloom
+from effects import Effects, apply_bloom, FloatingText, Shockwave
 from meta import (load_meta, save_meta, load_scores, save_score,
                   ACHIEVEMENTS, check_run, on_line_clear,
                   update_persistent, get_daily_quests, update_daily)
@@ -138,6 +138,15 @@ def cb_clear(rows, count):
         fx.burst_row(board_y + y * S.CELL, board_x, S.CELL, S.COLS, colors)
     fx.kick(6.0 if count < 4 else 12.0)
     
+    # Добавляем ударную волну и текст
+    if rows:
+        cy = board_y + (sum(rows) / len(rows)) * S.CELL + S.CELL / 2
+        fx.waves.append(Shockwave(board_x + S.BOARD_W / 2, cy, S.ACCENT, max_radius=150, life=30))
+        txt = "TETRIS!" if count == 4 else f"+{count * 100}"
+        col = S.GOLD if count == 4 else S.TEXT
+        fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, cy, txt, col, life=60))
+        if count == 4: audio.play('combo')
+    
     global meta, last_unlock, last_unlock_t
     meta['xp'] = meta.get('xp', 0) + count * 10
     while meta['xp'] >= meta.get('xp_needed', 100):
@@ -269,13 +278,13 @@ def draw_game(t, dt):
         tmp.fill(S.BG)
         draw_playfield_target(tmp)
         ui.draw_hud(tmp, game, sidebar_x, t, meta)
-        fx.draw(tmp)
+        fx.draw(tmp, font=ui.F_H2)
         screen.fill(S.BG)
         screen.blit(tmp, (ox, oy))
     else:
         draw_playfield_target(screen)
         ui.draw_hud(screen, game, sidebar_x, t, meta)
-        fx.draw(screen)
+        fx.draw(screen, font=ui.F_H2)
         
     if muted:
         m = ui.F_SMALL.render("MUTED", True, S.DANGER)
