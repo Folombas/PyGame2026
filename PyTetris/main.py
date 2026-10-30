@@ -122,6 +122,11 @@ def cb_lock():
                      board_y + gy * S.CELL + S.CELL / 2, 
                      game.current.color, count=6)
     fx.kick(3.0)
+    # Если фигура содержала пауэрап, добавляем вспышку
+    if getattr(game.current, 'powerup', None):
+        global flash_timer
+        flash_timer = 150
+        audio.play('powerup')
 
 def cb_levelup(lvl):
     global flash_timer
