@@ -42,8 +42,10 @@ class Particle:
 class Effects:
     def __init__(self):
         self.particles = []
-        self.enable_shake = True
         self.shake = 0.0
+        self.texts = []
+        self.waves = []
+        self.enable_shake = True
 
     def burst(self, x, y, color, count=14):
         for _ in range(count):
@@ -86,21 +88,6 @@ class Effects:
             return (random.uniform(-self.shake, self.shake),
                     random.uniform(-self.shake, self.shake))
         return (0, 0)
-
-
-def apply_bloom(surface, intensity=1.0):
-    """Нативный, но аккуратный эффект свечения."""
-    try:
-        # Уменьшаем радиус размытия с 6 до 2 (чтобы текст не превращался в кашу)
-        blurred = pygame.transform.gaussian_blur(surface, 2)
-        
-        # Делаем размытие полупрозрачным, чтобы оно не "выжигало" цвета
-        blurred.set_alpha(100) 
-        
-        # Накладываем с аддитивным смешиванием
-        surface.blit(blurred, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
-    except AttributeError:
-        pass
 
 class FloatingText:
     def __init__(self, x, y, text, color, life=60):
