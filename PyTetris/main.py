@@ -21,6 +21,7 @@ state = MENU
 transition_alpha = 0
 fade_speed = 15
 flash_timer = 0
+trail_timer = 0
 is_new_high = False
 muted = False
 is_fullscreen = False
@@ -361,6 +362,12 @@ while running:
             handle_game_over()
         else:
             game.update(dt)
+            trail_timer += dt
+            if trail_timer > 50:
+                trail_timer = 0
+                for gx, gy in game.current.cells():
+                    if gy >= 0:
+                        fx.burst(board_x + gx * S.CELL + S.CELL/2, board_y + gy * S.CELL + S.CELL/2, game.current.color, count=1)
             run_time += dt / 1000.0
             update_daily(meta, lines=0, score=game.score, dt=dt / 1000.0)
         draw_game(t, dt)
