@@ -276,6 +276,12 @@ def draw_playfield_target(surf):
             if yy >= 0:
                 renderer.draw_block(surf, board_x + xx*S.CELL, board_y + yy*S.CELL, p.kind)
 
+def draw_crt_effect(surf):
+    lines = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
+    for y in range(0, S.HEIGHT, 4):
+        pygame.draw.line(lines, (0, 0, 0, 40), (0, y), (S.WIDTH, y), 2)
+    surf.blit(lines, (0, 0))
+
 def draw_game(t, dt):
     screen.fill(S.BG)
     ox, oy = fx.offset()
@@ -303,6 +309,7 @@ def draw_game(t, dt):
         screen.blit(fl, (0, 0))
     
     apply_bloom(screen)
+    draw_crt_effect(screen)
 
 def handle_game_over():
     global meta, state, last_unlock, last_unlock_t, is_new_high
@@ -363,6 +370,7 @@ while running:
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt, 1.0)
         apply_bloom(screen)
+    draw_crt_effect(screen)
     elif state == PLAY:
         if game.game_over:
             handle_game_over()
