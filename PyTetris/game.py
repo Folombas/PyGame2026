@@ -121,8 +121,7 @@ class Game:
             return False
         if self.hold is None:
             self.hold = self.current.kind
-            self.current = self.next
-            self.next_queue = [self._spawn(), self._spawn(), self._spawn()]
+                self.next_queue = [self._spawn(), self._spawn(), self._spawn()]
         else:
             h = self.hold
             self.hold = self.current.kind
@@ -157,7 +156,6 @@ class Game:
             else:
                 self.b2b = False
                 
-            # Активация пауэрапов
             for (gx, gy), ptype in list(self.powerup_grid.items()):
                 if gy in full:
                     if ptype == 'bomb':
@@ -188,13 +186,17 @@ class Game:
 
         if self.on_lock: self.on_lock()
         self.hold_used = False
-        self.current = self.next
-        self.next_queue = [self._spawn(), self._spawn(), self._spawn()]
+        
+        # Достаем следующую фигуру из очереди
+        self.current = self.next_queue.pop(0)
+        self.next_queue.append(self._spawn())
+        
         self.fall_timer = 0
         self.lock_timer = 0
         if not self.valid(self.current):
             self.game_over = True
             if self.on_gameover: self.on_gameover()
+
 
     def _resolve_clear(self):
         kept = [row for i, row in enumerate(self.grid) if i not in self.clearing]
