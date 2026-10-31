@@ -132,8 +132,8 @@ def cb_levelup(lvl):
     global flash_timer
     audio.play('levelup')
     fx.kick(9.0)
-    flash_timer = 300
-    for _y in range(0, S.ROWS, 4):
+    flash_timer = 500
+    for _y in range(0, S.ROWS, 2):
         colors = list(S.COLORS.values())
         fx.burst_row(board_y + _y * S.CELL, board_x, S.CELL, S.COLS, colors)
 
