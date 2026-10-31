@@ -223,7 +223,12 @@ def handle_events():
                 elif e.key == pygame.K_DOWN:  game.soft_drop()
                 elif e.key == pygame.K_UP:    game.rotate(1)
                 elif e.key == pygame.K_z:     game.rotate(-1)
-                elif e.key == pygame.K_SPACE: game.hard_drop()
+                elif e.key == pygame.K_SPACE:
+                    old_y = game.current.y
+                    game.hard_drop()
+                    for gx, gy in game.current.cells():
+                        if gy >= 0:
+                            fx.burst(board_x + gx * S.CELL + S.CELL/2, board_y + old_y * S.CELL, (255, 255, 255), count=3)
                 elif e.key == pygame.K_c:
                     if game.hold_piece(): audio.play('rotate')
         elif state == PAUSE:
