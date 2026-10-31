@@ -373,6 +373,8 @@ def draw_piece_mini(surf, shape, color, cx, cy, cell=22):
                 draw_cell(surf, ox + x*cell, oy + y*cell, color, size=cell)
 
 def draw_text_center(surf, text, y, font, color=TEXT):
+    shadow = font.render(text, True, (0, 0, 0))
+    surf.blit(shadow, shadow.get_rect(center=(WIDTH // 2 + 2, y + 2)))
     s = font.render(text, True, color)
     surf.blit(s, s.get_rect(center=(WIDTH // 2, y)))
 
