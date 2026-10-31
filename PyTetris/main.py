@@ -152,6 +152,9 @@ def cb_clear(rows, count):
         col = S.GOLD if count == 4 else S.TEXT
         fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, cy, txt, col, life=60))
         if count == 4: audio.play('combo')
+        if game.combo > 1:
+            txt = f"COMBO x{game.combo}"
+            fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, cy - 40, txt, S.ACCENT2, life=80))
     
     global meta, last_unlock, last_unlock_t
     meta['xp'] = meta.get('xp', 0) + count * 10
