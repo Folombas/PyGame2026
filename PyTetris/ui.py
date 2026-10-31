@@ -598,6 +598,10 @@ def draw_hud(surf, game, sidebar_x, t, meta):
         l = F_SMALL.render(label, True, MUTED)
         surf.blit(l, (x, y))
         v = F_H2.render(val, True, col)
+        # Обводка для цифр
+        v_outline = F_H2.render(val, True, (0, 0, 0))
+        surf.blit(v_outline, (x - 1, y + 18 - 1))
+        surf.blit(v_outline, (x + 1, y + 18 + 1))
         surf.blit(v, (x, y + 18))
         y += 70
 
