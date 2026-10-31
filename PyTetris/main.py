@@ -21,7 +21,6 @@ state = MENU
 transition_alpha = 0
 fade_speed = 15
 flash_timer = 0
-trail_timer = 0
 is_new_high = False
 muted = False
 is_fullscreen = False
@@ -41,7 +40,7 @@ board_x = 30
 board_y = 80
 sidebar_x = board_x + S.BOARD_W + 30
 
-# Глобальные UI элементы
+# UI
 menu_buttons = []
 volume_slider = None
 sfx_slider = None
@@ -49,6 +48,12 @@ ghost_toggle = None
 shake_toggle = None
 speed_slider = None
 grid_toggle = None
+
+def draw_crt_effect(surf):
+    lines = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
+    for y in range(0, S.HEIGHT, 4):
+        pygame.draw.line(lines, (0, 0, 0, 40), (0, y), (S.WIDTH, y), 2)
+    surf.blit(lines, (0, 0))
 
 def toggle_fullscreen():
     global is_fullscreen, screen
@@ -122,7 +127,6 @@ def cb_lock():
                      board_y + gy * S.CELL + S.CELL / 2, 
                      game.current.color, count=6)
     fx.kick(3.0)
-    # Если фигура содержала пауэрап, добавляем вспышку
     if getattr(game.current, 'powerup', None):
         global flash_timer
         flash_timer = 150
@@ -144,7 +148,6 @@ def cb_clear(rows, count):
         fx.burst_row(board_y + y * S.CELL, board_x, S.CELL, S.COLS, colors)
     fx.kick(6.0 if count < 4 else 12.0)
     
-    # Добавляем ударную волну и текст
     if rows:
         cy = board_y + (sum(rows) / len(rows)) * S.CELL + S.CELL / 2
         fx.waves.append(Shockwave(board_x + S.BOARD_W / 2, cy, S.ACCENT, max_radius=150, life=30))
@@ -267,7 +270,6 @@ def draw_playfield_target(surf):
                 else:
                     kind = next((k for k, v in S.COLORS.items() if v == col), "I")
                     renderer.draw_block(surf, board_x + x*S.CELL, board_y + y*S.CELL, kind)
-                    # Рисуем пауэрапы
                     if (x, y) in game.powerup_grid:
                         ptype = game.powerup_grid[(x, y)]
                         icon = {"bomb": "B", "freeze": "F", "clear": "C"}[ptype]
@@ -284,12 +286,6 @@ def draw_playfield_target(surf):
         for xx, yy in p.cells():
             if yy >= 0:
                 renderer.draw_block(surf, board_x + xx*S.CELL, board_y + yy*S.CELL, p.kind)
-
-def draw_crt_effect(surf):
-    lines = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
-    for y in range(0, S.HEIGHT, 4):
-        pygame.draw.line(lines, (0, 0, 0, 40), (0, y), (S.WIDTH, y), 2)
-    surf.blit(lines, (0, 0))
 
 def draw_game(t, dt):
     screen.fill(S.BG)
@@ -314,7 +310,7 @@ def draw_game(t, dt):
     if flash_timer > 0:
         fl = pygame.Surface((S.WIDTH, S.HEIGHT))
         fl.fill((255, 255, 255))
-        fl.set_alpha(int(200 * (flash_timer / 300.0)))
+        fl.set_alpha(int(200 * (flash_timer / 500.0)))
         screen.blit(fl, (0, 0))
     
     apply_bloom(screen)
@@ -337,17 +333,15 @@ def handle_game_over():
 def draw_over():
     screen.fill(S.BG)
     draw_playfield_target(screen)
-    ui.draw_overlay(screen, 190)
+    ui.draw_overlay(screen, 200)
+    
+    shadow = ui.F_TITLE.render(locale.t("game_over"), True, (0,0,0))
+    screen.blit(shadow, shadow.get_rect(center=(S.WIDTH // 2 + 4, S.HEIGHT // 2 - 120 + 4)))
     
     if getattr(game, 'win', False):
         ui.draw_text_center(screen, locale.t("win"), S.HEIGHT // 2 - 120, ui.F_TITLE, S.GOLD)
     else:
-        # Рисуем тёмный оверлей
-    ui.draw_overlay(screen, 200)
-    # Заголовок с тенью
-    shadow = ui.F_TITLE.render(locale.t("game_over"), True, (0,0,0))
-    screen.blit(shadow, shadow.get_rect(center=(S.WIDTH // 2 + 4, S.HEIGHT // 2 - 120 + 4)))
-    ui.draw_text_center(screen, locale.t("game_over"), S.HEIGHT // 2 - 120, ui.F_TITLE, S.DANGER)
+        ui.draw_text_center(screen, locale.t("game_over"), S.HEIGHT // 2 - 120, ui.F_TITLE, S.DANGER)
         
     if is_new_high:
         h = ui.F_H1.render(locale.t("new_high"), True, S.GOLD)
@@ -382,9 +376,8 @@ while running:
         for b in menu_buttons: b.update(dt, mouse)
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
         if volume_slider: volume_slider.draw(screen)
-        stars.update(dt, 1.0)
+        stars.update(dt)
         apply_bloom(screen)
-    draw_crt_effect(screen)
     elif state == PLAY:
         if game.game_over:
             handle_game_over()
@@ -392,12 +385,6 @@ while running:
             handle_game_over()
         else:
             game.update(dt)
-            trail_timer += dt
-            if trail_timer > 50:
-                trail_timer = 0
-                for gx, gy in game.current.cells():
-                    if gy >= 0:
-                        fx.burst(board_x + gx * S.CELL + S.CELL/2, board_y + gy * S.CELL + S.CELL/2, game.current.color, count=1)
             run_time += dt / 1000.0
             update_daily(meta, lines=0, score=game.score, dt=dt / 1000.0)
         draw_game(t, dt)
