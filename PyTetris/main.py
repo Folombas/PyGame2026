@@ -252,9 +252,10 @@ def draw_playfield_target(surf):
             if col:
                 flash = y in game.clearing
                 if flash:
-                    pygame.draw.rect(surf, (255, 255, 255),
-                                     (board_x + x*S.CELL, board_y + y*S.CELL,
-                                      S.CELL, S.CELL), border_radius=3)
+                    flash_surf = pygame.Surface((S.CELL, S.CELL), pygame.SRCALPHA)
+                    alpha = min(255, max(0, int((game.clear_timer / 220.0) * 255)))
+                    flash_surf.fill((255, 255, 255, alpha))
+                    surf.blit(flash_surf, (board_x + x*S.CELL, board_y + y*S.CELL))
                 else:
                     kind = next((k for k, v in S.COLORS.items() if v == col), "I")
                     renderer.draw_block(surf, board_x + x*S.CELL, board_y + y*S.CELL, kind)
