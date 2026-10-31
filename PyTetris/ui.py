@@ -613,16 +613,18 @@ def draw_hud(surf, game, sidebar_x, t, meta):
     surf.blit(xp_txt, (bar_x + bar_w + 5, bar_y - 2))
     y += 60
 
-    # Next
-    nb = pygame.Rect(x, y, 200, 110)
+    # Next (3 pieces)
+    nb = pygame.Rect(x, y, 200, 230)
     pygame.draw.rect(surf, (22, 20, 40), nb, border_radius=12)
     pygame.draw.rect(surf, ACCENT2, nb, 2, border_radius=12)
     lab = F_SMALL.render(locale.t("next"), True, MUTED)
     surf.blit(lab, (x + 12, y + 12))
-    draw_piece_mini(surf, game.next.shape, game.next.color,
-                    nb.centerx, nb.centery + 10, cell=20)
     
-    y += 125
+    for i, piece in enumerate(game.next_queue):
+        draw_piece_mini(surf, piece.shape, piece.color,
+                        nb.centerx, nb.y + 60 + i * 60, cell=18)
+    
+    y += 245
     
     # HOLD
     hb = pygame.Rect(x, y, 200, 90)

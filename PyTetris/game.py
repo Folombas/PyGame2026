@@ -36,7 +36,7 @@ class Game:
         self.powerup_grid = {}
         self.bag = []
         self.current = self._spawn()
-        self.next = self._spawn()
+        self.next_queue = [self._spawn(), self._spawn(), self._spawn()]
         self.score = 0
         self.lines = 0
         self.level = 1
@@ -122,7 +122,7 @@ class Game:
         if self.hold is None:
             self.hold = self.current.kind
             self.current = self.next
-            self.next = self._spawn()
+            self.next_queue = [self._spawn(), self._spawn(), self._spawn()]
         else:
             h = self.hold
             self.hold = self.current.kind
@@ -189,7 +189,7 @@ class Game:
         if self.on_lock: self.on_lock()
         self.hold_used = False
         self.current = self.next
-        self.next = self._spawn()
+        self.next_queue = [self._spawn(), self._spawn(), self._spawn()]
         self.fall_timer = 0
         self.lock_timer = 0
         if not self.valid(self.current):
