@@ -350,7 +350,12 @@ def draw_grid_bg(surf, board_x, board_y, t=0):
 def draw_cell(surf, px, py, color, glow=0.0, ghost=False, size=CELL):
     r = pygame.Rect(px + 1, py + 1, size - 2, size - 2)
     if ghost:
-        pygame.draw.rect(surf, color, r, 1, border_radius=4)
+        # Пунктирная рамка
+        for i in range(0, size, 6):
+            pygame.draw.line(surf, color, (px + 1, py + i), (px + 1 + min(3, size - i), py + i), 2)
+            pygame.draw.line(surf, color, (px + size - 2, py + i), (px + size - 2 - min(3, size - i), py + i), 2)
+            pygame.draw.line(surf, color, (px + i, py + 1), (px + i, py + 1 + min(3, size - i)), 2)
+            pygame.draw.line(surf, color, (px + i, py + size - 2), (px + i, py + size - 2 - min(3, size - i)), 2)
         return
     if glow > 0.05:
         g = pygame.Surface((size + 8, size + 8), pygame.SRCALPHA)
