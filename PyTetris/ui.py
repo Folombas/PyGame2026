@@ -550,27 +550,32 @@ def draw_dailies(surf, meta, quests):
 
 
 def draw_collection(surf, meta):
+    from cards import CARDS
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_title(surf, locale.t("collection"), 70, pygame.time.get_ticks())
-    rect = pygame.Rect(WIDTH // 2 - 280, 140, 560, 420)
-    panel(surf, rect, accent=GOLD)
-    level = meta.get('player_level', 1)
-    unlocked_count = min(5, level - 1)  # Например, 5 карточек
-    for i in range(5):
-        x = rect.x + 40 + (i % 3) * 180
-        y = rect.y + 50 + (i // 3) * 180
-        card_rect = pygame.Rect(x, y, 140, 160)
-        if i < unlocked_count:
-            # Рисуем карточку (упрощённо)
-            pygame.draw.rect(surf, (30, 30, 60), card_rect, border_radius=10)
-            pygame.draw.rect(surf, GOLD, card_rect, 2, border_radius=10)
-            txt = F_SMALL.render(f"Card {i+1}", True, TEXT)
-            surf.blit(txt, txt.get_rect(center=(card_rect.centerx, card_rect.centery)))
+    owned = set(meta.get('cards', []))
+    draw_title(surf, f"{locale.t('cards')}  {len(owned)}/{len(CARDS)}", 40, pygame.time.get_ticks())
+    cols, rows_n = 5, 4
+    cw, ch = 100, 130
+    pad = 12
+    total_w = cols * cw + (cols - 1) * pad
+    total_h = rows_n * ch + (rows_n - 1) * pad
+    start_x = (WIDTH - total_w) // 2
+    start_y = 110
+    for i, card in enumerate(CARDS):
+        col, row = i % cols, i // cols
+        x = start_x + col * (cw + pad)
+        y = start_y + row * (ch + pad)
+        unlocked = card['id'] in owned
+        draw_card_icon(surf, x, y, cw, ch, card['rarity'], unlocked)
+        if unlocked:
+            name = F_TINY.render(locale.t(card['name_key']), True, RARITY_COLORS[card['rarity']])
+            surf.blit(name, name.get_rect(center=(x + cw // 2, y + 20)))
         else:
-            pygame.draw.rect(surf, (20, 20, 40), card_rect, border_radius=10)
-            pygame.draw.rect(surf, (60, 60, 80), card_rect, 2, border_radius=10)
-            lock = F_H2.render("?", True, MUTED)
-            surf.blit(lock, lock.get_rect(center=card_rect.center))
+            # show progress toward unlock
+            val = meta['stats'].get(card['stat'], 0)
+            prog = f"{min(val, card['threshold'])}/{card['threshold']}"
+            ptxt = F_TINY.render(prog, True, (100, 100, 120))
+            surf.blit(ptxt, ptxt.get_rect(center=(x + cw // 2, y + ch - 20)))
 
 def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, back_btn):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
