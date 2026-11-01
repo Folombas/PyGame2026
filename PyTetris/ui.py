@@ -519,6 +519,11 @@ def draw_achievements(surf, meta, ach_list):
 def draw_dailies(surf, meta, quests):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     draw_title(surf, "DAILY QUESTS", 70, pygame.time.get_ticks())
+    # Streak banner
+    streak = meta.get('daily_streak', 0)
+    if streak > 0:
+        s_lab = F_H2.render(f"🔥 {locale.t('day_streak', n=streak)}", True, GOLD)
+        surf.blit(s_lab, s_lab.get_rect(center=(WIDTH // 2, 115)))
     rect = pygame.Rect(WIDTH // 2 - 280, 160, 560, 420)
     panel(surf, rect, accent=ACCENT)
     p = meta.get('dailies', {}).get(__import__('meta').today_key(),
