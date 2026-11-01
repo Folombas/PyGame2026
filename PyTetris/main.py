@@ -164,6 +164,11 @@ def cb_clear(rows, count):
             fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, cy - 40, txt, S.ACCENT2, life=80))
     
     global meta, last_unlock, last_unlock_t
+    meta['stats']['total_lines'] += count
+    if count == 4:
+        meta['stats']['tetris_count'] += 1
+    meta['stats']['max_combo'] = max(meta['stats']['max_combo'], game.combo)
+    save_meta(meta)
     meta['xp'] = meta.get('xp', 0) + count * 10
     while meta['xp'] >= meta.get('xp_needed', 100):
         meta['xp'] -= meta['xp_needed']
