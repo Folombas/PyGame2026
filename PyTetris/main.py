@@ -34,6 +34,8 @@ locale.LANG = meta.get('lang', 'en')
 run_time = 0.0
 last_unlock = None
 last_unlock_t = 0
+last_card_unlock = None
+last_card_t = 0
 renderer = BlockRenderer()
 
 # Координаты
@@ -324,12 +326,17 @@ def handle_game_over():
         for _ in range(10):
             fx.burst(S.WIDTH//2 + random.randint(-150, 150), S.HEIGHT//2 - 100, S.GOLD, count=15)
     save_score(game.score)
+    global last_card_unlock, last_card_t
     new_medals, new_cards = check_run(meta, game, run_time)
     if new_medals:
         last_unlock = new_medals[0]
         last_unlock_t = pygame.time.get_ticks()
         audio.play('levelup')
         fx.kick(8.0)
+    if new_cards:
+        last_card_unlock = new_cards[0]
+        last_card_t = pygame.time.get_ticks()
+        audio.play('powerup')
     set_state(OVER)
 
 def draw_over():
@@ -423,6 +430,18 @@ while running:
         screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 10)))
     elif last_unlock:
         last_unlock = None
+
+    if last_card_unlock and t - last_card_t < 3000:
+        from cards import get_card_by_id, RARITY_COLORS
+        card = get_card_by_id(last_card_unlock)
+        if card:
+            fade = max(0.0, 1.0 - (t - last_card_t) / 3000.0)
+            rarity_col = RARITY_COLORS[card['rarity']]
+            toast = ui.F_H2.render(f"★ {locale.t(card['name_key'])}", True, rarity_col)
+            toast.set_alpha(int(255 * fade))
+            screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 50)))
+    elif last_card_unlock:
+        last_card_unlock = None
 
     if transition_alpha > 0:
         fs = pygame.Surface((S.WIDTH, S.HEIGHT))
