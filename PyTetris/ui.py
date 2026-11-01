@@ -563,7 +563,13 @@ def draw_collection(surf, meta):
     from cards import CARDS
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     owned = set(meta.get('cards', []))
-    draw_title(surf, f"{locale.t('cards')}  {len(owned)}/{len(CARDS)}", 40, pygame.time.get_ticks())
+    from meta import today_key
+    import hashlib
+    _h = int(hashlib.md5(today_key().encode()).hexdigest(), 16)
+    card_of_day = CARDS[_h % len(CARDS)]
+    draw_title(surf, f"{locale.t('cards')}  {len(owned)}/{len(CARDS)}", 30, pygame.time.get_ticks())
+    cday = F_SMALL.render(f"★ Карта дня: {locale.t(card_of_day['name_key'])}", True, GOLD)
+    surf.blit(cday, cday.get_rect(center=(WIDTH // 2, 80)))
     cols, rows_n = 5, 4
     cw, ch = 100, 130
     pad = 12
