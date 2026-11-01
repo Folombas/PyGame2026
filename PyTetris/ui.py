@@ -1,6 +1,9 @@
+from cards import RARITY_COLORS
+import math
 import math, random
 import pygame
 from settings import *
+import math
 import i18n as locale
 
 pygame.font.init()
@@ -26,6 +29,49 @@ F_H2     = _font(30, bold=True)
 F_MED    = _font(22)
 F_SMALL  = _font(17)
 F_TINY   = _font(14)
+
+MEDAL_COLORS = [(120,80,40), (205,127,50), (192,192,192), (255,215,0)]
+
+def draw_medal(surf, x, y, size, tier):
+    """tier: 0=empty, 1=bronze, 2=silver, 3=gold"""
+    rect = pygame.Rect(x, y, size, size)
+    if tier == 0:
+        pygame.draw.circle(surf, (60, 60, 80), rect.center, size // 2, 2)
+    else:
+        pygame.draw.circle(surf, MEDAL_COLORS[tier], rect.center, size // 2)
+        pygame.draw.circle(surf, (255, 255, 255), rect.center, size // 2, 2)
+        # star
+        cx, cy = rect.center
+        pts = []
+        for i in range(10):
+            ang = math.pi / 2 + i * math.pi / 5
+            r = size // 3 if i % 2 == 0 else size // 6
+            pts.append((cx + r * math.cos(ang), cy - r * math.sin(ang)))
+        pygame.draw.polygon(surf, (30, 20, 10), pts)
+
+
+def draw_card_icon(surf, x, y, w, h, rarity, unlocked, label=""):
+    """Draws a card icon with rarity color."""
+    col = RARITY_COLORS[rarity] if unlocked else (60, 60, 80)
+    pygame.draw.rect(surf, (20, 18, 35), (x, y, w, h), border_radius=8)
+    pygame.draw.rect(surf, col, (x, y, w, h), 2, border_radius=8)
+    if unlocked:
+        inner = pygame.Rect(x + 6, y + 6, w - 12, h - 12)
+        pygame.draw.rect(surf, col, inner, 1, border_radius=5)
+        if label:
+            txt = F_SMALL.render(label, True, col)
+            surf.blit(txt, txt.get_rect(center=(x + w // 2, y + h - 16)))
+    else:
+        lock = F_H2.render("?", True, (80, 80, 100))
+        surf.blit(lock, lock.get_rect(center=(x + w // 2, y + h // 2)))
+
+
+def draw_progress_bar(surf, x, y, w, h, frac, color):
+    pygame.draw.rect(surf, (30, 28, 50), (x, y, w, h), border_radius=h // 2)
+    if frac > 0:
+        fw = max(1, int(w * min(1.0, frac)))
+        pygame.draw.rect(surf, color, (x, y, fw, h), border_radius=h // 2)
+
 
 def load_skin(name):
     try:
