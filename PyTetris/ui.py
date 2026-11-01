@@ -491,25 +491,31 @@ def draw_leaderboard(surf, scores, best):
         surf.blit(s, s.get_rect(center=(WIDTH // 2, HEIGHT - 40)))
 
 def draw_achievements(surf, meta, ach_list):
+    from meta import get_medal_tier, get_progress
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_title(surf, locale.t("ach"), 50, pygame.time.get_ticks())
-    
-    # Панель достаточно большая для 10 ачивок
-    rect = pygame.Rect(WIDTH // 2 - 280, 120, 560, 580)
+    draw_title(surf, locale.t("ach"), 40, pygame.time.get_ticks())
+    rect = pygame.Rect(WIDTH // 2 - 300, 100, 600, 580)
     panel(surf, rect, accent=ACCENT2)
-    
-    unlocked = meta.get('unlocked', {})
     for i, a in enumerate(ach_list):
-        y = rect.y + 30 + i * 52  # Шаг 52 пикселя, чтобы поместились все 10
-        done = a['id'] in unlocked
-        color = ACCENT if done else MUTED
-        
-        draw_achievement_icon(surf, rect.x + 20, y, 36, done)
-        
-        name = F_MED.render(locale.t(a['name_key']), True, color)
-        surf.blit(name, (rect.x + 70, y))
-        desc = F_SMALL.render(locale.t(a['desc_key']), True, (180, 180, 220) if done else (110, 110, 140))
-        surf.blit(desc, (rect.x + 70, y + 22))
+        y = rect.y + 20 + i * 54
+        tier = get_medal_tier(meta, a)
+        cur, nxt, cur_tier = get_progress(meta, a)
+        # 3 mini-medals
+        for t in range(1, 4):
+            draw_medal(surf, rect.x + 20 + (t - 1) * 20, y + 4, 16, t if tier >= t else 0)
+        # name & desc
+        color = ACCENT if tier > 0 else MUTED
+        name = F_SMALL.render(locale.t(a['name_key']), True, color)
+        surf.blit(name, (rect.x + 85, y))
+        desc = F_TINY.render(locale.t(a['desc_key']), True, (140, 140, 180) if tier > 0 else (90, 90, 120))
+        surf.blit(desc, (rect.x + 85, y + 20))
+        # progress bar
+        if cur_tier < 3:
+            frac = cur / nxt if nxt else 0
+            draw_progress_bar(surf, rect.x + 320, y + 12, 260, 10, frac, MEDAL_COLORS[min(3, cur_tier + 1)])
+            stat = F_TINY.render(f"{int(cur)}/{nxt}", True, MUTED)
+            surf.blit(stat, (rect.x + 585 - stat.get_width(), y))
+
 def draw_dailies(surf, meta, quests):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     draw_title(surf, "DAILY QUESTS", 70, pygame.time.get_ticks())
