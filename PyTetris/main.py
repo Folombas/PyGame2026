@@ -4,7 +4,8 @@ from game import Game
 from effects import Effects, apply_bloom, FloatingText, Shockwave
 from meta import (load_meta, save_meta, load_scores, save_score,
                   ACHIEVEMENTS, check_run, on_line_clear,
-                  update_persistent, get_daily_quests, update_daily)
+                  update_persistent, get_daily_quests, update_daily,
+                  check_streak)
 import ui
 import audio
 import i18n as locale
@@ -323,11 +324,12 @@ def handle_game_over():
         for _ in range(10):
             fx.burst(S.WIDTH//2 + random.randint(-150, 150), S.HEIGHT//2 - 100, S.GOLD, count=15)
     save_score(game.score)
-    newly = check_run(meta, game, run_time)
-    update_persistent(meta, game, run_time)
-    if newly:
-        last_unlock = newly[0]
+    new_medals, new_cards = check_run(meta, game, run_time)
+    if new_medals:
+        last_unlock = new_medals[0]
         last_unlock_t = pygame.time.get_ticks()
+        audio.play('levelup')
+        fx.kick(8.0)
     set_state(OVER)
 
 def draw_over():
