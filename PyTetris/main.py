@@ -31,6 +31,7 @@ fx = Effects()
 stars = ui.Starfield(S.WIDTH, S.HEIGHT, n=80)
 meta = load_meta()
 locale.LANG = meta.get('lang', 'en')
+_streak_updated = check_streak(meta)
 run_time = 0.0
 last_unlock = None
 last_unlock_t = 0
