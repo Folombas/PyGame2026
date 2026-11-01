@@ -42,6 +42,7 @@ class Game:
         self.lines = 0
         self.level = 1
         self.combo = 0
+        self.tetris_count = 0
         self.max_combo = 0
         self.pieces = 0
         self.b2b = False
@@ -156,6 +157,7 @@ class Game:
                 if self.b2b:
                     self.score += int(self.LINE_SCORE[4] * 0.5 * self.level)
                 self.b2b = True
+                self.tetris_count += 1
             else:
                 self.b2b = False
 
