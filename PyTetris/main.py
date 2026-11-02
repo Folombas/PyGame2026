@@ -465,12 +465,24 @@ while running:
             if obj and hasattr(obj, 'update'): obj.update(dt)
         ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, settings_back)
 
-    if last_unlock and t - last_unlock_t < 2500:
-        fade = max(0.0, 1.0 - (t - last_unlock_t) / 2500.0)
+    if last_unlock and t - last_unlock_t < 3000:
+        elapsed = t - last_unlock_t
+        fade = max(0.0, 1.0 - elapsed / 3000.0)
+        # slide-in effect
+        slide = min(1.0, elapsed / 300.0)
+        y_pos = int(20 + (1 - slide) * -100)
         name = next((a['name_key'] for a in ACHIEVEMENTS if a['id'] == last_unlock), last_unlock)
-        toast = ui.F_H2.render(f"* {locale.t(name)}", True, S.GOLD)
+        tier = meta['medals'].get(last_unlock, 1)
+        # background box
+        box_w, box_h = 500, 70
+        box = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+        box.fill((20, 18, 40, int(220 * fade)))
+        pygame.draw.rect(box, ui.MEDAL_COLORS[tier] or S.GOLD, (0, 0, box_w, box_h), 2, border_radius=8)
+        screen.blit(box, (S.WIDTH // 2 - box_w // 2, y_pos))
+        # text
+        toast = ui.F_H2.render(f"★ {locale.t(name)}", True, ui.MEDAL_COLORS[tier] or S.GOLD)
         toast.set_alpha(int(255 * fade))
-        screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 10)))
+        screen.blit(toast, toast.get_rect(center=(S.WIDTH // 2, y_pos + box_h // 2)))
     elif last_unlock:
         last_unlock = None
 
