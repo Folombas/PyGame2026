@@ -43,6 +43,8 @@ class Game:
         self.level = 1
         self.combo = 0
         self.tetris_count = 0
+        self.b2b_count = 0
+        self.hold_uses = 0
         self.max_combo = 0
         self.pieces = 0
         self.b2b = False
@@ -131,6 +133,7 @@ class Game:
             self.hold = self.current.kind
             self.current = Piece(h)
         self.hold_used = True
+        self.hold_uses += 1
         return True
 
     def lock(self):
@@ -158,6 +161,8 @@ class Game:
                     self.score += int(self.LINE_SCORE[4] * 0.5 * self.level)
                 self.b2b = True
                 self.tetris_count += 1
+                if self.b2b:
+                    self.b2b_count += 1
             else:
                 self.b2b = False
 
