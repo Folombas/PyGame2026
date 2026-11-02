@@ -30,7 +30,7 @@ F_MED    = _font(22)
 F_SMALL  = _font(17)
 F_TINY   = _font(14)
 
-MEDAL_COLORS = [(120,80,40), (205,127,50), (192,192,192), (255,215,0)]
+MEDAL_COLORS = [None, (120,80,40), (205,127,50), (192,192,192), (255,215,0), (180,230,255)]
 
 def draw_medal(surf, x, y, size, tier):
     """tier: 0=empty, 1=bronze, 2=silver, 3=gold"""
