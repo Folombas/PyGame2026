@@ -54,6 +54,32 @@ shake_toggle = None
 speed_slider = None
 grid_toggle = None
 
+
+def _handle_quest_click(mx, my):
+    from meta import claim_quest_reward, get_daily_quests, get_weekly_quests
+    # Daily block: rect (WIDTH//2 - 320, 100, 640, 260); buttons at rect.right - 90, y + 5
+    rect_x = S.WIDTH // 2 - 320
+    rect_y = 100
+    for i, q in enumerate(get_daily_quests()):
+        bx = rect_x + 640 - 90
+        by = rect_y + 45 + i * 70 + 5
+        if bx <= mx <= bx + 70 and by <= my <= by + 32:
+            res = claim_quest_reward(meta, q['type'], 'daily')
+            if res:
+                audio.play('levelup')
+                return
+    # Weekly block: rect (WIDTH//2 - 320, 375, 640, 210)
+    wrex_y = 375
+    for i, q in enumerate(get_weekly_quests()):
+        bx = rect_x + 640 - 90
+        by = wrex_y + 45 + i * 70 + 5
+        if bx <= mx <= bx + 70 and by <= my <= by + 32:
+            res = claim_quest_reward(meta, q['type'], 'weekly')
+            if res:
+                audio.play('levelup')
+                return
+
+
 def draw_crt_effect(surf):
     lines = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
     for y in range(0, S.HEIGHT, 4):
@@ -261,6 +287,16 @@ def handle_events():
         elif state in (SCORES, ACHS, DAILY, COLLECTION):
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                 set_state(MENU)
+            if state == COLLECTION and e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
+                import cards as C
+                cid = C.open_pack(meta)
+                if cid:
+                    audio.play('powerup')
+                    fx.kick(6.0)
+            if state == DAILY and e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                mx, my = e.pos
+                # Проверяем клики по Claim-кнопкам
+                _handle_quest_click(mx, my)
 
 # --- ОТРИСОВКА ---
 def draw_playfield_target(surf):
