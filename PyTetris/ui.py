@@ -538,43 +538,77 @@ def draw_achievements(surf, meta, ach_list):
         y_cursor += 6
         if y_cursor > rect.bottom - 30: break
 
-def draw_dailies(surf, meta, quests):
+def draw_dailies(surf, meta, quests, weeklies=None):
+    from meta import daily_progress, weekly_progress, get_streak_multiplier
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_title(surf, "DAILY QUESTS", 70, pygame.time.get_ticks())
-    # Streak banner
     streak = meta.get('daily_streak', 0)
+    mult = get_streak_multiplier(meta)
+    draw_title(surf, locale.t("daily"), 25, pygame.time.get_ticks())
     if streak > 0:
-        s_lab = F_H2.render(f"🔥 {locale.t('day_streak', n=streak)}", True, GOLD)
-        surf.blit(s_lab, s_lab.get_rect(center=(WIDTH // 2, 115)))
-    rect = pygame.Rect(WIDTH // 2 - 280, 160, 560, 420)
+        s_lab = F_H2.render(f"🔥 {streak}  ({locale.t('streak_multiplier', n=mult)})", True, GOLD)
+        surf.blit(s_lab, s_lab.get_rect(center=(WIDTH // 2, 68)))
+
+    # DAILY block
+    rect = pygame.Rect(WIDTH // 2 - 320, 100, 640, 260)
     panel(surf, rect, accent=ACCENT)
-    p = meta.get('dailies', {}).get(__import__('meta').today_key(),
-                                     {'lines': 0, 'score': 0, 'time': 0})
+    dlabel = F_H2.render(locale.t("daily").upper(), True, ACCENT)
+    surf.blit(dlabel, (rect.x + 15, rect.y + 8))
+    p = daily_progress(meta)
     for i, q in enumerate(quests):
-        y = rect.y + 50 + i * 120
+        y = rect.y + 45 + i * 70
         cur = p.get(q['type'], 0)
         tgt = q['target']
         done = cur >= tgt
-        draw_daily_icon(surf, rect.x + 30, y, 36, q['type'], done)
-        bar = pygame.Rect(rect.x + 80, y + 35, rect.w - 140, 18)
-        pygame.draw.rect(surf, (40, 36, 70), bar, border_radius=9)
-        global daily_anim
-        target_fill = min(1.0, cur / tgt) if tgt else 0
-        daily_anim += (target_fill - daily_anim) * 0.1
-        if daily_anim > 0.01:
-            fw = int(bar.w * daily_anim)
-            pygame.draw.rect(surf, ACCENT if not done else GOLD,
-                             (bar.x, bar.y, fw, bar.h), border_radius=9)
-        pygame.draw.rect(surf, ACCENT, bar, 2, border_radius=9)
-        title = F_MED.render(q['desc'], True, TEXT)
-        surf.blit(title, (rect.x + 80, y))
-        stat = F_SMALL.render(
-            f"{cur:.0f} / {tgt}" if q['type'] != 'time'
-            else f"{int(cur)}s / {tgt}s",
-            True, GOLD if done else MUTED)
-        surf.blit(stat, (rect.right - 40 - stat.get_width(), y + 2))
+        claimed = q['id'] in p.get('done', [])
+        # icon
+        draw_daily_icon(surf, rect.x + 20, y, 36, q['type'], done)
+        # desc
+        desc = F_MED.render(q['desc'], True, TEXT)
+        surf.blit(desc, (rect.x + 70, y))
+        # bar
+        bar = pygame.Rect(rect.x + 70, y + 30, 380, 14)
+        frac = min(1.0, cur / tgt) if tgt else 0
+        draw_progress_bar(surf, bar.x, bar.y, bar.w, bar.h, frac, ACCENT if not done else GOLD)
+        stat = F_SMALL.render(f"{int(cur)}/{tgt}", True, GOLD if done else MUTED)
+        surf.blit(stat, (bar.right + 10, bar.y - 4))
+        # claim button
+        if done and not claimed:
+            cb = pygame.Rect(rect.right - 90, y + 5, 70, 32)
+            pygame.draw.rect(surf, GOLD, cb, border_radius=6)
+            ct = F_SMALL.render(locale.t("claim"), True, (20, 20, 20))
+            surf.blit(ct, ct.get_rect(center=cb.center))
+        elif claimed:
+            ct = F_SMALL.render(f"✓ {locale.t('claimed')}", True, ACCENT)
+            surf.blit(ct, (rect.right - 130, y + 12))
 
-
+    # WEEKLY block
+    if weeklies:
+        wrect = pygame.Rect(WIDTH // 2 - 320, 375, 640, 210)
+        panel(surf, wrect, accent=ACCENT2)
+        wlabel = F_H2.render(locale.t("weekly").upper(), True, ACCENT2)
+        surf.blit(wlabel, (wrect.x + 15, wrect.y + 8))
+        wp = weekly_progress(meta)
+        for i, q in enumerate(weeklies):
+            y = wrect.y + 45 + i * 70
+            cur = wp.get(q['type'], 0)
+            tgt = q['target']
+            done = cur >= tgt
+            claimed = q['id'] in wp.get('done', [])
+            desc = F_MED.render(q['desc'], True, TEXT)
+            surf.blit(desc, (wrect.x + 20, y))
+            bar = pygame.Rect(wrect.x + 20, y + 30, 480, 14)
+            frac = min(1.0, cur / tgt) if tgt else 0
+            draw_progress_bar(surf, bar.x, bar.y, bar.w, bar.h, frac, ACCENT2 if not done else GOLD)
+            stat = F_SMALL.render(f"{int(cur)}/{tgt}", True, GOLD if done else MUTED)
+            surf.blit(stat, (bar.right + 10, bar.y - 4))
+            if done and not claimed:
+                cb = pygame.Rect(wrect.right - 90, y + 5, 70, 32)
+                pygame.draw.rect(surf, GOLD, cb, border_radius=6)
+                ct = F_SMALL.render(locale.t("claim"), True, (20, 20, 20))
+                surf.blit(ct, ct.get_rect(center=cb.center))
+            elif claimed:
+                ct = F_SMALL.render(f"✓ {locale.t('claimed')}", True, ACCENT2)
+                surf.blit(ct, (wrect.right - 130, y + 12))
 
 def draw_collection(surf, meta):
     from cards import CARDS, get_cards_by_category, get_card_level, get_card_dups_to_next, RARITY_COLORS, CATEGORIES
