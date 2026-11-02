@@ -4,8 +4,9 @@ from game import Game
 from effects import Effects, apply_bloom, FloatingText, Shockwave
 from meta import (load_meta, save_meta, load_scores, save_score,
                   ACHIEVEMENTS, check_run, on_line_clear,
-                  update_persistent, get_daily_quests, update_daily,
-                  check_streak)
+                  update_persistent, get_daily_quests, get_weekly_quests,
+                  update_daily, check_streak, claim_quest_reward,
+                  daily_progress, weekly_progress)
 import ui
 import audio
 import i18n as locale
@@ -421,7 +422,7 @@ while running:
     elif state == ACHS:
         ui.draw_achievements(screen, meta, ACHIEVEMENTS)
     elif state == DAILY:
-        ui.draw_dailies(screen, meta, get_daily_quests())
+        ui.draw_dailies(screen, meta, get_daily_quests(), get_weekly_quests())
     elif state == SETTINGS:
         settings_back.update(dt, mouse)
         for obj in (sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle):
