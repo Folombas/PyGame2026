@@ -397,7 +397,7 @@ def handle_events():
         elif state == OVER:
             for b in over_buttons: b.handle(e)
         elif state == SHOP:
-        ui.draw_shop(screen, meta, t)
+            ui.draw_shop(screen, meta, t)
     elif state == CALENDAR:
         ui.draw_calendar(screen, meta, t)
     elif state == PROFILE:
