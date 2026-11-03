@@ -18,7 +18,7 @@ screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 clock = pygame.time.Clock()
 
 # Состояния
-MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION = range(9)
+MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP = range(10)
 state = MENU
 transition_alpha = 0
 fade_speed = 15
@@ -186,9 +186,10 @@ def rebuild_menu():
         ui.Button(locale.t("lb"),      S.WIDTH // 2, 360, 240, 36, lambda: set_state(SCORES), accent=S.GOLD),
         ui.Button(locale.t("ach"),     S.WIDTH // 2, 405, 240, 36, lambda: set_state(ACHS), accent=S.ACCENT2),
         ui.Button(locale.t("daily"),   S.WIDTH // 2, 450, 240, 36, lambda: set_state(DAILY), accent=S.ACCENT),
-        ui.Button(locale.t("settings"),S.WIDTH // 2, 495, 240, 36, lambda: set_state(SETTINGS), accent=S.ACCENT),
-        ui.Button(locale.t("lang"),    S.WIDTH // 2, 540, 240, 36, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),    S.WIDTH // 2, 585, 240, 36, quit_game, accent=S.DANGER),
+        ui.Button("🛒 SHOP",         S.WIDTH // 2, 495, 240, 36, lambda: set_state(SHOP), accent=S.GOLD),
+        ui.Button(locale.t("settings"),S.WIDTH // 2, 525, 240, 30, lambda: set_state(SETTINGS), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),    S.WIDTH // 2, 560, 240, 30, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),    S.WIDTH // 2, 595, 240, 30, quit_game, accent=S.DANGER),
     ]
     if volume_slider is None:
         volume_slider = ui.Slider(S.WIDTH // 2 - 100, 640, 200, 10, 0.4)
@@ -362,7 +363,9 @@ def handle_events():
                 elif e.key == pygame.K_q: set_state(MENU)
         elif state == OVER:
             for b in over_buttons: b.handle(e)
-        elif state == SETTINGS:
+        elif state == SHOP:
+        ui.draw_shop(screen, meta, t)
+    elif state == SETTINGS:
             settings_back.handle(e)
             if sfx_slider: sfx_slider.handle_event(e)
             if ghost_toggle: ghost_toggle.handle_event(e)
@@ -549,6 +552,8 @@ while running:
         ui.draw_achievements(screen, meta, ACHIEVEMENTS)
     elif state == DAILY:
         ui.draw_dailies(screen, meta, get_daily_quests(), get_weekly_quests())
+    elif state == SHOP:
+        ui.draw_shop(screen, meta, t)
     elif state == SETTINGS:
         settings_back.update(dt, mouse)
         for obj in (sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle):
