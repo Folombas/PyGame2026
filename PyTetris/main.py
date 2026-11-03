@@ -92,6 +92,20 @@ def draw_pack_reveal(surf, t):
         pack_reveal = None
         return
     from cards import get_card_by_id, RARITY_COLORS
+    if 'levelup' in pack_reveal:
+        # Level up celebration
+        frac = elapsed / pack_reveal_duration
+        overlay = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, int(180 * (1 - abs(frac - 0.5) * 2))))
+        surf.blit(overlay, (0, 0))
+        scale = 1.0 + 0.2 * (1 - frac)
+        txt = ui.F_TITLE.render(f"LEVEL UP! {pack_reveal['levelup']}", True, S.GOLD)
+        sw, sh = int(txt.get_width() * scale), int(txt.get_height() * scale)
+        txt = pygame.transform.smoothscale(txt, (sw, sh))
+        surf.blit(txt, txt.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2)))
+        sub = ui.F_H2.render("+1 pack", True, S.ACCENT)
+        surf.blit(sub, sub.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2 + 80)))
+        return
     frac = elapsed / pack_reveal_duration
     card = get_card_by_id(pack_reveal['card_id'])
     if not card: return
@@ -259,7 +273,20 @@ def cb_clear(rows, count):
         meta['xp_needed'] = int(meta['xp_needed'] * 1.5)
         audio.play('levelup')
         fx.kick(9.0)
+    old_level = meta.get('player_level', 1)
+    # ... xp logic above
     save_meta(meta)
+    if meta.get('player_level', 1) > old_level:
+        # Level up celebration
+        global pack_reveal, pack_reveal_t
+        import cards as C
+        meta['unopened_packs'] = meta.get('unopened_packs', 0) + 1
+        save_meta(meta)
+        audio.play('levelup')
+        fx.kick(12.0)
+        # Use pack_reveal as celebration overlay
+        pack_reveal = {'card_id': None, 'levelup': meta['player_level']}
+        pack_reveal_t = pygame.time.get_ticks()
 
     res = on_line_clear(meta, count)
     if res:
