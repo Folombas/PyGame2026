@@ -494,6 +494,14 @@ def draw_leaderboard(surf, scores, best):
     if best:
         s = F_SMALL.render(f"Personal best: {best}", True, ACCENT)
         surf.blit(s, s.get_rect(center=(WIDTH // 2, HEIGHT - 40)))
+    # mode records
+    mode_stats = meta.get('mode_scores', {}) if 'meta' in dir() else {}
+    try:
+        import inspect
+        frame = inspect.currentframe()
+    except Exception:
+        pass
+
 
 def draw_achievements(surf, meta, ach_list):
     from meta import get_medal_tier, get_progress, get_achievement_points, get_global_rank
@@ -836,6 +844,10 @@ def draw_stats(surf, meta):
         ("Achievement Points", f"{ap}  (Rank {rank}/10)"),
         ("Score bonus", f"+{int((ap_mult - 1) * 100)}%"),
     ]
+    ms = meta.get('mode_scores', {})
+    for mode, score in ms.items():
+        if score > 0:
+            lines.append((f"Mode Best: {mode}", f"{score}"))
     for i, (label, val) in enumerate(lines):
         y = rect.y + 30 + i * 28
         l = F_SMALL.render(label, True, MUTED)

@@ -60,7 +60,7 @@ ACHIEVEMENTS = [
 
 def _default_stats():
     return {
-        'total_lines': 0, 'best_score': 0, 'best_level': 1,
+        'total_lines': 0, 'best_score': 0, 'mode_scores': {}, 'best_level': 1,
         'max_combo': 0, 'tetris_count': 0, 'longest_run': 0,
         'b2b_count': 0, 'perfect_clears': 0, 'hold_uses': 0,
         'sprint_wins': 0, 'zen_games': 0,
@@ -75,7 +75,7 @@ def _default_meta():
         'player_level': 1, 'xp': 0, 'xp_needed': 100,
         'best_sprint_time': 999999.0, 'dailies': {}, 'weeklies': {},
         'daily_streak': 0, 'last_daily_date': '',
-        'best_score': 0, 'total_lines': 0, 'total_playtime': 0.0,
+        'best_score': 0, 'mode_scores': {}, 'total_lines': 0, 'total_playtime': 0.0,
         'coins': 0, 'unopened_packs': 0, 'best_weekly_iso': '',
         'completed_sets': [], 'last_season_id': -1,
         'foil_cards': {}, 'streak_skip_tokens': 0,
@@ -168,6 +168,9 @@ def check_new_medals(meta):
 def check_run(meta, game, run_time):
     s = meta['stats']
     s['best_score'] = max(s['best_score'], game.score)
+    mode = getattr(game, 'mode', 'classic')
+    meta.setdefault('mode_scores', {})
+    meta['mode_scores'][mode] = max(meta['mode_scores'].get(mode, 0), game.score)
     s['best_level'] = max(s['best_level'], game.level)
     s['longest_run'] = max(s['longest_run'], int(run_time))
     if getattr(game, 'b2b_count', 0) > 0:
