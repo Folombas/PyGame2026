@@ -350,8 +350,10 @@ def handle_events():
                 if res:
                     pack_reveal = res
                     pack_reveal_t = pygame.time.get_ticks()
-                    audio.play('powerup')
+                    audio.play('pack_open')
                     fx.kick(6.0)
+                    if res.get('foil'): audio.play('foil_chime')
+                    if res.get('new_sets'): audio.play('set_complete')
             if state == DAILY and e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                 mx, my = e.pos
                 # Проверяем клики по Claim-кнопкам
@@ -433,7 +435,7 @@ def handle_game_over():
     if new_medals:
         last_unlock = new_medals[0]
         last_unlock_t = pygame.time.get_ticks()
-        audio.play('levelup')
+        audio.play('medal_shine')
         fx.kick(8.0)
     if new_cards:
         last_card_unlock = new_cards[0]
