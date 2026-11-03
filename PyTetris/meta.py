@@ -220,8 +220,20 @@ def check_streak(meta):
     if last == today.isoformat():
         return False
     yesterday = (today - datetime.timedelta(days=1)).isoformat()
-    meta['daily_streak'] = (meta.get('daily_streak', 0) + 1) if last == yesterday else 1
+    two_days_ago = (today - datetime.timedelta(days=2)).isoformat()
+    if last == yesterday:
+        meta['daily_streak'] = meta.get('daily_streak', 0) + 1
+    elif last == two_days_ago and meta.get('streak_skip_tokens', 0) > 0:
+        # Use skip token to preserve streak (missed exactly 1 day)
+        meta['streak_skip_tokens'] -= 1
+        meta['daily_streak'] = meta.get('daily_streak', 0) + 1
+        meta['_used_skip'] = True
+    else:
+        meta['daily_streak'] = 1
     meta['last_daily_date'] = today.isoformat()
+    # Award 1 skip token per week of streak (at multiples of 7)
+    if meta['daily_streak'] % 7 == 0:
+        meta['streak_skip_tokens'] = meta.get('streak_skip_tokens', 0) + 1
     save_meta(meta)
     return True
 
