@@ -69,7 +69,7 @@ def _default_meta():
         'best_sprint_time': 999999.0, 'dailies': {}, 'weeklies': {},
         'daily_streak': 0, 'last_daily_date': '',
         'best_score': 0, 'total_lines': 0, 'total_playtime': 0.0,
-        'unopened_packs': 0, 'best_weekly_iso': '',
+        'coins': 0, 'unopened_packs': 0, 'best_weekly_iso': '',
         'completed_sets': [], 'last_season_id': -1,
         'foil_cards': {}, 'streak_skip_tokens': 0,
         'last_played_date': '',
@@ -360,3 +360,23 @@ def get_ap_bonus(meta):
     ap = get_achievement_points(meta)
     pct = min(25, ap // 100)
     return pct, 1.0 + pct / 100.0
+
+
+def award_coins(meta, amount, reason=''):
+    if amount <= 0:
+        return
+    meta['coins'] = meta.get('coins', 0) + int(amount)
+    save_meta(meta)
+
+def get_coin_multiplier(meta):
+    """More coins for higher rank."""
+    rank = get_global_rank(meta)
+    return 1.0 + rank * 0.1  # up to +100% at rank 10
+
+def award_run_coins(meta, score, lines):
+    mult = get_coin_multiplier(meta)
+    base = int((score // 100) + (lines * 2))
+    total = int(base * mult)
+    if total > 0:
+        award_coins(meta, total, 'run')
+    return total

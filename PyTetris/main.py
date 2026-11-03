@@ -261,6 +261,8 @@ def cb_clear(rows, count):
     _, ap_mult = get_ap_bonus(meta)
     if ap_mult > 1.0:
         game.score += int(count * 100 * game.level * (ap_mult - 1.0))
+    from meta import award_coins
+    award_coins(meta, count * 3, 'line_clear')
     meta['stats']['total_lines'] += count
     if count == 4:
         meta['stats']['tetris_count'] += 1
