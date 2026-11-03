@@ -927,3 +927,48 @@ def draw_calendar(surf, meta, t):
 
     hint = F_TINY.render("ESC — назад", True, MUTED)
     surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
+
+
+def draw_profile(surf, meta, t):
+    from meta import get_player_title, get_achievement_points, get_global_rank
+    import i18n as locale
+    vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
+    draw_title(surf, "PROFILE", 40, t)
+    # Avatar circle
+    cx, cy = WIDTH // 2, 140
+    pygame.draw.circle(surf, (30, 28, 55), (cx, cy), 55)
+    pygame.draw.circle(surf, ACCENT, (cx, cy), 55, 3)
+    # Initial letter
+    init = F_TITLE.render("P", True, ACCENT)
+    surf.blit(init, init.get_rect(center=(cx, cy)))
+
+    ap = get_achievement_points(meta)
+    rank = get_global_rank(meta)
+    title_en, title_ru, title_col = get_player_title(meta, locale.LANG)
+    tt = F_H1.render(title_ru if locale.LANG == 'ru' else title_en, True, title_col)
+    surf.blit(tt, tt.get_rect(midtop=(WIDTH // 2, 205)))
+
+    # Stats grid
+    rect = pygame.Rect(WIDTH // 2 - 280, 265, 560, 300)
+    panel(surf, rect, accent=ACCENT2)
+    rows = [
+        ("AP", f"{ap}"),
+        ("Global Rank", f"{rank}/10"),
+        ("Player Level", f"{meta.get('player_level', 1)}"),
+        ("XP", f"{meta.get('xp', 0)}/{meta.get('xp_needed', 100)}"),
+        ("Coins", f"{meta.get('coins', 0)}"),
+        ("Total Lines", f"{meta.get('stats', {}).get('total_lines', 0)}"),
+        ("Best Score", f"{meta.get('stats', {}).get('best_score', 0)}"),
+        ("Streak", f"{meta.get('daily_streak', 0)} days"),
+        ("Cards", f"{len(meta.get('cards', {}))}/20"),
+        ("Sets", f"{len(meta.get('completed_sets', []))}/5"),
+    ]
+    for i, (label, val) in enumerate(rows):
+        y = rect.y + 20 + i * 28
+        l = F_SMALL.render(label, True, MUTED)
+        surf.blit(l, (rect.x + 25, y))
+        v = F_SMALL.render(val, True, TEXT)
+        surf.blit(v, (rect.right - 25 - v.get_width(), y))
+
+    hint = F_TINY.render("ESC — назад", True, MUTED)
+    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))

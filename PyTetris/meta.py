@@ -420,3 +420,27 @@ def claim_login(meta):
     meta['login_claims'][key] = True
     save_meta(meta)
     return reward
+
+
+PLAYER_TITLES = [
+    (0, "Rookie", "Новичок", (160, 160, 180)),
+    (50, "Apprentice", "Ученик", (120, 200, 120)),
+    (150, "Adept", "Адепт", (100, 180, 255)),
+    (300, "Expert", "Эксперт", (170, 80, 240)),
+    (600, "Master", "Мастер", (255, 200, 50)),
+    (1000, "Grandmaster", "Гроссмейстер", (255, 100, 200)),
+    (1500, "Legend", "Легенда", (255, 50, 50)),
+    (2000, "Mythic", "Мифический", (255, 0, 255)),
+    (3000, "Ascended", "Вознёсшийся", (255, 215, 100)),
+    (5000, "Transcendent", "Трансцендент", (200, 255, 255)),
+]
+
+def get_player_title(meta, lang='en'):
+    ap = get_achievement_points(meta)
+    chosen = PLAYER_TITLES[0]
+    for entry in PLAYER_TITLES:
+        if ap >= entry[0]:
+            chosen = entry
+    if lang == 'ru':
+        return chosen[1], chosen[2], chosen[3]
+    return chosen[0], chosen[2], chosen[3]
