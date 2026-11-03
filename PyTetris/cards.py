@@ -56,27 +56,41 @@ def check_unlocks(meta):
     return new
 
 def open_pack(meta):
-    """Open one pack: gives 1 random card. Returns card id or None."""
     if meta.get('unopened_packs', 0) <= 0:
         return None
     meta['unopened_packs'] -= 1
-    # weighted rarity
-    rarities = [0, 1, 2, 3]
-    rarity = random.choices(rarities, weights=RARITY_WEIGHTS)[0]
+
+    rarities, weights = rarity_weights_with_featured()
+    rarity = random.choices(rarities, weights=weights)[0]
     candidates = [c for c in CARDS if c['rarity'] == rarity]
     if not candidates:
         candidates = [c for c in CARDS if c['rarity'] == 0]
     card = random.choice(candidates)
+
+    # Foil: 5% chance overall, 15% if featured
+    foil_chance = 0.15 if is_featured(card) else 0.05
+    is_foil = random.random() < foil_chance
+
     cards = meta.get('cards', {})
     if card['id'] in cards:
-        # duplicate -> +1 level
+        meta.setdefault('card_dups', {})
         meta['card_dups'][card['id']] = meta['card_dups'].get(card['id'], 0) + 1
         levels = 1 + meta['card_dups'][card['id']] // 3
         meta['cards'][card['id']] = min(5, levels)
+        result = {'card_id': card['id'], 'duplicate': True, 'foil': False, 'new_level': meta['cards'][card['id']]}
     else:
         meta['cards'][card['id']] = 1
+        result = {'card_id': card['id'], 'duplicate': False, 'foil': is_foil, 'new_level': 1}
+        if is_foil:
+            meta.setdefault('foil_cards', {})
+            meta['foil_cards'][card['id']] = True
+
+    # Check sets after new card
+    new_sets = check_completed_sets(meta)
+    result['new_sets'] = new_sets
+
     save_meta(meta)
-    return card['id']
+    return result
 
 def get_card_level(meta, cid):
     return meta.get('cards', {}).get(cid, 0)
