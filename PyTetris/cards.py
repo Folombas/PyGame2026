@@ -59,6 +59,7 @@ def open_pack(meta):
     if meta.get('unopened_packs', 0) <= 0:
         return None
     meta['unopened_packs'] -= 1
+    meta['stats']['packs_opened'] = meta['stats'].get('packs_opened', 0) + 1
 
     rarities, weights = rarity_weights_with_featured()
     rarity = random.choices(rarities, weights=weights)[0]

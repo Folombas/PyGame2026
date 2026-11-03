@@ -50,6 +50,12 @@ ACHIEVEMENTS = [
     {'id': 'secret_zen', 'name_key': 'ach15', 'desc_key': 'achd15',
      'stat': 'zen_games', 'cat': 'mastery', 'points': 15, 'hidden': True,
      'tiers': [5, 15, 40, 100, 250]},
+    {'id': 'meta_sets', 'name_key': 'ach16', 'desc_key': 'achd16',
+     'stat': 'sets_done', 'cat': 'mastery', 'points': 100, 'hidden': False,
+     'tiers': [1, 2, 3, 4, 5]},
+    {'id': 'meta_packs', 'name_key': 'ach17', 'desc_key': 'achd17',
+     'stat': 'packs_opened', 'cat': 'progress', 'points': 50, 'hidden': False,
+     'tiers': [1, 10, 50, 100, 250]},
 ]
 
 def _default_stats():
@@ -58,6 +64,7 @@ def _default_stats():
         'max_combo': 0, 'tetris_count': 0, 'longest_run': 0,
         'b2b_count': 0, 'perfect_clears': 0, 'hold_uses': 0,
         'sprint_wins': 0, 'zen_games': 0,
+        'sets_done': 0, 'packs_opened': 0,
     }
 
 def _default_meta():
@@ -174,6 +181,7 @@ def check_run(meta, game, run_time):
     meta['best_score'] = s['best_score']
     meta['total_lines'] = s['total_lines']
     meta['total_playtime'] += run_time
+    s['sets_done'] = len(meta.get('completed_sets', []))
     new_medals = check_new_medals(meta)
     try:
         import cards as C
