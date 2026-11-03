@@ -273,7 +273,9 @@ def cb_clear(rows, count):
         meta['stats']['tetris_count'] += 1
     meta['stats']['max_combo'] = max(meta['stats']['max_combo'], game.combo)
     save_meta(meta)
-    meta['xp'] = meta.get('xp', 0) + count * 10
+    from meta import get_streak_multiplier as _gsm
+    streak_xp_mult = _gsm(meta)
+    meta['xp'] = meta.get('xp', 0) + int(count * 10 * streak_xp_mult)
     while meta['xp'] >= meta.get('xp_needed', 100):
         meta['xp'] -= meta['xp_needed']
         meta['player_level'] = meta.get('player_level', 1) + 1
