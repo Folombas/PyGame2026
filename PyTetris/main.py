@@ -332,6 +332,396 @@ rebuild_menu()
 
 # --- ОБРАБОТКА СОБЫТИЙ ---
 def handle_events():
+    global state, muted, konami_progress
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+        if e.type == pygame.KEYDOWN:
+            if e.key == pygame.K_F11:
+                toggle_fullscreen()
+            elif e.key == pygame.K_F5:
+                from meta import export_save
+                fname = export_save(meta)
+                print(f"✅ Сохранено в {fname}")
+                audio.play('levelup')
+            elif e.key == pygame.K_F9:
+                from meta import import_save
+                try:
+                    data = import_save()
+                    meta.update(data)
+                    print("✅ Загружено")
+                    audio.play('levelup')
+                except Exception as ex:
+                    print(f"⚠️ {ex}")
+            elif e.key == pygame.K_m:
+                muted = not muted
+                audio.toggle_mute(muted)
+            elif e.key == KONAMI_SEQ[konami_progress]:
+                konami_progress += 1
+                if konami_progress == len(KONAMI_SEQ):
+                    konami_progress = 0
+                    meta['unopened_packs'] = meta.get('unopened_packs', 0) + 5
+                    meta['coins'] = meta.get('coins', 0) + 1000
+                    save_meta(meta)
+                    audio.play('set_complete')
+                    print("🎉 KONAMI CODE! +5 паков, +1000 монет")
+            else:
+                konami_progress = 0
+
+        if state == MENU:
+            for b in menu_buttons: b.handle(e)
+            if volume_slider: volume_slider.handle_event(e)
+        elif state == PLAY:
+            if e.type == pygame.KEYDOWN:
+                if e.key in (pygame.K_ESCAPE, pygame.K_p): set_state(PAUSE)
+                elif e.key == pygame.K_LEFT:  game.move(-1)
+                elif e.key == pygame.K_RIGHT: game.move(1)
+                elif e.key == pygame.K_DOWN:  game.soft_drop()
+                elif e.key == pygame.K_UP:    game.rotate(1)
+                elif e.key == pygame.K_z:     game.rotate(-1)
+                elif e.key == pygame.K_SPACE:
+                    old_y = game.current.y
+                    game.hard_drop()
+                    for gx, gy in game.current.cells():
+                        if gy >= 0:
+                            fx.burst(board_x + gx * S.CELL + S.CELL/2,
+                                     board_y + old_y * S.CELL, (255, 255, 255), count=3)
+                elif e.key == pygame.K_c:
+                    if game.hold_piece(): audio.play('rotate')
+        elif state == PAUSE:
+            for b in pause_buttons: b.handle(e)
+            if e.type == pygame.KEYDOWN:
+                if e.key in (pygame.K_ESCAPE, pygame.K_p): set_state(PLAY)
+                elif e.key == pygame.K_q: set_state(MENU)
+        elif state == OVER:
+            for b in over_buttons: b.handle(e)
+        elif state == SHOP:
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+                set_state(MENU)
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                mx, my = e.pos
+                from shop import buy_pack, PACK_PRICES
+                for i, kind in enumerate(['standard', 'premium', 'legendary']):
+                    yr = 130 + i * 105
+                    if (S.WIDTH // 2 - 250 <= mx <= S.WIDTH // 2 + 250) and (yr <= my <= yr + 90):
+                        if buy_pack(meta, kind):
+                            audio.play('pack_open')
+                            fx.kick(6.0)
+                        break
+        elif state == CALENDAR:
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+                set_state(MENU)
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                mx, my = e.pos
+                bx, by = S.WIDTH // 2 - 120, 270
+                if bx <= mx <= bx + 240 and by <= my <= by + 55:
+                    from meta import claim_login
+                    r = claim_login(meta)
+                    if r:
+                        audio.play('levelup')
+                        fx.kick(6.0)
+        elif state == PROFILE:
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
+                set_state(MENU)
+        elif state == SETTINGS:
+            settings_back.handle(e)
+            if sfx_slider: sfx_slider.handle_event(e)
+            if ghost_toggle: ghost_toggle.handle_event(e)
+            if shake_toggle: shake_toggle.handle_event(e)
+            if speed_slider: speed_slider.handle_event(e)
+            if grid_toggle: grid_toggle.handle_event(e)
+        elif state in (SCORES, ACHS, DAILY, COLLECTION):
+            if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
+                set_state(MENU)
+            if state == COLLECTION and e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
+                import cards as C
+                global pack_reveal, pack_reveal_t
+                res = C.open_pack(meta)
+                if res:
+                    pack_reveal = res
+                    pack_reveal_t = pygame.time.get_ticks()
+                    audio.play('pack_open')
+                    fx.kick(6.0)
+                    if res.get('foil'): audio.play('foil_chime')
+                    if res.get('new_sets'): audio.play('set_complete')
+            if state == DAILY and e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                _handle_quest_click(e.pos[0], e.pos[1])
+
+
+def _handle_quest_click(mx, my):
+    from meta import claim_quest_reward, get_daily_quests, get_weekly_quests
+    # Daily block: rect (WIDTH//2 - 320, 100, 640, 260); buttons at rect.right - 90, y + 5
+    rect_x = S.WIDTH // 2 - 320
+    rect_y = 100
+    for i, q in enumerate(get_daily_quests()):
+        bx = rect_x + 640 - 90
+        by = rect_y + 45 + i * 70 + 5
+        if bx <= mx <= bx + 70 and by <= my <= by + 32:
+            res = claim_quest_reward(meta, q['type'], 'daily')
+            if res:
+                audio.play('levelup')
+                return
+    # Weekly block: rect (WIDTH//2 - 320, 375, 640, 210)
+    wrex_y = 430
+    for i, q in enumerate(get_weekly_quests()):
+        bx = rect_x + 640 - 90
+        by = wrex_y + 45 + i * 70 + 5
+        if bx <= mx <= bx + 70 and by <= my <= by + 32:
+            res = claim_quest_reward(meta, q['type'], 'weekly')
+            if res:
+                audio.play('levelup')
+                return
+
+
+
+def draw_pack_reveal(surf, t):
+    global pack_reveal, pack_reveal_t
+    if not pack_reveal: return
+    elapsed = t - pack_reveal_t
+    if elapsed > pack_reveal_duration:
+        pack_reveal = None
+        return
+    from cards import get_card_by_id, RARITY_COLORS
+    if 'levelup' in pack_reveal:
+        # Level up celebration
+        frac = elapsed / pack_reveal_duration
+        overlay = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, int(180 * (1 - abs(frac - 0.5) * 2))))
+        surf.blit(overlay, (0, 0))
+        scale = 1.0 + 0.2 * (1 - frac)
+        txt = ui.F_TITLE.render(f"LEVEL UP! {pack_reveal['levelup']}", True, S.GOLD)
+        sw, sh = int(txt.get_width() * scale), int(txt.get_height() * scale)
+        txt = pygame.transform.smoothscale(txt, (sw, sh))
+        surf.blit(txt, txt.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2)))
+        sub = ui.F_H2.render("+1 pack", True, S.ACCENT)
+        surf.blit(sub, sub.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2 + 80)))
+        return
+    frac = elapsed / pack_reveal_duration
+    card = get_card_by_id(pack_reveal['card_id'])
+    if not card: return
+    # Overlay
+    overlay = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, int(180 * (1 - abs(frac - 0.5) * 2))))
+    surf.blit(overlay, (0, 0))
+    # Scale from 0 to 1.2 to 1.0
+    if frac < 0.3:
+        scale = frac / 0.3 * 1.2
+    elif frac < 0.5:
+        scale = 1.2 - (frac - 0.3) / 0.2 * 0.2
+    else:
+        scale = 1.0
+    w, h = int(240 * scale), int(320 * scale)
+    cx, cy = S.WIDTH // 2, S.HEIGHT // 2
+    rect = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
+    col = RARITY_COLORS[card['rarity']]
+    if pack_reveal.get('foil'):
+        # prismatic border
+        for i in range(6):
+            c = [(255, 100, 100), (255, 200, 100), (200, 255, 100),
+                 (100, 255, 200), (100, 200, 255), (200, 100, 255)][i]
+            pygame.draw.rect(surf, c, rect.inflate(2*i, 2*i), 2, border_radius=10)
+    pygame.draw.rect(surf, (20, 18, 35), rect, border_radius=10)
+    pygame.draw.rect(surf, col, rect, 3, border_radius=10)
+    if pack_reveal.get('foil'):
+        txt = ui.F_H2.render("✨ FOIL ✨", True, (255, 255, 200))
+        surf.blit(txt, txt.get_rect(center=(cx, rect.y - 25)))
+    name = ui.F_H1.render(locale.t(card['name_key']), True, col)
+    surf.blit(name, name.get_rect(center=(cx, cy)))
+    if pack_reveal.get('duplicate'):
+        dup = ui.F_MED.render(f"+1 duplicate (Lv.{pack_reveal.get('new_level', 1)})", True, S.MUTED)
+        surf.blit(dup, dup.get_rect(center=(cx, cy + 50)))
+    if pack_reveal.get('new_sets'):
+        for i, sname in enumerate(pack_reveal['new_sets']):
+            st = ui.F_H2.render(f"🏆 SET COMPLETE: {sname.upper()}!", True, S.GOLD)
+            surf.blit(st, st.get_rect(center=(cx, rect.bottom + 40 + i * 30)))
+
+def draw_crt_effect(surf):
+    lines = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
+    for y in range(0, S.HEIGHT, 4):
+        pygame.draw.line(lines, (0, 0, 0, 40), (0, y), (S.WIDTH, y), 2)
+    surf.blit(lines, (0, 0))
+
+def toggle_fullscreen():
+    global is_fullscreen, screen
+    is_fullscreen = not is_fullscreen
+    if is_fullscreen:
+        screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+    else:
+        screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
+
+def set_state(s):
+    global state, transition_alpha
+    state = s
+    audio.play('menu')
+    if s in (PLAY, PAUSE):
+        audio.play_music()
+    else:
+        audio.stop_music()
+    transition_alpha = 255
+
+def toggle_lang():
+    global meta
+    meta['lang'] = 'ru' if locale.LANG == 'en' else 'en'
+    locale.LANG = meta['lang']
+    save_meta(meta)
+    rebuild_menu()
+
+def rebuild_menu():
+    global menu_buttons, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle
+    menu_buttons = [
+        ui.Button(locale.t("play"),    S.WIDTH // 2, 180, 240, 36, lambda: start_game(False, "classic")),
+        ui.Button(locale.t("sprint"),  S.WIDTH // 2, 225, 240, 36, lambda: start_game(False, "sprint"), accent=S.GOLD),
+        ui.Button(locale.t("survival"),S.WIDTH // 2, 270, 240, 36, lambda: start_game(False, "survival"), accent=S.DANGER),
+        ui.Button(locale.t("zen"),     S.WIDTH // 2, 315, 240, 36, lambda: start_game(True, "classic"), accent=S.ACCENT2),
+        ui.Button(locale.t("lb"),      S.WIDTH // 2, 360, 240, 36, lambda: set_state(SCORES), accent=S.GOLD),
+        ui.Button(locale.t("ach"),     S.WIDTH // 2, 405, 240, 30, lambda: set_state(ACHS), accent=S.ACCENT2),
+        ui.Button("👤 PROFILE",       S.WIDTH // 2, 440, 240, 26, lambda: set_state(PROFILE), accent=S.ACCENT2),
+        ui.Button(locale.t("daily"),   S.WIDTH // 2, 470, 240, 26, lambda: set_state(DAILY), accent=S.ACCENT),
+        ui.Button("🎁 CALENDAR",       S.WIDTH // 2, 500, 240, 26, lambda: set_state(CALENDAR), accent=S.GOLD),
+        ui.Button("🛒 SHOP",         S.WIDTH // 2, 530, 240, 26, lambda: set_state(SHOP), accent=S.GOLD),
+        ui.Button(locale.t("settings"),S.WIDTH // 2, 560, 240, 24, lambda: set_state(SETTINGS), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),    S.WIDTH // 2, 588, 240, 24, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),    S.WIDTH // 2, 616, 240, 24, quit_game, accent=S.DANGER),
+    ]
+    if volume_slider is None:
+        volume_slider = ui.Slider(S.WIDTH // 2 - 100, 640, 200, 10, 0.4)
+        sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
+        ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
+        shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
+        speed_slider = ui.Slider(S.WIDTH // 2 - 100, 480, 200, 10, 0.5)
+        grid_toggle = ui.Toggle(S.WIDTH // 2 + 50, 540, 60, 26, True)
+
+def start_game(zen=False, mode='classic'):
+    global run_time
+    game.reset(zen=zen, mode=mode)
+    run_time = 0.0
+    set_state(PLAY)
+
+def back_to_menu():
+    set_state(MENU)
+
+def quit_game():
+    pygame.quit()
+    sys.exit()
+
+# --- КОЛЛБЕКИ ИГРЫ ---
+def cb_move():    audio.play('move')
+def cb_rotate():  audio.play('rotate')
+
+def cb_lock():
+    audio.play('lock')
+    for gx, gy in game.current.cells():
+        if gy >= 0:
+            fx.burst(board_x + gx * S.CELL + S.CELL / 2, 
+                     board_y + gy * S.CELL + S.CELL / 2, 
+                     game.current.color, count=6)
+    fx.kick(3.0)
+    if getattr(game.current, 'powerup', None):
+        global flash_timer
+        flash_timer = 150
+        audio.play('powerup')
+
+def cb_levelup(lvl):
+    global flash_timer
+    audio.play('levelup')
+    fx.kick(9.0)
+    flash_timer = 500
+    for _y in range(0, S.ROWS, 2):
+        colors = list(S.COLORS.values())
+        fx.burst_row(board_y + _y * S.CELL, board_x, S.CELL, S.COLS, colors)
+
+def cb_clear(rows, count):
+    audio.play('tetris' if count == 4 else 'clear')
+    for y in rows:
+        colors = list(S.COLORS.values())
+        fx.burst_row(board_y + y * S.CELL, board_x, S.CELL, S.COLS, colors)
+    fx.kick(6.0 if count < 4 else 12.0)
+    
+    if rows:
+        cy = board_y + (sum(rows) / len(rows)) * S.CELL + S.CELL / 2
+        fx.waves.append(Shockwave(board_x + S.BOARD_W / 2, cy, S.ACCENT, max_radius=150, life=30))
+        txt = "TETRIS!" if count == 4 else f"+{count * 100}"
+        col = S.GOLD if count == 4 else S.TEXT
+        fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, cy, txt, col, life=60))
+        if count == 4: audio.play('combo')
+        if game.combo > 1:
+            txt = f"COMBO x{game.combo}"
+            fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, cy - 40, txt, S.ACCENT2, life=80))
+    
+    global meta, last_unlock, last_unlock_t
+    # AP bonus
+    from meta import get_ap_bonus
+    _, ap_mult = get_ap_bonus(meta)
+    if ap_mult > 1.0:
+        game.score += int(count * 100 * game.level * (ap_mult - 1.0))
+    from meta import award_coins
+    award_coins(meta, count * 3, 'line_clear')
+    meta['stats']['total_lines'] += count
+    if count == 4:
+        meta['stats']['tetris_count'] += 1
+    meta['stats']['max_combo'] = max(meta['stats']['max_combo'], game.combo)
+    save_meta(meta)
+    from meta import get_streak_multiplier as _gsm
+    streak_xp_mult = _gsm(meta)
+    meta['xp'] = meta.get('xp', 0) + int(count * 10 * streak_xp_mult)
+    while meta['xp'] >= meta.get('xp_needed', 100):
+        meta['xp'] -= meta['xp_needed']
+        meta['player_level'] = meta.get('player_level', 1) + 1
+        meta['xp_needed'] = int(meta['xp_needed'] * 1.5)
+        audio.play('levelup')
+        fx.kick(9.0)
+    old_level = meta.get('player_level', 1)
+    # ... xp logic above
+    save_meta(meta)
+    if meta.get('player_level', 1) > old_level:
+        # Level up celebration
+        global pack_reveal, pack_reveal_t
+        import cards as C
+        meta['unopened_packs'] = meta.get('unopened_packs', 0) + 1
+        save_meta(meta)
+        audio.play('levelup')
+        fx.kick(12.0)
+        # Use pack_reveal as celebration overlay
+        pack_reveal = {'card_id': None, 'levelup': meta['player_level']}
+        pack_reveal_t = pygame.time.get_ticks()
+
+    res = on_line_clear(meta, count)
+    if res:
+        last_unlock = res
+        last_unlock_t = pygame.time.get_ticks()
+
+def cb_gameover():
+    audio.play('gameover')
+
+def cb_win():
+    audio.play('levelup')
+
+game.on_move = cb_move
+game.on_rotate = cb_rotate
+game.on_lock = cb_lock
+game.on_clear = cb_clear
+game.on_levelup = cb_levelup
+game.on_gameover = cb_gameover
+game.on_win = cb_win
+
+settings_back = ui.Button(locale.t("back"), S.WIDTH // 2, S.HEIGHT - 60, 200, 45, lambda: set_state(MENU))
+
+pause_buttons = [
+    ui.Button(locale.t("resume"), S.WIDTH // 2, S.HEIGHT // 2 + 40, 240, 54, lambda: set_state(PLAY)),
+    ui.Button(locale.t("menu"),   S.WIDTH // 2, S.HEIGHT // 2 + 110, 240, 54, lambda: set_state(MENU), accent=S.ACCENT2)
+]
+
+over_buttons = [
+    ui.Button(locale.t("restart"), S.WIDTH // 2, S.HEIGHT // 2 + 90, 240, 60, lambda: start_game(False, game.mode)),
+    ui.Button(locale.t("menu"),    S.WIDTH // 2, S.HEIGHT // 2 + 170, 240, 60, back_to_menu, accent=S.ACCENT2),
+]
+
+rebuild_menu()
+
+# --- ОБРАБОТКА СОБЫТИЙ ---
+def handle_events():
     global state, muted
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
