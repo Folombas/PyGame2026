@@ -452,3 +452,19 @@ def get_player_title(meta, lang='en'):
     if lang == 'ru':
         return chosen[1], chosen[2], chosen[3]
     return chosen[0], chosen[2], chosen[3]
+
+
+import shutil
+
+def export_save(meta, path='easy_tetris_save.json'):
+    import json
+    with open(path, 'w') as f:
+        json.dump(meta, f, indent=2)
+    return path
+
+def import_save(path='easy_tetris_save.json'):
+    import json
+    with open(path) as f:
+        data = json.load(f)
+    save_meta(data)
+    return data

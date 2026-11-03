@@ -335,6 +335,20 @@ def handle_events():
             sys.exit()
         if e.type == pygame.KEYDOWN and e.key == pygame.K_F11:
             toggle_fullscreen()
+        if e.type == pygame.KEYDOWN and e.key == pygame.K_F5:
+            from meta import export_save
+            fname = export_save(meta)
+            print(f'✅ Сохранено в {fname}')
+            audio.play('levelup')
+        if e.type == pygame.KEYDOWN and e.key == pygame.K_F9:
+            from meta import import_save
+            try:
+                data = import_save()
+                meta.update(data)
+                print('✅ Загружено')
+                audio.play('levelup')
+            except Exception as ex:
+                print(f'⚠️ {ex}')
         if e.type == pygame.KEYDOWN and e.key == pygame.K_m:
             muted = not muted
             audio.toggle_mute(muted)
