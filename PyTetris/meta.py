@@ -15,19 +15,19 @@ ACHIEVEMENTS = [
      'tiers': [2, 4, 7, 10, 15]},
     {'id': 'combo5', 'name_key': 'ach4', 'desc_key': 'achd4',
      'stat': 'max_combo', 'cat': 'skill', 'points': 30, 'hidden': False,
-     'tiers': [4, 7, 10, 15, 20]},
+     'tiers': [4, 7, 10, 15, 20], 'chain': 'combo3'},
     {'id': 'level5', 'name_key': 'ach5', 'desc_key': 'achd5',
      'stat': 'best_level', 'cat': 'progress', 'points': 20, 'hidden': False,
      'tiers': [5, 8, 12, 15, 20]},
     {'id': 'level10', 'name_key': 'ach6', 'desc_key': 'achd6',
      'stat': 'best_level', 'cat': 'progress', 'points': 40, 'hidden': False,
-     'tiers': [10, 13, 16, 20, 25]},
+     'tiers': [10, 13, 16, 20, 25], 'chain': 'level5'},
     {'id': 'score5k', 'name_key': 'ach7', 'desc_key': 'achd7',
      'stat': 'best_score', 'cat': 'progress', 'points': 20, 'hidden': False,
      'tiers': [5000, 15000, 30000, 50000, 100000]},
     {'id': 'score20k', 'name_key': 'ach8', 'desc_key': 'achd8',
      'stat': 'best_score', 'cat': 'progress', 'points': 40, 'hidden': False,
-     'tiers': [20000, 40000, 75000, 150000, 300000]},
+     'tiers': [20000, 40000, 75000, 150000, 300000], 'chain': 'score5k'},
     {'id': 'marathon', 'name_key': 'ach9', 'desc_key': 'achd9',
      'stat': 'longest_run', 'cat': 'endurance', 'points': 30, 'hidden': False,
      'tiers': [60, 180, 300, 600, 1200]},
@@ -101,7 +101,15 @@ def save_meta(meta):
     with open(META_FILE, 'w') as f:
         json.dump(meta, f, indent=2)
 
+def _chain_unlocked(meta, ach):
+    chain = ach.get('chain')
+    if not chain:
+        return True
+    return meta['medals'].get(chain, 0) > 0
+
 def get_medal_tier(meta, ach):
+    if not _chain_unlocked(meta, ach):
+        return 0
     val = meta['stats'].get(ach['stat'], 0)
     tier = 0
     for i, th in enumerate(ach['tiers']):
