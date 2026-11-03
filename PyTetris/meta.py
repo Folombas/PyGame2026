@@ -380,3 +380,43 @@ def award_run_coins(meta, score, lines):
     if total > 0:
         award_coins(meta, total, 'run')
     return total
+
+
+LOGIN_REWARDS = [
+    {'day': 1, 'coins': 50,  'packs': 0},
+    {'day': 2, 'coins': 100, 'packs': 0},
+    {'day': 3, 'coins': 0,   'packs': 1},
+    {'day': 4, 'coins': 150, 'packs': 0},
+    {'day': 5, 'coins': 200, 'packs': 0},
+    {'day': 6, 'coins': 0,   'packs': 2},
+    {'day': 7, 'coins': 300, 'packs': 1},
+]
+
+def get_daily_calendar(meta):
+    """Returns list of dicts with claimed status."""
+    key = today_key()
+    meta.setdefault('login_claims', {})
+    streak = meta.get('daily_streak', 0)
+    day_in_cycle = ((streak - 1) % 7) + 1 if streak > 0 else 1
+    today_claimed = meta['login_claims'].get(key, False)
+    return [
+        {**r, 'claimed': r['day'] <= day_in_cycle and (r['day'] < day_in_cycle or today_claimed),
+         'current': r['day'] == day_in_cycle and not today_claimed}
+        for r in LOGIN_REWARDS
+    ]
+
+def claim_login(meta):
+    key = today_key()
+    meta.setdefault('login_claims', {})
+    if meta['login_claims'].get(key):
+        return None
+    streak = meta.get('daily_streak', 0)
+    day_in_cycle = ((streak - 1) % 7) + 1 if streak > 0 else 1
+    reward = next((r for r in LOGIN_REWARDS if r['day'] == day_in_cycle), None)
+    if not reward:
+        return None
+    meta['coins'] = meta.get('coins', 0) + reward['coins']
+    meta['unopened_packs'] = meta.get('unopened_packs', 0) + reward['packs']
+    meta['login_claims'][key] = True
+    save_meta(meta)
+    return reward
