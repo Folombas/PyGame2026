@@ -293,3 +293,43 @@ def claim_quest_reward(meta, quest_type, period='daily'):
                 save_meta(meta)
                 return q
     return None
+
+
+WILDCARD_POOL = [
+    {'id': 'wc_tetris',   'type': 'tetris_count', 'target': 3, 'desc_key': 'wc_tetris',   'xp': 80, 'packs': 1},
+    {'id': 'wc_combo',    'type': 'max_combo',    'target': 3, 'desc_key': 'wc_combo',    'xp': 60, 'packs': 0},
+    {'id': 'wc_b2b',      'type': 'b2b_count',    'target': 2, 'desc_key': 'wc_b2b',      'xp': 70, 'packs': 1},
+    {'id': 'wc_hold',     'type': 'hold_uses',    'target': 15, 'desc_key': 'wc_hold',    'xp': 40, 'packs': 0},
+    {'id': 'wc_sprint',   'type': 'sprint_wins',  'target': 1, 'desc_key': 'wc_sprint',   'xp': 100, 'packs': 2},
+]
+
+def get_wildcard():
+    day = datetime.date.today()
+    h = int(hashlib.md5(('wc' + day.isoformat()).encode()).hexdigest(), 16)
+    return WILDCARD_POOL[h % len(WILDCARD_POOL)]
+
+def wildcard_progress(meta):
+    key = today_key()
+    meta.setdefault('wildcard_progress', {})
+    if key not in meta['wildcard_progress']:
+        meta['wildcard_progress'][key] = {'cur': 0, 'done': False}
+    return meta['wildcard_progress'][key]
+
+def update_wildcard(meta, stat_name, value):
+    """Called when stats change. Updates wildcard if it matches."""
+    wc = get_wildcard()
+    if wc['type'] != stat_name:
+        return
+    p = wildcard_progress(meta)
+    if p['done']:
+        return
+    # For combo/max stats, use max
+    if stat_name in ('max_combo', 'best_level'):
+        p['cur'] = max(p['cur'], value)
+    else:
+        p['cur'] += value
+    if p['cur'] >= wc['target']:
+        p['done'] = True
+        meta['xp'] = meta.get('xp', 0) + wc['xp']
+        meta['unopened_packs'] = meta.get('unopened_packs', 0) + wc['packs']
+    save_meta(meta)
