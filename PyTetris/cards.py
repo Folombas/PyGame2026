@@ -85,3 +85,34 @@ def get_card_dups_to_next(meta, cid):
     if cid not in meta.get('card_dups', {}):
         return 3
     return 3 - (meta['card_dups'][cid] % 3)
+
+
+CARD_SETS = {
+    'beasts':    {'name_key': 'set_beasts',    'cards': ['b1', 'b2', 'b3', 'b4'], 'packs': 3, 'xp': 100},
+    'lands':     {'name_key': 'set_lands',     'cards': ['l1', 'l2', 'l3', 'l4'], 'packs': 3, 'xp': 100},
+    'artifacts': {'name_key': 'set_artifacts', 'cards': ['a1', 'a2', 'a3', 'a4'], 'packs': 3, 'xp': 100},
+    'signs':     {'name_key': 'set_signs',     'cards': ['s1', 's2', 's3', 's4'], 'packs': 3, 'xp': 100},
+    'heroes':    {'name_key': 'set_heroes',    'cards': ['h1', 'h2', 'h3', 'h4'], 'packs': 3, 'xp': 100},
+}
+
+def check_completed_sets(meta):
+    cards = meta.get('cards', {})
+    done = set(meta.get('completed_sets', []))
+    new = []
+    for cat, s in CARD_SETS.items():
+        if cat in done: continue
+        if all(c in cards for c in s['cards']):
+            done.add(cat)
+            meta['unopened_packs'] = meta.get('unopened_packs', 0) + s['packs']
+            meta['xp'] = meta.get('xp', 0) + s['xp']
+            new.append(cat)
+    if new:
+        meta['completed_sets'] = list(done)
+        save_meta(meta)
+    return new
+
+def get_set_progress(meta, cat):
+    s = CARD_SETS[cat]
+    cards = meta.get('cards', {})
+    got = sum(1 for c in s['cards'] if c in cards)
+    return got, len(s['cards'])
