@@ -38,6 +38,9 @@ last_unlock = None
 last_unlock_t = 0
 last_card_unlock = None
 last_card_t = 0
+pack_reveal = None
+pack_reveal_t = 0
+pack_reveal_duration = 1200
 renderer = BlockRenderer()
 
 # Координаты
@@ -79,6 +82,54 @@ def _handle_quest_click(mx, my):
                 audio.play('levelup')
                 return
 
+
+
+def draw_pack_reveal(surf, t):
+    global pack_reveal, pack_reveal_t
+    if not pack_reveal: return
+    elapsed = t - pack_reveal_t
+    if elapsed > pack_reveal_duration:
+        pack_reveal = None
+        return
+    from cards import get_card_by_id, RARITY_COLORS
+    frac = elapsed / pack_reveal_duration
+    card = get_card_by_id(pack_reveal['card_id'])
+    if not card: return
+    # Overlay
+    overlay = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, int(180 * (1 - abs(frac - 0.5) * 2))))
+    surf.blit(overlay, (0, 0))
+    # Scale from 0 to 1.2 to 1.0
+    if frac < 0.3:
+        scale = frac / 0.3 * 1.2
+    elif frac < 0.5:
+        scale = 1.2 - (frac - 0.3) / 0.2 * 0.2
+    else:
+        scale = 1.0
+    w, h = int(240 * scale), int(320 * scale)
+    cx, cy = S.WIDTH // 2, S.HEIGHT // 2
+    rect = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
+    col = RARITY_COLORS[card['rarity']]
+    if pack_reveal.get('foil'):
+        # prismatic border
+        for i in range(6):
+            c = [(255, 100, 100), (255, 200, 100), (200, 255, 100),
+                 (100, 255, 200), (100, 200, 255), (200, 100, 255)][i]
+            pygame.draw.rect(surf, c, rect.inflate(2*i, 2*i), 2, border_radius=10)
+    pygame.draw.rect(surf, (20, 18, 35), rect, border_radius=10)
+    pygame.draw.rect(surf, col, rect, 3, border_radius=10)
+    if pack_reveal.get('foil'):
+        txt = ui.F_H2.render("✨ FOIL ✨", True, (255, 255, 200))
+        surf.blit(txt, txt.get_rect(center=(cx, rect.y - 25)))
+    name = ui.F_H1.render(locale.t(card['name_key']), True, col)
+    surf.blit(name, name.get_rect(center=(cx, cy)))
+    if pack_reveal.get('duplicate'):
+        dup = ui.F_MED.render(f"+1 duplicate (Lv.{pack_reveal.get('new_level', 1)})", True, S.MUTED)
+        surf.blit(dup, dup.get_rect(center=(cx, cy + 50)))
+    if pack_reveal.get('new_sets'):
+        for i, sname in enumerate(pack_reveal['new_sets']):
+            st = ui.F_H2.render(f"🏆 SET COMPLETE: {sname.upper()}!", True, S.GOLD)
+            surf.blit(st, st.get_rect(center=(cx, rect.bottom + 40 + i * 30)))
 
 def draw_crt_effect(surf):
     lines = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
@@ -294,8 +345,11 @@ def handle_events():
                 set_state(MENU)
             if state == COLLECTION and e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
                 import cards as C
-                cid = C.open_pack(meta)
-                if cid:
+                global pack_reveal, pack_reveal_t
+                res = C.open_pack(meta)
+                if res:
+                    pack_reveal = res
+                    pack_reveal_t = pygame.time.get_ticks()
                     audio.play('powerup')
                     fx.kick(6.0)
             if state == DAILY and e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
@@ -502,6 +556,8 @@ while running:
             screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 50)))
     elif last_card_unlock:
         last_card_unlock = None
+
+    draw_pack_reveal(screen, t)
 
     if transition_alpha > 0:
         fs = pygame.Surface((S.WIDTH, S.HEIGHT))
