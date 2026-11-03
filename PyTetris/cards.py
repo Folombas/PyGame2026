@@ -116,3 +116,29 @@ def get_set_progress(meta, cat):
     cards = meta.get('cards', {})
     got = sum(1 for c in s['cards'] if c in cards)
     return got, len(s['cards'])
+
+
+import hashlib
+import datetime
+
+def get_featured_card():
+    """Rotates daily. Boosted drop rate (2x for its rarity)."""
+    today = datetime.date.today().isoformat()
+    h = int(hashlib.md5(today.encode()).hexdigest(), 16)
+    # Pick a non-common card as featured
+    candidates = [c for c in CARDS if c['rarity'] >= 1]
+    if not candidates:
+        candidates = CARDS
+    return candidates[h % len(candidates)]
+
+def is_featured(card):
+    return card['id'] == get_featured_card()['id']
+
+def rarity_weights_with_featured():
+    """Returns (rarities, weights) with featured card's rarity doubled."""
+    feat = get_featured_card()
+    weights = list(RARITY_WEIGHTS)
+    for i, r in enumerate([0, 1, 2, 3]):
+        if r == feat['rarity']:
+            weights[i] *= 2
+    return [0, 1, 2, 3], weights
