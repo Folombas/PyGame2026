@@ -70,6 +70,9 @@ def _default_meta():
         'daily_streak': 0, 'last_daily_date': '',
         'best_score': 0, 'total_lines': 0, 'total_playtime': 0.0,
         'unopened_packs': 0, 'best_weekly_iso': '',
+        'completed_sets': [], 'last_season_id': -1,
+        'foil_cards': {}, 'streak_skip_tokens': 0,
+        'last_played_date': '',
     }
 
 def _ensure_dir():
@@ -167,11 +170,15 @@ def check_run(meta, game, run_time):
     try:
         import cards as C
         new_cards = C.check_unlocks(meta)
+        new_sets = C.check_completed_sets(meta)
     except Exception:
         new_cards = []
+        new_sets = []
     # Reward for new medals: +1 pack per medal
     meta['unopened_packs'] = meta.get('unopened_packs', 0) + len(new_medals)
     save_meta(meta)
+    if new_sets:
+        meta['_new_sets'] = new_sets
     return [m[0] for m in new_medals], new_cards
 
 def on_line_clear(meta, count):
