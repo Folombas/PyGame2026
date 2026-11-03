@@ -26,6 +26,8 @@ flash_timer = 0
 is_new_high = False
 muted = False
 is_fullscreen = False
+KONAMI_SEQ = [pygame.K_UP, pygame.K_UP, pygame.K_DOWN, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_b, pygame.K_a]
+konami_progress = 0
 
 game = Game()
 fx = Effects()
@@ -335,6 +337,19 @@ def handle_events():
             sys.exit()
         if e.type == pygame.KEYDOWN and e.key == pygame.K_F11:
             toggle_fullscreen()
+        global konami_progress
+        if e.type == pygame.KEYDOWN:
+            if e.key == KONAMI_SEQ[konami_progress]:
+                konami_progress += 1
+                if konami_progress == len(KONAMI_SEQ):
+                    konami_progress = 0
+                    meta['unopened_packs'] = meta.get('unopened_packs', 0) + 5
+                    meta['coins'] = meta.get('coins', 0) + 1000
+                    save_meta(meta)
+                    audio.play('set_complete')
+                    print("🎉 KONAMI CODE! +5 паков, +1000 монет")
+            else:
+                konami_progress = 0
         if e.type == pygame.KEYDOWN and e.key == pygame.K_F5:
             from meta import export_save
             fname = export_save(meta)
