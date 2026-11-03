@@ -191,6 +191,11 @@ def cb_clear(rows, count):
             fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, cy - 40, txt, S.ACCENT2, life=80))
     
     global meta, last_unlock, last_unlock_t
+    # AP bonus
+    from meta import get_ap_bonus
+    _, ap_mult = get_ap_bonus(meta)
+    if ap_mult > 1.0:
+        game.score += int(count * 100 * game.level * (ap_mult - 1.0))
     meta['stats']['total_lines'] += count
     if count == 4:
         meta['stats']['tetris_count'] += 1

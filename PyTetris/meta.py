@@ -353,3 +353,10 @@ def update_wildcard(meta, stat_name, value):
         meta['xp'] = meta.get('xp', 0) + wc['xp']
         meta['unopened_packs'] = meta.get('unopened_packs', 0) + wc['packs']
     save_meta(meta)
+
+
+def get_ap_bonus(meta):
+    """1% score bonus per 100 AP, capped at 25%."""
+    ap = get_achievement_points(meta)
+    pct = min(25, ap // 100)
+    return pct, 1.0 + pct / 100.0
