@@ -789,3 +789,37 @@ def draw_hud(surf, game, sidebar_x, t, meta):
     hint = F_TINY.render(locale.t("controls"), True, MUTED)
     surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 20)))
 
+
+def draw_stats(surf, meta):
+    from meta import get_achievement_points, get_global_rank, get_ap_bonus
+    vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
+    draw_title(surf, "STATS", 40, pygame.time.get_ticks())
+    rect = pygame.Rect(WIDTH // 2 - 280, 100, 560, 480)
+    panel(surf, rect, accent=ACCENT)
+    stats = meta['stats']
+    ap = get_achievement_points(meta)
+    rank = get_global_rank(meta)
+    _, ap_mult = get_ap_bonus(meta)
+    lines = [
+        ("Total lines", stats.get('total_lines', 0)),
+        ("Best score", stats.get('best_score', 0)),
+        ("Best level", stats.get('best_level', 1)),
+        ("Max combo", stats.get('max_combo', 0)),
+        ("Tetrises", stats.get('tetris_count', 0)),
+        ("B2B count", stats.get('b2b_count', 0)),
+        ("Holds used", stats.get('hold_uses', 0)),
+        ("Sprint wins", stats.get('sprint_wins', 0)),
+        ("Zen games", stats.get('zen_games', 0)),
+        ("Longest run", f"{stats.get('longest_run', 0)}s"),
+        ("Playtime", f"{int(meta.get('total_playtime', 0))}s"),
+        ("Achievement Points", f"{ap}  (Rank {rank}/10)"),
+        ("Score bonus", f"+{int((ap_mult - 1) * 100)}%"),
+    ]
+    for i, (label, val) in enumerate(lines):
+        y = rect.y + 30 + i * 28
+        l = F_SMALL.render(label, True, MUTED)
+        surf.blit(l, (rect.x + 30, y))
+        v = F_SMALL.render(str(val), True, TEXT)
+        surf.blit(v, (rect.right - 30 - v.get_width(), y))
+    hint = F_TINY.render("ESC — назад", True, MUTED)
+    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
