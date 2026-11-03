@@ -581,9 +581,30 @@ def draw_dailies(surf, meta, quests, weeklies=None):
             ct = F_SMALL.render(f"✓ {locale.t('claimed')}", True, ACCENT)
             surf.blit(ct, (rect.right - 130, y + 12))
 
+    # WILDCARD block
+    try:
+        from meta import get_wildcard, wildcard_progress
+        wc = get_wildcard()
+        wcp = wildcard_progress(meta)
+        wc_rect = pygame.Rect(WIDTH // 2 - 320, 360, 640, 60)
+        panel(surf, wc_rect, accent=GOLD)
+        wc_icon = F_H2.render("🌟", True, GOLD)
+        surf.blit(wc_icon, (wc_rect.x + 12, wc_rect.y + 12))
+        wc_lbl = F_SMALL.render("WILDCARD", True, GOLD)
+        surf.blit(wc_lbl, (wc_rect.x + 55, wc_rect.y + 8))
+        wc_desc = F_SMALL.render(locale.t(wc['desc_key']) if locale.t(wc['desc_key']) != wc['desc_key'] else wc['desc_key'], True, TEXT)
+        surf.blit(wc_desc, (wc_rect.x + 55, wc_rect.y + 28))
+        wc_bar = pygame.Rect(wc_rect.x + 380, wc_rect.y + 22, 180, 14)
+        frac = min(1.0, wcp['cur'] / wc['target'])
+        draw_progress_bar(surf, wc_bar.x, wc_bar.y, wc_bar.w, wc_bar.h, frac, GOLD if wcp['done'] else ACCENT)
+        wc_stat = F_TINY.render(f"{wcp['cur']}/{wc['target']}", True, GOLD if wcp['done'] else MUTED)
+        surf.blit(wc_stat, (wc_bar.right + 8, wc_bar.y - 2))
+    except Exception:
+        pass
+
     # WEEKLY block
     if weeklies:
-        wrect = pygame.Rect(WIDTH // 2 - 320, 375, 640, 210)
+        wrect = pygame.Rect(WIDTH // 2 - 320, 430, 640, 210)
         panel(surf, wrect, accent=ACCENT2)
         wlabel = F_H2.render(locale.t("weekly").upper(), True, ACCENT2)
         surf.blit(wlabel, (wrect.x + 15, wrect.y + 8))

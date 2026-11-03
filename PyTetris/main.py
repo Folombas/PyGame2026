@@ -72,7 +72,7 @@ def _handle_quest_click(mx, my):
                 audio.play('levelup')
                 return
     # Weekly block: rect (WIDTH//2 - 320, 375, 640, 210)
-    wrex_y = 375
+    wrex_y = 430
     for i, q in enumerate(get_weekly_quests()):
         bx = rect_x + 640 - 90
         by = wrex_y + 45 + i * 70 + 5
