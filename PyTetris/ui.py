@@ -876,3 +876,54 @@ def draw_shop(surf, meta, t):
 
     hint = F_TINY.render("ЛКМ — купить   ESC — назад", True, MUTED)
     surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
+
+
+def draw_calendar(surf, meta, t):
+    from meta import get_daily_calendar, LOGIN_REWARDS
+    vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
+    draw_title(surf, "DAILY REWARDS", 40, t)
+    cal = get_daily_calendar(meta)
+    cols = 7
+    cw, ch, pad = 70, 100, 10
+    total_w = cols * cw + (cols - 1) * pad
+    sx = (WIDTH - total_w) // 2
+    sy = 130
+    for i, r in enumerate(cal):
+        x = sx + i * (cw + pad)
+        y = sy
+        rect = pygame.Rect(x, y, cw, ch)
+        if r['claimed']:
+            bg = (30, 50, 30)
+            border = (60, 200, 80)
+        elif r['current']:
+            bg = (50, 40, 20)
+            border = GOLD
+        else:
+            bg = (22, 20, 40)
+            border = (80, 80, 100)
+        pygame.draw.rect(surf, bg, rect, border_radius=8)
+        pygame.draw.rect(surf, border, rect, 2, border_radius=8)
+        # day number
+        dn = F_H2.render(f"D{r['day']}", True, border)
+        surf.blit(dn, dn.get_rect(midtop=(x + cw // 2, y + 8)))
+        # reward
+        if r['coins'] > 0:
+            ct = F_SMALL.render(f"🪙{r['coins']}", True, GOLD)
+            surf.blit(ct, ct.get_rect(center=(x + cw // 2, y + 55)))
+        if r['packs'] > 0:
+            pt = F_SMALL.render(f"📦{r['packs']}", True, ACCENT2)
+            surf.blit(pt, pt.get_rect(center=(x + cw // 2, y + 75)))
+        if r['claimed']:
+            ck = F_H2.render("✓", True, (60, 200, 80))
+            surf.blit(ck, ck.get_rect(center=(x + cw // 2, y + 90)))
+
+    # Claim button
+    cur = next((r for r in cal if r['current']), None)
+    if cur:
+        btn = pygame.Rect(WIDTH // 2 - 120, sy + ch + 40, 240, 55)
+        pygame.draw.rect(surf, GOLD, btn, border_radius=10)
+        bt = F_H2.render("CLAIM TODAY", True, (20, 20, 20))
+        surf.blit(bt, bt.get_rect(center=btn.center))
+
+    hint = F_TINY.render("ESC — назад", True, MUTED)
+    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
