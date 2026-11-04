@@ -172,6 +172,7 @@ def cb_rotate():
 
 def cb_lock():
     audio.play('lock')
+    game.peek_flash_until = pygame.time.get_ticks() + 300
     for gx, gy in game.current.cells():
         if gy >= 0:
             fx.burst(board_x + gx * S.CELL + S.CELL / 2,
@@ -510,6 +511,8 @@ def draw_game(t, dt):
         fx.draw(screen, font=ui.F_H2)
     draw_combo_hud(screen, t)
     ui.draw_coin_hud(screen, meta, t)
+    # Floating next-piece peek (top-right corner)
+    ui.draw_peek_next(screen, game, S.WIDTH - 88, 75, t)
     if muted:
         m = ui.F_SMALL.render("MUTED", True, S.DANGER)
         screen.blit(m, (S.WIDTH - 70, 10))
