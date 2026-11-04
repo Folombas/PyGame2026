@@ -51,6 +51,7 @@ last_unlock_t = 0
 last_card_unlock = None
 last_card_t = 0
 danger_pulse = 0
+danger_beep_timer = 0
 combo_display = 0
 combo_display_t = 0
 last_milestone = 0
@@ -598,6 +599,15 @@ while running:
             update_daily(meta, lines=0, score=game.score, dt=dt / 1000.0)
         draw_game(t, dt)
         fx.update(dt)
+        # Danger beep when stack is high
+        filled = sum(1 for row in game.grid if any(c is not None for c in row))
+        if filled >= 15 and not game.game_over:
+            danger_beep_timer += dt
+            if danger_beep_timer > 700:
+                danger_beep_timer = 0
+                audio.play('danger')
+        else:
+            danger_beep_timer = 0
     elif state == PAUSE:
         draw_game(t, dt)
         ui.draw_pause(screen)
