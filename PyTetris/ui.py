@@ -1,3 +1,4 @@
+import settings as S
 from cards import RARITY_COLORS
 import math
 import math, random
