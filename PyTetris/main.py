@@ -306,6 +306,7 @@ def handle_events():
             pygame.quit(); sys.exit()
         if e.type == pygame.WINDOWFOCUSLOST and state == PLAY:
             set_state(PAUSE)
+            print('⏸ Авто-пауза (потеря фокуса)')
         if e.type == pygame.KEYDOWN:
             if e.key == pygame.K_F11:
                 toggle_fullscreen()
