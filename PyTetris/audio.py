@@ -41,6 +41,8 @@ if _OK:
             'powerup':  _tone(1200, 0.20, 0.30, 'sine'),
             'ui_hover': _tone(880, 0.03, 0.10, 'sine'),
             'ui_click': _tone(660, 0.05, 0.20, 'square'),
+            'danger':   _tone(180, 0.15, 0.20, 'square'),
+            'milestone': _tone(1500, 0.30, 0.30, 'sine', decay=3.0),
             'pack_open': _tone(880, 0.25, 0.30, 'sine'),
             'card_reveal': _tone(1200, 0.15, 0.28, 'sine'),
             'medal_shine': _tone(1500, 0.20, 0.25, 'sine'),
