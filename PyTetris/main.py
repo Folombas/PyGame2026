@@ -509,6 +509,7 @@ def draw_game(t, dt):
         ui.draw_hud(screen, game, sidebar_x, t, meta)
         fx.draw(screen, font=ui.F_H2)
     draw_combo_hud(screen, t)
+    ui.draw_coin_hud(screen, meta, t)
     if muted:
         m = ui.F_SMALL.render("MUTED", True, S.DANGER)
         screen.blit(m, (S.WIDTH - 70, 10))

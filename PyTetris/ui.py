@@ -998,3 +998,14 @@ def draw_animated_flame(surf, x, y, t, streak):
         flame = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
         pygame.draw.circle(flame, (*col, alpha), (size, size), size)
         surf.blit(flame, (x + wobble - size, y - size + phase * 10))
+
+
+def draw_coin_hud(surf, meta, t):
+    """Coins displayed in top-right corner."""
+    coins = meta.get('coins', 0)
+    packs = meta.get('unopened_packs', 0)
+    txt = F_H2.render(f"🪙 {coins}", True, GOLD)
+    surf.blit(txt, (WIDTH - txt.get_width() - 20, 15))
+    if packs > 0:
+        ptxt = F_SMALL.render(f"📦 {packs}", True, ACCENT2)
+        surf.blit(ptxt, (WIDTH - ptxt.get_width() - 20, 45))
