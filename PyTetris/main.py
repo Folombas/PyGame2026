@@ -674,7 +674,9 @@ while running:
     if last_unlock and t - last_unlock_t < 2500:
         fade = max(0.0, 1.0 - (t - last_unlock_t) / 2500.0)
         name = next((a['name_key'] for a in ACHIEVEMENTS if a['id'] == last_unlock), last_unlock)
-        toast = ui.F_H2.render(f"★ {locale.t(name)}", True, S.GOLD)
+        tier = meta['medals'].get(last_unlock, 1)
+        tier_col = ui.MEDAL_COLORS[tier] if tier < len(ui.MEDAL_COLORS) else S.GOLD
+        toast = ui.F_H2.render(f"★ {locale.t(name)}", True, tier_col)
         toast.set_alpha(int(255 * fade))
         screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 10)))
     elif last_unlock:
