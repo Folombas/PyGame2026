@@ -55,6 +55,8 @@ danger_beep_timer = 0
 combo_display = 0
 combo_display_t = 0
 last_milestone = 0
+milestone_toast = None
+milestone_toast_t = 0
 focus_lost = False
 
 KONAMI_SEQ = [pygame.K_UP, pygame.K_UP, pygame.K_DOWN, pygame.K_DOWN,
@@ -148,6 +150,8 @@ def start_game(zen=False, mode='classic'):
     game.reset(zen=zen, mode=mode)
     run_time = 0.0
     last_milestone = 0
+milestone_toast = None
+milestone_toast_t = 0
     combo_display = 0
     combo_display_t = 0
     set_state(PLAY)
@@ -187,7 +191,7 @@ def cb_levelup(lvl):
 
 
 def cb_clear(rows, count):
-    global last_unlock, last_unlock_t, combo_display, combo_display_t, last_milestone
+    global last_unlock, last_unlock_t, combo_display, combo_display_t, last_milestone, milestone_toast, milestone_toast_t
     audio.play('tetris' if count == 4 else 'clear')
     for y in rows:
         colors = list(S.COLORS.values())
@@ -240,9 +244,10 @@ def cb_clear(rows, count):
         last_milestone = milestone
         meta['coins'] = meta.get('coins', 0) + 100
         save_meta(meta)
-        fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, board_y + 100,
-                                     f"🎉 {milestone}!", S.GOLD, life=120))
-        audio.play('levelup')
+        global milestone_toast, milestone_toast_t
+        milestone_toast = milestone
+        milestone_toast_t = pygame.time.get_ticks()
+        audio.play('milestone')
 
     res = on_line_clear(meta, count)
     if res:
@@ -658,6 +663,18 @@ while running:
                 screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 50)))
     elif last_card_unlock:
         last_card_unlock = None
+
+    if milestone_toast and t - milestone_toast_t < 2000:
+        fade = max(0.0, 1.0 - (t - milestone_toast_t) / 2000.0)
+        elapsed = t - milestone_toast_t
+        scale = 1.0 + min(0.3, elapsed / 800.0)
+        size = int(60 * scale)
+        font = ui.F_TITLE if size > 60 else ui.F_H1
+        txt = font.render(f"🎉 {milestone_toast}", True, S.GOLD)
+        txt.set_alpha(int(255 * fade))
+        screen.blit(txt, txt.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 3)))
+    elif milestone_toast:
+        milestone_toast = None
 
     draw_pack_reveal(screen, t)
 
