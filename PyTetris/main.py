@@ -215,7 +215,8 @@ def cb_clear(rows, count):
 
     # XP (with streak multiplier)
     streak_xp = get_streak_multiplier(meta)
-    meta['xp'] = meta.get('xp', 0) + int(count * 10 * streak_xp)
+    combo_mult = 1.0 + max(0, game.combo - 1) * 0.25  # +25% per combo step
+    meta['xp'] = meta.get('xp', 0) + int(count * 10 * streak_xp * combo_mult)
 
     # AP bonus coins
     _, ap_mult = get_ap_bonus(meta)
