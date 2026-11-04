@@ -146,14 +146,14 @@ def rebuild_menu():
 
 
 def start_game(zen=False, mode='classic'):
-    global run_time, last_milestone, combo_display, combo_display_t
+    global run_time, last_milestone, combo_display, combo_display_t, milestone_toast, milestone_toast_t
     game.reset(zen=zen, mode=mode)
     run_time = 0.0
     last_milestone = 0
-milestone_toast = None
-milestone_toast_t = 0
     combo_display = 0
     combo_display_t = 0
+    milestone_toast = None
+    milestone_toast_t = 0
     set_state(PLAY)
 
 
