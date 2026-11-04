@@ -368,7 +368,9 @@ def handle_events():
                 elif e.key == pygame.K_z:     game.rotate(-1)
                 elif e.key == pygame.K_SPACE:
                     old_y = game.current.y
+                    height = game.ghost_y() - old_y
                     game.hard_drop()
+                    fx.kick(min(10.0, 3.0 + height * 0.5))
                     for gx, gy in game.current.cells():
                         if gy >= 0:
                             fx.burst(board_x + gx * S.CELL + S.CELL/2,
