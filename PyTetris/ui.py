@@ -1009,3 +1009,55 @@ def draw_coin_hud(surf, meta, t):
     if packs > 0:
         ptxt = F_SMALL.render(f"📦 {packs}", True, ACCENT2)
         surf.blit(ptxt, (WIDTH - ptxt.get_width() - 20, 45))
+
+
+def draw_peek_next(surf, game, x, y, t=0):
+    """Compact floating 'next piece' preview in top-right corner."""
+    if not getattr(game, 'next_queue', None):
+        return
+    piece = game.next_queue[0]
+    w, h = 74, 74
+
+    # Pulsing border on every swap
+    pulse = 0.0
+    if hasattr(game, 'peek_flash_until') and t < getattr(game, 'peek_flash_until', 0):
+        rem = (game.peek_flash_until - t) / 300.0
+        pulse = max(0.0, min(1.0, rem))
+
+    border_col = ACCENT2
+    if pulse > 0:
+        border_col = (
+            int(ACCENT2[0] + (255 - ACCENT2[0]) * pulse),
+            int(ACCENT2[1] + (255 - ACCENT2[1]) * pulse),
+            int(ACCENT2[2] + (255 - ACCENT2[2]) * pulse),
+        )
+
+    # subtle glow behind
+    if pulse > 0.05:
+        glow = pygame.Surface((w + 16, h + 16), pygame.SRCALPHA)
+        for i in range(6, 0, -1):
+            a = int(70 * pulse * (7 - i) / 6)
+            pygame.draw.rect(glow, (*border_col, a),
+                             (8 - i, 8 - i, w + 2*i, h + 2*i),
+                             border_radius=12 + i)
+        surf.blit(glow, (x - 8, y - 8))
+
+    rect = pygame.Rect(x, y, w, h)
+    pygame.draw.rect(surf, (22, 20, 40), rect, border_radius=10)
+    pygame.draw.rect(surf, border_col, rect, 2, border_radius=10)
+
+    lbl = F_TINY.render("NEXT", True, MUTED)
+    surf.blit(lbl, lbl.get_rect(midtop=(rect.centerx, rect.y + 3)))
+
+    cell = 13
+    sw = len(piece.shape[0]) * cell
+    sh = len(piece.shape) * cell
+    ox = rect.centerx - sw // 2
+    oy = rect.y + 18 + (h - 24 - sh) // 2
+    for yy, row in enumerate(piece.shape):
+        for xx, v in enumerate(row):
+            if v:
+                c = pygame.Rect(ox + xx*cell, oy + yy*cell, cell - 1, cell - 1)
+                pygame.draw.rect(surf, piece.color, c, border_radius=2)
+                hi = tuple(min(255, k + 50) for k in piece.color)
+                pygame.draw.rect(surf, hi, c, 1, border_radius=2)
