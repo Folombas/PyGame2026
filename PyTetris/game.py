@@ -43,6 +43,7 @@ class Game:
         self.level = 1
         self.combo = 0
         self.tetris_count = 0
+        self.perfect_clear = False
         self.b2b_count = 0
         self.hold_uses = 0
         self.max_combo = 0
@@ -179,6 +180,11 @@ class Game:
                             self.grid[by] = [None] * COLS
                     del self.powerup_grid[(gx, gy)]
 
+            # Perfect clear if grid is empty after clears resolve
+            if len(full) > 0:
+                temp = [row for i, row in enumerate(self.grid) if i not in full]
+                if all(cell is None for row in temp for cell in row):
+                    self.perfect_clear = True
             self.clearing = full
             self.clear_timer = 220.0
             if self.on_clear: self.on_clear(full, len(full))

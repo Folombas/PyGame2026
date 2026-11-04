@@ -249,6 +249,23 @@ def cb_clear(rows, count):
         milestone_toast_t = pygame.time.get_ticks()
         audio.play('milestone')
 
+    # Perfect clear bonus
+    if game.perfect_clear:
+        game.perfect_clear = False
+        meta['stats']['perfect_clears'] = meta.get('perfect_clears', 0) if 'perfect_clears' in meta.get('stats', {}) else 0
+        meta['stats']['perfect_clears'] = meta['stats'].get('perfect_clears', 0) + 1
+        meta['coins'] = meta.get('coins', 0) + 500
+        meta['unopened_packs'] = meta.get('unopened_packs', 0) + 1
+        save_meta(meta)
+        audio.play('milestone')
+        fx.kick(15.0)
+        for _ in range(20):
+            fx.burst(S.WIDTH // 2 + random.randint(-200, 200),
+                     S.HEIGHT // 2 + random.randint(-100, 100),
+                     S.GOLD, count=10)
+        fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, board_y + 200,
+                                     "PERFECT CLEAR!", S.GOLD, life=120))
+
     res = on_line_clear(meta, count)
     if res:
         last_unlock = res
