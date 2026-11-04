@@ -224,7 +224,7 @@ def cb_clear(rows, count):
 
     # AP bonus coins
     _, ap_mult = get_ap_bonus(meta)
-    coins_earned = int(count * 3 * ap_mult)
+    coins_earned = int(count * 3 * ap_mult * streak_xp)
     award_coins(meta, coins_earned, 'line_clear')
 
     # Level up player
