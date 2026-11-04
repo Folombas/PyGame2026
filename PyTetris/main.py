@@ -635,6 +635,13 @@ while running:
     elif state == PAUSE:
         draw_game(t, dt)
         ui.draw_pause(screen)
+        # Show focus hint if window is unfocused
+        try:
+            if not pygame.display.get_active():
+                hint = ui.F_SMALL.render('(Окно не в фокусе)', True, S.MUTED)
+                screen.blit(hint, hint.get_rect(center=(S.WIDTH // 2, S.HEIGHT - 100)))
+        except Exception:
+            pass
         for b in pause_buttons: b.update(dt, mouse)
         for b in pause_buttons: b.draw(screen)
     elif state == OVER:
