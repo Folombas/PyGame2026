@@ -984,3 +984,17 @@ def draw_profile(surf, meta, t):
 
     hint = F_TINY.render("ESC — назад", True, MUTED)
     surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
+
+
+def draw_animated_flame(surf, x, y, t, streak):
+    """Animated flame that grows with streak."""
+    if streak <= 0: return
+    phase = (t / 200.0) % 1.0
+    base_size = min(1.0 + streak * 0.15, 2.0)
+    for i, col in enumerate([(255, 100, 30), (255, 160, 60), (255, 220, 100)]):
+        wobble = math.sin(t / 100.0 + i) * 3
+        size = int(20 * base_size - i * 4)
+        alpha = 180 - i * 40
+        flame = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+        pygame.draw.circle(flame, (*col, alpha), (size, size), size)
+        surf.blit(flame, (x + wobble - size, y - size + phase * 10))
