@@ -120,32 +120,37 @@ class Button:
             self.pressed = False
 
     def draw(self, surf):
+        from settings import (MD_PRIMARY, MD_SURFACE, MD_ON_SURFACE, MD_ON_PRIMARY)
         p = self.pulse
-        base = (30, 28, 60)
-        col = tuple(int(base[i] + (self.accent[i] - base[i]) * (0.35 + 0.35 * p)) for i in range(3))
         rect = self.rect.copy()
         if self.pressed:
-            rect = rect.inflate(-4, -4)
-        # glow
-        if p > 0.05:
-            glow = pygame.Surface((rect.w + 24, rect.h + 24), pygame.SRCALPHA)
-            for i in range(10, 0, -1):
-                a = int(28 * p * (11 - i) / 10)
-                pygame.draw.rect(glow, (*self.accent, a),
-                                 (12 - i, 12 - i, rect.w + 2*i, rect.h + 2*i),
-                                 border_radius=14 + i)
-            surf.blit(glow, (rect.x - 12, rect.y - 12))
-        pygame.draw.rect(surf, col, rect, border_radius=12)
-        pygame.draw.rect(surf, self.accent, rect, 2, border_radius=12)
-        txt = F_H2.render(self.label, True, TEXT)
-        surf.blit(txt, txt.get_rect(center=rect.center))
+            rect = rect.inflate(-2, -2)
 
-def vertical_gradient(surf, top, bottom):
-    h = surf.get_height()
-    for y in range(h):
-        t = y / max(1, h - 1)
-        col = tuple(int(top[i] + (bottom[i] - top[i]) * t) for i in range(3))
-        pygame.draw.line(surf, col, (0, y), (surf.get_width(), y))
+        # Shadow
+        shadow = pygame.Surface((rect.w + 8, rect.h + 8), pygame.SRCALPHA)
+        pygame.draw.rect(shadow, (0, 0, 0, 80), (4, 4, rect.w, rect.h), border_radius=12)
+        surf.blit(shadow, (rect.x - 4, rect.y - 4))
+
+        # Surface
+        base_col = MD_SURFACE
+        if p > 0.5:
+            base_col = (int(MD_SURFACE[0]*0.9), int(MD_SURFACE[1]*0.9), int(MD_SURFACE[2]*0.9))
+        pygame.draw.rect(surf, base_col, rect, border_radius=12)
+
+        # Hover highlight
+        if p > 0.05:
+            highlight = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+            alpha = int(30 * p)
+            pygame.draw.rect(highlight, (*MD_PRIMARY, alpha), (0, 0, rect.w, rect.h), border_radius=12)
+            surf.blit(highlight, rect.topleft)
+
+        # Border
+        pygame.draw.rect(surf, (60, 60, 60), rect, 1, border_radius=12)
+
+        # Text
+        txt_color = MD_ON_PRIMARY if p > 0.5 else MD_ON_SURFACE
+        txt = F_H2.render(self.label, True, txt_color)
+        surf.blit(txt, txt.get_rect(center=rect.center))
 
 class Starfield:
     def __init__(self, w, h, n=60):
@@ -267,17 +272,13 @@ class Toggle:
         self.anim += (target - self.anim) * min(1.0, dt / 80.0)
 
     def draw(self, surf):
-        color = ACCENT if self.state else (60, 60, 80)
-        if self.hovered:
-            color = tuple(min(255, c + 30) for c in color)
-        
-        pygame.draw.rect(surf, color, self.rect, border_radius=self.rect.h // 2)
-        
-        # Кружочек
-        r = self.rect.h - 8
-        cx = self.rect.x + 4 + int(self.anim * (self.rect.w - r - 8)) + r // 2
+        from settings import (MD_PRIMARY, MD_ON_SURFACE)
+        track_col = MD_PRIMARY if self.state else (60, 60, 60)
+        pygame.draw.rect(surf, track_col, self.rect, border_radius=self.rect.h // 2)
+        r = self.rect.h - 6
+        cx = self.rect.x + 3 + int(self.anim * (self.rect.w - r - 6)) + r // 2
         cy = self.rect.centery
-        pygame.draw.circle(surf, (255, 255, 255), (cx, cy), r // 2)
+        pygame.draw.circle(surf, MD_ON_SURFACE, (cx, cy), r // 2)
 
 class Slider:
     def __init__(self, x, y, w, h, val=0.5, callback=None):
@@ -307,12 +308,14 @@ class Slider:
             self.callback(self.val)
 
     def draw(self, surf):
-        pygame.draw.rect(surf, (40, 36, 70), self.rect, border_radius=5)
+        from settings import (MD_PRIMARY, MD_ON_SURFACE)
+        pygame.draw.rect(surf, (50, 50, 50), self.rect, border_radius=2)
         fill_w = int(self.val * self.rect.w)
         if fill_w > 0:
-            pygame.draw.rect(surf, ACCENT, (self.rect.x, self.rect.y, fill_w, self.rect.h), border_radius=5)
-        pygame.draw.rect(surf, TEXT, self.handle_rect, border_radius=8)
-        pygame.draw.rect(surf, ACCENT, self.handle_rect, 2, border_radius=8)
+            pygame.draw.rect(surf, MD_PRIMARY, (self.rect.x, self.rect.y, fill_w, self.rect.h), border_radius=2)
+        thumb_pos = self.rect.x + fill_w
+        pygame.draw.circle(surf, MD_PRIMARY, (thumb_pos, self.rect.centery), 8)
+        pygame.draw.circle(surf, MD_ON_SURFACE, (thumb_pos, self.rect.centery), 4)
 
 class VolumeSlider:
     def __init__(self, x, y, w, h):

@@ -34,7 +34,13 @@ except Exception:
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
-screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+_win_flags = pygame.FULLSCREEN | pygame.SCALED
+try:
+    screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), _win_flags)
+except Exception as _e:
+    print(f"⚠️ Fullscreen failed: {_e}, falling back to windowed")
+    screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
+is_fullscreen = True, pygame.FULLSCREEN | pygame.SCALED)
 clock = pygame.time.Clock()
 
 MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY = range(13)
