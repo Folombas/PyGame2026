@@ -57,6 +57,8 @@ combo_display_t = 0
 last_milestone = 0
 milestone_toast = None
 milestone_toast_t = 0
+levelup_toast = None
+levelup_toast_t = 0
 focus_lost = False
 time_scale = 1.0
 trail_timer = 0
@@ -184,7 +186,9 @@ def cb_lock():
 
 
 def cb_levelup(lvl):
-    global flash_timer
+    global flash_timer, levelup_toast, levelup_toast_t
+    levelup_toast = lvl
+    levelup_toast_t = pygame.time.get_ticks()
     audio.play('levelup')
     fx.kick(12.0)
     flash_timer = 500
@@ -727,6 +731,32 @@ while running:
                 screen.blit(toast, toast.get_rect(midtop=(S.WIDTH // 2, 50)))
     elif last_card_unlock:
         last_card_unlock = None
+
+    if levelup_toast and t - levelup_toast_t < 2200:
+        elapsed = t - levelup_toast_t
+        fade = max(0.0, 1.0 - elapsed / 2200.0)
+        # Slide-in from top
+        slide = min(1.0, elapsed / 400.0)
+        y_pos = int(-100 + slide * 120)
+        scale = 1.0 + min(0.4, elapsed / 500.0)
+        size = int(80 * scale)
+        try:
+            font = pygame.font.SysFont('Arial', size, bold=True)
+            shadow = font.render("LEVEL UP!", True, (0, 0, 0))
+            txt = font.render("LEVEL UP!", True, S.GOLD)
+            shadow.set_alpha(int(255 * fade))
+            txt.set_alpha(int(255 * fade))
+            surf = screen
+            surf.blit(shadow, shadow.get_rect(center=(S.WIDTH // 2 + 4, y_pos + 4)))
+            surf.blit(txt, txt.get_rect(center=(S.WIDTH // 2, y_pos)))
+            # Level number
+            lv = ui.F_TITLE.render(f"→ {levelup_toast}", True, S.ACCENT)
+            lv.set_alpha(int(255 * fade))
+            surf.blit(lv, lv.get_rect(center=(S.WIDTH // 2, y_pos + 70)))
+        except Exception:
+            pass
+    elif levelup_toast:
+        levelup_toast = None
 
     if milestone_toast and t - milestone_toast_t < 2000:
         fade = max(0.0, 1.0 - (t - milestone_toast_t) / 2000.0)
