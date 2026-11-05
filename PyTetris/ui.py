@@ -126,120 +126,6 @@ btn_skin = load_skin("neon_ui_basic.png")
 daily_anim = 0.0
 
 class Button:
-    def __init__(self, label, cx, cy, w, h, on_click, accent=ACCENT, icon=None):
-        self.label = label
-        self.rect = pygame.Rect(0, 0, w, h)
-        self.rect.center = (cx, cy)
-        self.on_click = on_click
-        self.accent = accent
-        self.hovered = False
-        self.pressed = False
-        self.pulse = 0.0
-        self.press_anim = 0.0
-        self.icon = icon
-
-    def update(self, dt, mouse):
-        was_hovered = self.hovered
-        self.hovered = self.rect.collidepoint(mouse)
-        if self.hovered and not was_hovered:
-            try:
-                import audio
-                audio.play('ui_hover')
-            except Exception:
-                pass
-        target = 1.0 if self.hovered else 0.0
-        self.pulse += (target - self.pulse) * min(1.0, dt / 80.0)
-        # Press animation
-        target_press = 1.0 if self.pressed else 0.0
-        self.press_anim += (target_press - self.press_anim) * min(1.0, dt / 40.0)
-
-    def handle(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.rect.collidepoint(event.pos):
-                self.pressed = True
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if self.pressed and self.rect.collidepoint(event.pos):
-                try:
-                    import audio
-                    audio.play('ui_click')
-                except Exception:
-                    pass
-                if self.on_click:
-                    self.on_click()
-            self.pressed = False
-
-    def draw(self, surf):
-        from settings import (MD_PRIMARY, MD_SURFACE, MD_ON_SURFACE, MD_ON_PRIMARY)
-        p = self.pulse
-        press = self.press_anim
-
-        # Кнопка "продавливается" вниз на 4 пикселя
-        y_offset = int(4 * press)
-        rect = self.rect.copy()
-        rect.y += y_offset
-
-        # Тень (уменьшается при продавливании)
-        if press < 0.9:
-            shadow_h = int(6 * (1.0 - press))
-            shadow_alpha = int(90 * (1.0 - press))
-            shadow = pygame.Surface((rect.w + 8, rect.h + shadow_h + 8), pygame.SRCALPHA)
-            pygame.draw.rect(shadow, (0, 0, 0, shadow_alpha),
-                             (4, 4, rect.w, rect.h + shadow_h), border_radius=12)
-            surf.blit(shadow, (rect.x - 4, rect.y - 4))
-
-        # Base
-        base_col = MD_SURFACE
-        if press > 0.5:
-            base_col = (14, 12, 22)  # темнее при нажатии
-        elif p > 0.5:
-            base_col = (int(MD_SURFACE[0]*0.85), int(MD_SURFACE[1]*0.85), int(MD_SURFACE[2]*0.85))
-        pygame.draw.rect(surf, base_col, rect, border_radius=12)
-
-        # Hover highlight
-        if p > 0.05 and press < 0.5:
-            highlight = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
-            alpha = int(35 * p)
-            pygame.draw.rect(highlight, (*MD_PRIMARY, alpha), (0, 0, rect.w, rect.h), border_radius=12)
-            surf.blit(highlight, rect.topleft)
-
-        # Border
-        border_col = (60, 60, 60)
-        if p > 0.5:
-            border_col = self.accent
-        if press > 0.5:
-            border_col = tuple(int(c * 0.6) for c in self.accent)
-        pygame.draw.rect(surf, border_col, rect, 2, border_radius=12)
-
-        # Текст
-        txt_color = MD_ON_PRIMARY if p > 0.5 else MD_ON_SURFACE
-        if press > 0.5:
-            txt_color = tuple(int(c * 0.7) for c in txt_color)
-        txt = F_H2.render(self.label, True, txt_color)
-        txt_rect = txt.get_rect(center=rect.center)
-
-        # Иконки-стрелки
-        if self.icon == 'left':
-            txt_rect.centerx += 14
-            ax, ay = rect.x + 22, rect.centery
-            pygame.draw.line(surf, txt_color, (ax + 7, ay - 7), (ax, ay), 3)
-            pygame.draw.line(surf, txt_color, (ax, ay), (ax + 7, ay + 7), 3)
-            pygame.draw.line(surf, txt_color, (ax, ay), (ax + 12, ay), 3)
-        elif self.icon == 'right':
-            txt_rect.centerx -= 14
-            ax, ay = rect.right - 22, rect.centery
-            pygame.draw.line(surf, txt_color, (ax - 7, ay - 7), (ax, ay), 3)
-            pygame.draw.line(surf, txt_color, (ax, ay), (ax - 7, ay + 7), 3)
-            pygame.draw.line(surf, txt_color, (ax, ay), (ax - 12, ay), 3)
-        elif self.icon == 'home':
-            txt_rect.centerx += 14
-            cx_ico, cy_ico = rect.centerx - txt.get_width()//2 - 12, rect.centery
-            pygame.draw.polygon(surf, txt_color, [
-                (cx_ico - 9, cy_ico), (cx_ico, cy_ico - 8), (cx_ico + 9, cy_ico)
-            ], 2)
-            pygame.draw.rect(surf, txt_color, (cx_ico - 6, cy_ico, 12, 8), 2)
-
-        surf.blit(txt, txt_rect)
-
     def __init__(self, label, cx, cy, w, h, on_click, accent=ACCENT):
         self.label = label
         self.rect = pygame.Rect(0, 0, w, h)
@@ -604,180 +490,32 @@ def draw_text_center(surf, text, y, font, color=TEXT):
     s = font.render(text, True, color)
     surf.blit(s, s.get_rect(center=(WIDTH // 2, y)))
 
-
-
-
-def draw_vector_icon(surf, cx, cy, size, kind, color):
-    """Рисует векторную иконку без эмодзи."""
-    s = size
-    half = s // 2
-    # Фон карточки
-    rect = pygame.Rect(cx - half, cy - half, s, s)
-    pygame.draw.rect(surf, (22, 20, 40), rect, border_radius=10)
-    pygame.draw.rect(surf, color, rect, 2, border_radius=10)
-
-    # Символ внутри
-    if kind == 'ach':
-        # Медаль
-        pygame.draw.circle(surf, color, (cx, cy - 4), half // 3)
-        pygame.draw.circle(surf, (22, 20, 40), (cx, cy - 4), half // 5)
-        pygame.draw.polygon(surf, color, [
-            (cx - 6, cy + 4), (cx + 6, cy + 4), (cx + 10, cy + half - 6), (cx - 10, cy + half - 6)
-        ], 2)
-    elif kind == 'profile':
-        # Голова + тело
-        pygame.draw.circle(surf, color, (cx, cy - 6), half // 3, 2)
-        pygame.draw.arc(surf, color, (cx - half // 3, cy + 2, half * 2 // 3, half * 2 // 3), 0, 3.14, 2)
-    elif kind == 'daily':
-        # Календарь
-        pygame.draw.rect(surf, color, (cx - 12, cy - 10, 24, 22), 2, border_radius=3)
-        pygame.draw.line(surf, color, (cx - 12, cy - 4), (cx + 12, cy - 4), 2)
-        pygame.draw.line(surf, color, (cx - 6, cy - 14), (cx - 6, cy - 8), 2)
-        pygame.draw.line(surf, color, (cx + 6, cy - 14), (cx + 6, cy - 8), 2)
-        pygame.draw.circle(surf, color, (cx - 4, cy + 4), 2)
-        pygame.draw.circle(surf, color, (cx + 4, cy + 4), 2)
-    elif kind == 'calendar':
-        # Подарок
-        pygame.draw.rect(surf, color, (cx - 12, cy - 6, 24, 18), 2)
-        pygame.draw.line(surf, color, (cx, cy - 6), (cx, cy + 12), 2)
-        pygame.draw.line(surf, color, (cx - 12, cy + 2), (cx + 12, cy + 2), 2)
-        pygame.draw.arc(surf, color, (cx - 8, cy - 14, 8, 8), 0, 3.14, 2)
-        pygame.draw.arc(surf, color, (cx, cy - 14, 8, 8), 0, 3.14, 2)
-    elif kind == 'shop':
-        # Корзина
-        pygame.draw.circle(surf, color, (cx - 8, cy + 8), 3)
-        pygame.draw.circle(surf, color, (cx + 8, cy + 8), 3)
-        pygame.draw.polygon(surf, color, [
-            (cx - 14, cy - 6), (cx + 10, cy - 6), (cx + 6, cy + 4), (cx - 10, cy + 4)
-        ], 2)
-        pygame.draw.line(surf, color, (cx - 14, cy - 6), (cx - 10, cy - 12), 2)
-    elif kind == 'cards':
-        # Две карточки
-        pygame.draw.rect(surf, color, (cx - 12, cy - 8, 18, 20), 2, border_radius=3)
-        pygame.draw.rect(surf, color, (cx - 6, cy - 12, 18, 20), 2, border_radius=3)
-    elif kind == 'settings':
-        # Шестерёнка
-        pygame.draw.circle(surf, color, (cx, cy), 10, 2)
-        pygame.draw.circle(surf, (22, 20, 40), (cx, cy), 4)
-        for a in range(0, 360, 45):
-            import math
-            rad = math.radians(a)
-            x1, y1 = cx + int(10 * math.cos(rad)), cy + int(10 * math.sin(rad))
-            x2, y2 = cx + int(14 * math.cos(rad)), cy + int(14 * math.sin(rad))
-            pygame.draw.line(surf, color, (x1, y1), (x2, y2), 2)
-    elif kind == 'lang':
-        # Глобус
-        pygame.draw.circle(surf, color, (cx, cy), 12, 2)
-        pygame.draw.ellipse(surf, color, (cx - 6, cy - 12, 12, 24), 2)
-        pygame.draw.line(surf, color, (cx - 12, cy), (cx + 12, cy), 2)
-    elif kind == 'quit':
-        # Крестик
-        pygame.draw.line(surf, color, (cx - 8, cy - 8), (cx + 8, cy + 8), 3)
-        pygame.draw.line(surf, color, (cx + 8, cy - 8), (cx - 8, cy + 8), 3)
-
-
 def draw_menu(surf, buttons, t, stars, meta=None):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     stars.draw(surf)
-
-    # Title
-    draw_title(surf, "PYTETRIS", 60, t)
-    sub = F_MED.render("★ Neon Edition ★", True, ACCENT)
-    surf.blit(sub, sub.get_rect(center=(WIDTH // 2, 120)))
-
+    draw_title(surf, "PYTETRIS", 80, t)
+    
+    s = F_MED.render("★ Neon Edition ★", True, ACCENT)
+    surf.blit(s, s.get_rect(center=(WIDTH // 2, 140)))
+    
     if meta:
+        medals = sum(1 for a in __import__('meta').ACHIEVEMENTS if meta['medals'].get(a['id'], 0) > 0)
+        cards = len(meta.get('cards', []))
+        from cards import CARDS
+        mc = F_SMALL.render(f"🏅 {medals}/10    🃏 {cards}/{len(CARDS)}", True, GOLD)
+        surf.blit(mc, mc.get_rect(center=(WIDTH // 2, 165)))
         total = meta.get('total_lines', 0)
         best = meta.get('best_score', 0)
-        stat = F_SMALL.render(f"Всего линий: {total}   |   Лучший счёт: {best}", True, MUTED)
-        surf.blit(stat, stat.get_rect(center=(WIDTH // 2, 150)))
+        stat = F_SMALL.render(f"{locale.t('total_lines')}: {total}  |  {locale.t('best_score')}: {best}", True, MUTED)
+        surf.blit(stat, stat.get_rect(center=(WIDTH // 2, 170)))
 
-    # --- Mode cards (2x2) ---
-    card_w, card_h = 240, 70
-    gap_x, gap_y = 20, 15
-    total_w = card_w * 2 + gap_x
-    start_x = (WIDTH - total_w) // 2
-    start_y = 180
+    # Панель под кнопки
+    panel_rect = pygame.Rect(WIDTH // 2 - 160, 190, 320, 420)
+    pygame.draw.rect(surf, (12, 10, 24, 200), panel_rect, border_radius=20)
+    pygame.draw.rect(surf, ACCENT, panel_rect, 1, border_radius=20)
 
-    mode_cards = [
-        ('ИГРАТЬ', 'классика', ACCENT),
-        ('СПРИНТ', '40 линий', GOLD),
-        ('МУСОР', 'выживание', DANGER),
-        ('ДЗЕН', 'без проигрыша', ACCENT2),
-    ]
-
-    for i, (label, sub_text, col) in enumerate(mode_cards):
-        col_idx = i % 2
-        row_idx = i // 2
-        cx = start_x + col_idx * (card_w + gap_x)
-        cy = start_y + row_idx * (card_h + gap_y)
-        card_rect = pygame.Rect(cx, cy, card_w, card_h)
-        # hover
-        hover = buttons[i].pulse if i < len(buttons) else 0
-        bg_col = (int(22 + 20*hover), int(20 + 20*hover), int(40 + 20*hover))
-        pygame.draw.rect(surf, bg_col, card_rect, border_radius=14)
-        pygame.draw.rect(surf, col, card_rect, 2, border_radius=14)
-        pygame.draw.rect(surf, col, (cx, cy + 8, 4, card_h - 16), border_radius=2)
-        lab = F_H2.render(label, True, col)
-        surf.blit(lab, (cx + 20, cy + 8))
-        sub2 = F_TINY.render(sub_text, True, MUTED)
-        surf.blit(sub2, (cx + 20, cy + card_h - 22))
-
-    # --- Section: Аккаунт ---
-    sect_y = start_y + 2 * (card_h + gap_y) + 25
-    # Декоративные линии по бокам
-    line_w = 160
-    pygame.draw.line(surf, MUTED, (WIDTH // 2 - line_w - 10, sect_y), (WIDTH // 2 - 60, sect_y), 1)
-    pygame.draw.line(surf, MUTED, (WIDTH // 2 + 60, sect_y), (WIDTH // 2 + line_w + 10, sect_y), 1)
-    sect = F_SMALL.render("АККАУНТ", True, MUTED)
-    surf.blit(sect, sect.get_rect(center=(WIDTH // 2, sect_y)))
-
-    # --- Icon grid row 1 (5 icons) ---
-    icon_size = 64
-    icon_gap = 30
-    row1_y = sect_y + 35
-    labels1 = ['ДОСТИЖ', 'ПРОФИЛЬ', 'ДЕЙЛИКИ', 'КАЛЕНД', 'МАГАЗИН']
-    kinds1 = ['ach', 'profile', 'daily', 'calendar', 'shop']
-    colors1 = [ACCENT2, ACCENT, ACCENT, GOLD, GOLD]
-
-    total_w1 = len(labels1) * icon_size + (len(labels1) - 1) * icon_gap
-    sx1 = (WIDTH - total_w1) // 2
-    for i, (lab, kind, col) in enumerate(zip(labels1, kinds1, colors1)):
-        cx = sx1 + i * (icon_size + icon_gap) + icon_size // 2
-        cy = row1_y + icon_size // 2
-        hover = buttons[4 + i].pulse if 4 + i < len(buttons) else 0
-        draw_vector_icon(surf, cx, cy, icon_size, kind, col)
-        # hover обводка
-        if hover > 0.1:
-            r = pygame.Rect(cx - icon_size//2 - 4, cy - icon_size//2 - 4, icon_size + 8, icon_size + 8)
-            pygame.draw.rect(surf, col, r, 2, border_radius=12)
-        lt = F_TINY.render(lab, True, MUTED)
-        surf.blit(lt, lt.get_rect(center=(cx, row1_y + icon_size + 10)))
-
-    # --- Icon grid row 2 (4 icons) ---
-    row2_y = row1_y + icon_size + 35
-    labels2 = ['КАРТЫ', 'НАСТР', 'ЯЗЫК', 'ВЫХОД']
-    kinds2 = ['cards', 'settings', 'lang', 'quit']
-    colors2 = [ACCENT2, ACCENT, ACCENT2, DANGER]
-
-    total_w2 = len(labels2) * icon_size + (len(labels2) - 1) * icon_gap
-    sx2 = (WIDTH - total_w2) // 2
-    for i, (lab, kind, col) in enumerate(zip(labels2, kinds2, colors2)):
-        cx = sx2 + i * (icon_size + icon_gap) + icon_size // 2
-        cy = row2_y + icon_size // 2
-        hover = buttons[9 + i].pulse if 9 + i < len(buttons) else 0
-        draw_vector_icon(surf, cx, cy, icon_size, kind, col)
-        if hover > 0.1:
-            r = pygame.Rect(cx - icon_size//2 - 4, cy - icon_size//2 - 4, icon_size + 8, icon_size + 8)
-            pygame.draw.rect(surf, col, r, 2, border_radius=12)
-        lt = F_TINY.render(lab, True, MUTED)
-        surf.blit(lt, lt.get_rect(center=(cx, row2_y + icon_size + 10)))
-
-    # --- Volume label ---
-    slider_y = row2_y + icon_size + 55
-    vol_lab = F_SMALL.render("ГРОМКОСТЬ", True, MUTED)
-    surf.blit(vol_lab, vol_lab.get_rect(midright=(WIDTH // 2 - 110, slider_y + 5)))
-
-
+    for b in buttons:
+        b.draw(surf)
 def draw_pause(surf):
     draw_overlay(surf, 170)
     draw_text_center(surf, locale.t("paused"), HEIGHT // 2 - 40, F_TITLE, ACCENT)

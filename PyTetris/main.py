@@ -34,9 +34,8 @@ except Exception:
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
-# Windowed mode by default (F11 toggles fullscreen)
 import os
-os.environ['SDL_VIDEO_CENTERED'] = '1'   # центрируем окно
+os.environ['SDL_VIDEO_CENTERED'] = '1'  # центрируем окно на экране
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 is_fullscreen = False
 clock = pygame.time.Clock()
@@ -80,7 +79,7 @@ meta = load_meta()
 locale.LANG = meta.get('lang', 'en')
 check_streak(meta)
 
-# ============== Navigation Buttons (для всех подэкранов) ==============
+# === Подэкраны и их навигация ===
 SUBMENU_STATES = [SCORES, ACHS, DAILY, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY]
 
 def submenu_prev():
@@ -90,16 +89,6 @@ def submenu_prev():
 def submenu_next():
     idx = SUBMENU_STATES.index(state)
     set_state(SUBMENU_STATES[(idx + 1) % len(SUBMENU_STATES)])
-
-nav_buttons = [
-    ui.Button("НАЗАД", S.WIDTH // 2 - 280, S.HEIGHT - 50, 200, 48,
-              submenu_prev, accent=S.ACCENT, icon='left'),
-    ui.Button("В МЕНЮ", S.WIDTH // 2, S.HEIGHT - 50, 200, 48,
-              lambda: set_state(MENU), accent=S.ACCENT2, icon='home'),
-    ui.Button("ДАЛЕЕ", S.WIDTH // 2 + 280, S.HEIGHT - 50, 200, 48,
-              submenu_next, accent=S.GOLD, icon='right'),
-]
-
 
 run_time = 0.0
 renderer = BlockRenderer()
@@ -151,62 +140,25 @@ def quit_game():
 
 def rebuild_menu():
     global menu_buttons, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle
-
-    # Точные координаты из draw_menu
-    card_w, card_h = 240, 70
-    gap_x, gap_y = 20, 15
-    total_w = card_w * 2 + gap_x
-    start_x = (S.WIDTH - total_w) // 2
-    start_y = 180
-
-    cx0 = start_x + card_w // 2
-    cx1 = start_x + card_w + gap_x + card_w // 2
-    cy0 = start_y + card_h // 2
-    cy1 = start_y + card_h + gap_y + card_h // 2
-
-    # Иконки
-    icon_size = 64
-    icon_gap = 30
-    sect_y = start_y + 2 * (card_h + gap_y) + 25
-    row1_y = sect_y + 35
-    row2_y = row1_y + icon_size + 35
-
-    def icon_cx_1(i):
-        total = 5 * icon_size + 4 * icon_gap
-        sx = (S.WIDTH - total) // 2
-        return sx + i * (icon_size + icon_gap) + icon_size // 2
-
-    def icon_cx_2(i):
-        total = 4 * icon_size + 3 * icon_gap
-        sx = (S.WIDTH - total) // 2
-        return sx + i * (icon_size + icon_gap) + icon_size // 2
-
-    row1_cy = row1_y + icon_size // 2
-    row2_cy = row2_y + icon_size // 2
-
     menu_buttons = [
-        ui.Button("", cx0, cy0, card_w, card_h, lambda: start_game(False, "classic")),
-        ui.Button("", cx1, cy0, card_w, card_h, lambda: start_game(False, "sprint")),
-        ui.Button("", cx0, cy1, card_w, card_h, lambda: start_game(False, "survival")),
-        ui.Button("", cx1, cy1, card_w, card_h, lambda: start_game(True, "classic")),
-        # Row 1
-        ui.Button("", icon_cx_1(0), row1_cy, icon_size, icon_size, lambda: set_state(ACHS)),
-        ui.Button("", icon_cx_1(1), row1_cy, icon_size, icon_size, lambda: set_state(PROFILE)),
-        ui.Button("", icon_cx_1(2), row1_cy, icon_size, icon_size, lambda: set_state(DAILY)),
-        ui.Button("", icon_cx_1(3), row1_cy, icon_size, icon_size, lambda: set_state(CALENDAR)),
-        ui.Button("", icon_cx_1(4), row1_cy, icon_size, icon_size, lambda: set_state(SHOP)),
-        # Row 2
-        ui.Button("", icon_cx_2(0), row2_cy, icon_size, icon_size, lambda: set_state(COLLECTION)),
-        ui.Button("", icon_cx_2(1), row2_cy, icon_size, icon_size, lambda: set_state(SETTINGS)),
-        ui.Button("", icon_cx_2(2), row2_cy, icon_size, icon_size, toggle_lang),
-        ui.Button("", icon_cx_2(3), row2_cy, icon_size, icon_size, quit_game),
+        ui.Button(locale.t("play"),    S.WIDTH // 2, 175, 240, 30, lambda: start_game(False, "classic")),
+        ui.Button(locale.t("sprint"),  S.WIDTH // 2, 210, 240, 30, lambda: start_game(False, "sprint"), accent=S.GOLD),
+        ui.Button(locale.t("survival"),S.WIDTH // 2, 245, 240, 30, lambda: start_game(False, "survival"), accent=S.DANGER),
+        ui.Button(locale.t("zen"),     S.WIDTH // 2, 280, 240, 30, lambda: start_game(True, "classic"), accent=S.ACCENT2),
+        ui.Button(locale.t("lb"),      S.WIDTH // 2, 315, 240, 30, lambda: set_state(SCORES), accent=S.GOLD),
+        ui.Button(locale.t("ach"),     S.WIDTH // 2, 350, 240, 28, lambda: set_state(ACHS), accent=S.ACCENT2),
+        ui.Button("👤 PROFILE",        S.WIDTH // 2, 383, 240, 26, lambda: set_state(PROFILE), accent=S.ACCENT2),
+        ui.Button(locale.t("daily"),   S.WIDTH // 2, 414, 240, 26, lambda: set_state(DAILY), accent=S.ACCENT),
+        ui.Button("📅 WEEKLY",          S.WIDTH // 2, 445, 240, 22, lambda: set_state(WEEKLY), accent=S.ACCENT),
+        ui.Button("🎁 CALENDAR",       S.WIDTH // 2, 470, 240, 22, lambda: set_state(CALENDAR), accent=S.GOLD),
+        ui.Button("🛒 SHOP",           S.WIDTH // 2, 495, 240, 22, lambda: set_state(SHOP), accent=S.GOLD),
+        ui.Button("🎴 CARDS",          S.WIDTH // 2, 520, 240, 22, lambda: set_state(COLLECTION), accent=S.ACCENT2),
+        ui.Button(locale.t("settings"),S.WIDTH // 2, 545, 240, 20, lambda: set_state(SETTINGS), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),    S.WIDTH // 2, 568, 240, 20, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),    S.WIDTH // 2, 591, 240, 20, quit_game, accent=S.DANGER),
     ]
-
     if volume_slider is None:
-        slider_y = row2_y + icon_size + 55
-        volume_slider = ui.Slider(S.WIDTH // 2 - 100, slider_y, 220, 10, 0.4)
-
-    if sfx_slider is None:
+        volume_slider = ui.Slider(S.WIDTH // 2 - 100, 640, 200, 10, 0.4)
         sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
         ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
         shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
@@ -382,6 +334,18 @@ over_buttons = [
     ui.Button(locale.t("restart"), S.WIDTH // 2, S.HEIGHT // 2 + 90, 240, 60, lambda: start_game(False, game.mode)),
     ui.Button(locale.t("menu"),    S.WIDTH // 2, S.HEIGHT // 2 + 170, 240, 60, back_to_menu, accent=S.ACCENT2),
 ]
+
+# === Навигационные кнопки для всех подэкранов ===
+nav_buttons = [
+    ui.Button("НАЗАД",  S.WIDTH // 2 - 280, S.HEIGHT - 50, 200, 48,
+              submenu_prev, accent=S.ACCENT, icon='left'),
+    ui.Button("В МЕНЮ", S.WIDTH // 2,       S.HEIGHT - 50, 200, 48,
+              lambda: set_state(MENU), accent=S.ACCENT2, icon='home'),
+    ui.Button("ДАЛЕЕ",  S.WIDTH // 2 + 280, S.HEIGHT - 50, 200, 48,
+              submenu_next, accent=S.GOLD, icon='right'),
+]
+
+
 rebuild_menu()
 
 
@@ -481,8 +445,6 @@ def handle_events():
                             audio.play('pack_open')
                             fx.kick(6.0)
                         break
-        
-            for b in nav_buttons: b.handle(e)
         elif state == CALENDAR:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
@@ -492,13 +454,9 @@ def handle_events():
                     if claim_login(meta):
                         audio.play('levelup')
                         fx.kick(6.0)
-        
-            for b in nav_buttons: b.handle(e)
         elif state == PROFILE:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
-        
-            for b in nav_buttons: b.handle(e)
         elif state == SETTINGS:
             settings_back.handle(e)
             if sfx_slider: sfx_slider.handle_event(e)
@@ -506,8 +464,10 @@ def handle_events():
             if shake_toggle: shake_toggle.handle_event(e)
             if speed_slider: speed_slider.handle_event(e)
             if grid_toggle: grid_toggle.handle_event(e)
-        elif state in (SCORES, ACHS, DAILY, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY):
+        elif state in (SCORES, ACHS, DAILY, COLLECTION, WEEKLY):
             for b in nav_buttons: b.handle(e)
+            if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
+                set_state(MENU)
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                 set_state(MENU)
             if state == COLLECTION and e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE and C:
@@ -744,12 +704,10 @@ while running:
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
-        # кастомные кнопки-хотзоны рисуются невидимо (в draw_menu свой визуал)
-        # hover-обводки рисуются внутри draw_menu
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
         apply_bloom(screen)
-        elif state == PLAY:
+    elif state == PLAY:
         if game.game_over or game.win:
             handle_game_over()
         else:
@@ -782,7 +740,7 @@ while running:
                 audio.play('danger')
         else:
             danger_beep_timer = 0
-        elif state == PAUSE:
+    elif state == PAUSE:
         draw_game(t, dt)
         ui.draw_pause(screen)
         # Show focus hint if window is unfocused
@@ -794,41 +752,31 @@ while running:
             pass
         for b in pause_buttons: b.update(dt, mouse)
         for b in pause_buttons: b.draw(screen)
-        elif state == OVER:
+    elif state == OVER:
         for b in over_buttons: b.update(dt, mouse)
         draw_over()
         fx.update(dt)
-        elif state == SCORES:
+    elif state == SCORES:
         ui.draw_leaderboard(screen, load_scores(), meta.get('best_score', 0))
-    
-            for b in nav_buttons: b.handle(e)
-        elif state == ACHS:
+    elif state == ACHS:
         ui.draw_achievements(screen, meta, ACHIEVEMENTS)
-    
-            for b in nav_buttons: b.handle(e)
-        elif state == DAILY:
+    elif state == DAILY:
         ui.draw_dailies(screen, meta, get_daily_quests(), get_weekly_quests())
-    
-            for b in nav_buttons: b.handle(e)
-        elif state == WEEKLY:
+    elif state == WEEKLY:
         ui.draw_weekly(screen, meta, get_weekly_quests())
-    
-            for b in nav_buttons: b.handle(e)
-        elif state == SETTINGS:
+    elif state == SETTINGS:
         settings_back.update(dt, mouse)
         for obj in (sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle):
             if obj and hasattr(obj, 'update'): obj.update(dt)
         ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle,
                         speed_slider, grid_toggle, settings_back)
-        elif state == COLLECTION:
+    elif state == COLLECTION:
         ui.draw_collection(screen, meta)
-    
-            for b in nav_buttons: b.handle(e)
-        elif state == SHOP:
+    elif state == SHOP:
         ui.draw_shop(screen, meta, t)
-        elif state == CALENDAR:
+    elif state == CALENDAR:
         ui.draw_calendar(screen, meta, t)
-        elif state == PROFILE:
+    elif state == PROFILE:
         ui.draw_profile(screen, meta, t)
 
     if last_unlock and t - last_unlock_t < 2500:
@@ -885,7 +833,7 @@ while running:
     elif milestone_toast:
         milestone_toast = None
 
-    # Отрисовка кнопок навигации для всех подэкранов
+    # Отрисовка кнопок навигации на всех подэкранах
     if state in SUBMENU_STATES:
         for b in nav_buttons:
             b.update(dt, mouse)
