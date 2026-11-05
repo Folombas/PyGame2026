@@ -186,11 +186,22 @@ def cb_lock():
 def cb_levelup(lvl):
     global flash_timer
     audio.play('levelup')
-    fx.kick(9.0)
+    fx.kick(12.0)
     flash_timer = 500
     for _y in range(0, S.ROWS, 2):
         colors = list(S.COLORS.values())
         fx.burst_row(board_y + _y * S.CELL, board_x, S.CELL, S.COLS, colors)
+    # Fireworks from 4 corners + center
+    import math
+    cx, cy = S.WIDTH // 2, S.HEIGHT // 2
+    for angle in [0, 90, 180, 270]:
+        rad = math.radians(angle)
+        px = cx + math.cos(rad) * 200
+        py = cy + math.sin(rad) * 150
+        for _ in range(15):
+            fx.burst(px, py, S.GOLD, count=1)
+    for _ in range(20):
+        fx.burst(cx, cy, S.ACCENT, count=1)
 
 
 def cb_clear(rows, count):
