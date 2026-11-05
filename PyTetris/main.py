@@ -129,25 +129,56 @@ def quit_game():
 
 def rebuild_menu():
     global menu_buttons, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle
+    # Невидимые кнопки-хотзоны поверх кастомной отрисовки draw_menu
+    # Карточки режимов (2×2)
+    card_w, card_h = 220, 62
+    gap_x, gap_y = 20, 14
+    total_w = card_w * 2 + gap_x
+    start_x = (S.WIDTH - total_w) // 2
+    start_y = 175
+
+    # Центры карточек
+    cx0 = start_x + card_w // 2
+    cx1 = start_x + card_w + gap_x + card_w // 2
+    cy0 = start_y + card_h // 2
+    cy1 = start_y + card_h + gap_y + card_h // 2
+
+    # Иконки-сетка
+    icon_size = 54
+    icon_gap = 16
+    row1_y = start_y + 2 * (card_h + gap_y) + 20 + 22 + 22
+    row2_y = row1_y + icon_size + 22
+
+    def icon_cx(i, n):
+        total = n * icon_size + (n - 1) * icon_gap
+        sx = (S.WIDTH - total) // 2
+        return sx + i * (icon_size + icon_gap) + icon_size // 2
+
     menu_buttons = [
-        ui.Button(locale.t("play"),    S.WIDTH // 2, 175, 240, 30, lambda: start_game(False, "classic")),
-        ui.Button(locale.t("sprint"),  S.WIDTH // 2, 210, 240, 30, lambda: start_game(False, "sprint"), accent=S.GOLD),
-        ui.Button(locale.t("survival"),S.WIDTH // 2, 245, 240, 30, lambda: start_game(False, "survival"), accent=S.DANGER),
-        ui.Button(locale.t("zen"),     S.WIDTH // 2, 280, 240, 30, lambda: start_game(True, "classic"), accent=S.ACCENT2),
-        ui.Button(locale.t("lb"),      S.WIDTH // 2, 315, 240, 30, lambda: set_state(SCORES), accent=S.GOLD),
-        ui.Button(locale.t("ach"),     S.WIDTH // 2, 350, 240, 28, lambda: set_state(ACHS), accent=S.ACCENT2),
-        ui.Button("👤 PROFILE",        S.WIDTH // 2, 383, 240, 26, lambda: set_state(PROFILE), accent=S.ACCENT2),
-        ui.Button(locale.t("daily"),   S.WIDTH // 2, 414, 240, 26, lambda: set_state(DAILY), accent=S.ACCENT),
-        ui.Button("📅 WEEKLY",          S.WIDTH // 2, 445, 240, 22, lambda: set_state(WEEKLY), accent=S.ACCENT),
-        ui.Button("🎁 CALENDAR",       S.WIDTH // 2, 470, 240, 22, lambda: set_state(CALENDAR), accent=S.GOLD),
-        ui.Button("🛒 SHOP",           S.WIDTH // 2, 495, 240, 22, lambda: set_state(SHOP), accent=S.GOLD),
-        ui.Button("🎴 CARDS",          S.WIDTH // 2, 520, 240, 22, lambda: set_state(COLLECTION), accent=S.ACCENT2),
-        ui.Button(locale.t("settings"),S.WIDTH // 2, 545, 240, 20, lambda: set_state(SETTINGS), accent=S.ACCENT),
-        ui.Button(locale.t("lang"),    S.WIDTH // 2, 568, 240, 20, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),    S.WIDTH // 2, 591, 240, 20, quit_game, accent=S.DANGER),
+        # Mode cards
+        ui.Button("", cx0, cy0, card_w, card_h, lambda: start_game(False, "classic")),
+        ui.Button("", cx1, cy0, card_w, card_h, lambda: start_game(False, "sprint")),
+        ui.Button("", cx0, cy1, card_w, card_h, lambda: start_game(False, "survival")),
+        ui.Button("", cx1, cy1, card_w, card_h, lambda: start_game(True, "classic")),
+        # Icon row 1
+        ui.Button("", icon_cx(0, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(ACHS)),
+        ui.Button("", icon_cx(1, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(PROFILE)),
+        ui.Button("", icon_cx(2, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(DAILY)),
+        ui.Button("", icon_cx(3, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(CALENDAR)),
+        ui.Button("", icon_cx(4, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(SHOP)),
+        # Icon row 2
+        ui.Button("", icon_cx(0, 4), row2_y + icon_size // 2, icon_size, icon_size, lambda: set_state(COLLECTION)),
+        ui.Button("", icon_cx(1, 4), row2_y + icon_size // 2, icon_size, icon_size, lambda: set_state(SETTINGS)),
+        ui.Button("", icon_cx(2, 4), row2_y + icon_size // 2, icon_size, icon_size, toggle_lang),
+        ui.Button("", icon_cx(3, 4), row2_y + icon_size // 2, icon_size, icon_size, quit_game),
     ]
+
     if volume_slider is None:
-        volume_slider = ui.Slider(S.WIDTH // 2 - 100, 640, 200, 10, 0.4)
+        slider_y = row2_y + icon_size + 40
+        volume_slider = ui.Slider(S.WIDTH // 2 - 50, slider_y, 260, 10, 0.4)
+
+    # Остальные элементы (настройки)
+    if sfx_slider is None:
         sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
         ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
         shake_toggle = ui.Toggle(S.WIDTH // 2 + 50, 420, 60, 26, True)
