@@ -126,7 +126,7 @@ btn_skin = load_skin("neon_ui_basic.png")
 daily_anim = 0.0
 
 class Button:
-    def __init__(self, label, cx, cy, w, h, on_click, accent=ACCENT):
+    def __init__(self, label, cx, cy, w, h, on_click, accent=ACCENT, icon=None):
         self.label = label
         self.rect = pygame.Rect(0, 0, w, h)
         self.rect.center = (cx, cy)
@@ -135,6 +135,8 @@ class Button:
         self.hovered = False
         self.pressed = False
         self.pulse = 0.0
+        self.press_anim = 0.0
+        self.icon = icon
 
     def update(self, dt, mouse):
         was_hovered = self.hovered
@@ -142,11 +144,13 @@ class Button:
         if self.hovered and not was_hovered:
             try:
                 import audio
-                audio.play('menu')
-            except:
+                audio.play('ui_hover')
+            except Exception:
                 pass
         target = 1.0 if self.hovered else 0.0
         self.pulse += (target - self.pulse) * min(1.0, dt / 80.0)
+        target_press = 1.0 if self.pressed else 0.0
+        self.press_anim += (target_press - self.press_anim) * min(1.0, dt / 40.0)
 
     def handle(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -154,6 +158,11 @@ class Button:
                 self.pressed = True
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if self.pressed and self.rect.collidepoint(event.pos):
+                try:
+                    import audio
+                    audio.play('ui_click')
+                except Exception:
+                    pass
                 if self.on_click:
                     self.on_click()
             self.pressed = False
@@ -161,35 +170,78 @@ class Button:
     def draw(self, surf):
         from settings import (MD_PRIMARY, MD_SURFACE, MD_ON_SURFACE, MD_ON_PRIMARY)
         p = self.pulse
+        press = self.press_anim
+
+        # Продавливание
+        y_offset = int(3 * press)
         rect = self.rect.copy()
-        if self.pressed:
-            rect = rect.inflate(-2, -2)
+        rect.y += y_offset
 
-        # Shadow
-        shadow = pygame.Surface((rect.w + 8, rect.h + 8), pygame.SRCALPHA)
-        pygame.draw.rect(shadow, (0, 0, 0, 80), (4, 4, rect.w, rect.h), border_radius=12)
-        surf.blit(shadow, (rect.x - 4, rect.y - 4))
+        # Тень
+        if press < 0.8:
+            shadow_h = int(5 * (1.0 - press))
+            shadow_alpha = int(80 * (1.0 - press))
+            shadow = pygame.Surface((rect.w + 8, rect.h + shadow_h + 8), pygame.SRCALPHA)
+            pygame.draw.rect(shadow, (0, 0, 0, shadow_alpha),
+                             (4, 4, rect.w, rect.h + shadow_h), border_radius=12)
+            surf.blit(shadow, (rect.x - 4, rect.y - 4))
 
-        # Surface
-        base_col = MD_SURFACE
-        if p > 0.5:
-            base_col = (int(MD_SURFACE[0]*0.9), int(MD_SURFACE[1]*0.9), int(MD_SURFACE[2]*0.9))
+        # Фон
+        if press > 0.5:
+            base_col = (14, 12, 22)
+        elif p > 0.5:
+            base_col = (int(MD_SURFACE[0]*0.85), int(MD_SURFACE[1]*0.85), int(MD_SURFACE[2]*0.85))
+        else:
+            base_col = MD_SURFACE
         pygame.draw.rect(surf, base_col, rect, border_radius=12)
 
-        # Hover highlight
-        if p > 0.05:
-            highlight = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
-            alpha = int(30 * p)
-            pygame.draw.rect(highlight, (*MD_PRIMARY, alpha), (0, 0, rect.w, rect.h), border_radius=12)
-            surf.blit(highlight, rect.topleft)
+        # Hover-подсветка
+        if p > 0.05 and press < 0.5:
+            hl = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+            alpha = int(35 * p)
+            pygame.draw.rect(hl, (*MD_PRIMARY, alpha), (0, 0, rect.w, rect.h), border_radius=12)
+            surf.blit(hl, rect.topleft)
 
-        # Border
-        pygame.draw.rect(surf, (60, 60, 60), rect, 1, border_radius=12)
+        # Рамка
+        if press > 0.5:
+            border_col = tuple(int(c * 0.6) for c in self.accent)
+        elif p > 0.5:
+            border_col = self.accent
+        else:
+            border_col = (60, 60, 60)
+        pygame.draw.rect(surf, border_col, rect, 2, border_radius=12)
 
-        # Text
+        # Текст
         txt_color = MD_ON_PRIMARY if p > 0.5 else MD_ON_SURFACE
+        if press > 0.5:
+            txt_color = tuple(int(c * 0.7) for c in txt_color)
         txt = F_H2.render(self.label, True, txt_color)
-        surf.blit(txt, txt.get_rect(center=rect.center))
+        txt_rect = txt.get_rect(center=rect.center)
+
+        # Иконки
+        if self.icon == 'left':
+            txt_rect.centerx += 14
+            ax, ay = rect.x + 26, rect.centery
+            pygame.draw.line(surf, txt_color, (ax + 8, ay - 8), (ax, ay), 3)
+            pygame.draw.line(surf, txt_color, (ax, ay), (ax + 8, ay + 8), 3)
+            pygame.draw.line(surf, txt_color, (ax, ay), (ax + 14, ay), 3)
+        elif self.icon == 'right':
+            txt_rect.centerx -= 14
+            ax, ay = rect.right - 26, rect.centery
+            pygame.draw.line(surf, txt_color, (ax - 8, ay - 8), (ax, ay), 3)
+            pygame.draw.line(surf, txt_color, (ax, ay), (ax - 8, ay + 8), 3)
+            pygame.draw.line(surf, txt_color, (ax, ay), (ax - 14, ay), 3)
+        elif self.icon == 'home':
+            txt_rect.centerx += 16
+            hx = txt_rect.x - 18
+            hy = rect.centery
+            pygame.draw.polygon(surf, txt_color, [
+                (hx - 9, hy + 1), (hx, hy - 8), (hx + 9, hy + 1)
+            ], 2)
+            pygame.draw.rect(surf, txt_color, (hx - 6, hy + 1, 12, 8), 2)
+
+        surf.blit(txt, txt_rect)
+
 
 class Starfield:
     def __init__(self, w, h, n=60):
