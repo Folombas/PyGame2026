@@ -59,6 +59,7 @@ milestone_toast = None
 milestone_toast_t = 0
 focus_lost = False
 time_scale = 1.0
+trail_timer = 0
 
 KONAMI_SEQ = [pygame.K_UP, pygame.K_UP, pygame.K_DOWN, pygame.K_DOWN,
               pygame.K_LEFT, pygame.K_RIGHT, pygame.K_LEFT, pygame.K_RIGHT,
@@ -635,6 +636,15 @@ while running:
                 target = 1.0
                 time_scale += (target - time_scale) * min(1.0, dt / 80.0)
             game.update(dt * time_scale)
+            # Trail particles behind falling piece
+            trail_timer += dt
+            if trail_timer > 60 and not game.game_over and not game.clearing:
+                trail_timer = 0
+                for gx, gy in game.current.cells():
+                    if gy >= 0:
+                        fx.burst(board_x + gx * S.CELL + S.CELL/2,
+                                 board_y + gy * S.CELL + S.CELL/2,
+                                 game.current.color, count=1)
             run_time += dt / 1000.0
             update_daily(meta, lines=0, score=game.score, dt=dt / 1000.0)
         draw_game(t, dt)
