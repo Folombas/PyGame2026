@@ -129,55 +129,61 @@ def quit_game():
 
 def rebuild_menu():
     global menu_buttons, volume_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle
-    # Невидимые кнопки-хотзоны поверх кастомной отрисовки draw_menu
-    # Карточки режимов (2×2)
-    card_w, card_h = 220, 62
-    gap_x, gap_y = 20, 14
+
+    # Точные координаты из draw_menu
+    card_w, card_h = 240, 70
+    gap_x, gap_y = 20, 15
     total_w = card_w * 2 + gap_x
     start_x = (S.WIDTH - total_w) // 2
-    start_y = 175
+    start_y = 180
 
-    # Центры карточек
     cx0 = start_x + card_w // 2
     cx1 = start_x + card_w + gap_x + card_w // 2
     cy0 = start_y + card_h // 2
     cy1 = start_y + card_h + gap_y + card_h // 2
 
-    # Иконки-сетка
-    icon_size = 54
-    icon_gap = 16
-    row1_y = start_y + 2 * (card_h + gap_y) + 20 + 22 + 22
-    row2_y = row1_y + icon_size + 22
+    # Иконки
+    icon_size = 64
+    icon_gap = 30
+    sect_y = start_y + 2 * (card_h + gap_y) + 25
+    row1_y = sect_y + 35
+    row2_y = row1_y + icon_size + 35
 
-    def icon_cx(i, n):
-        total = n * icon_size + (n - 1) * icon_gap
+    def icon_cx_1(i):
+        total = 5 * icon_size + 4 * icon_gap
         sx = (S.WIDTH - total) // 2
         return sx + i * (icon_size + icon_gap) + icon_size // 2
 
+    def icon_cx_2(i):
+        total = 4 * icon_size + 3 * icon_gap
+        sx = (S.WIDTH - total) // 2
+        return sx + i * (icon_size + icon_gap) + icon_size // 2
+
+    row1_cy = row1_y + icon_size // 2
+    row2_cy = row2_y + icon_size // 2
+
     menu_buttons = [
-        # Mode cards
         ui.Button("", cx0, cy0, card_w, card_h, lambda: start_game(False, "classic")),
         ui.Button("", cx1, cy0, card_w, card_h, lambda: start_game(False, "sprint")),
         ui.Button("", cx0, cy1, card_w, card_h, lambda: start_game(False, "survival")),
         ui.Button("", cx1, cy1, card_w, card_h, lambda: start_game(True, "classic")),
-        # Icon row 1
-        ui.Button("", icon_cx(0, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(ACHS)),
-        ui.Button("", icon_cx(1, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(PROFILE)),
-        ui.Button("", icon_cx(2, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(DAILY)),
-        ui.Button("", icon_cx(3, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(CALENDAR)),
-        ui.Button("", icon_cx(4, 5), row1_y + icon_size // 2, icon_size, icon_size, lambda: set_state(SHOP)),
-        # Icon row 2
-        ui.Button("", icon_cx(0, 4), row2_y + icon_size // 2, icon_size, icon_size, lambda: set_state(COLLECTION)),
-        ui.Button("", icon_cx(1, 4), row2_y + icon_size // 2, icon_size, icon_size, lambda: set_state(SETTINGS)),
-        ui.Button("", icon_cx(2, 4), row2_y + icon_size // 2, icon_size, icon_size, toggle_lang),
-        ui.Button("", icon_cx(3, 4), row2_y + icon_size // 2, icon_size, icon_size, quit_game),
+        # Row 1
+        ui.Button("", icon_cx_1(0), row1_cy, icon_size, icon_size, lambda: set_state(ACHS)),
+        ui.Button("", icon_cx_1(1), row1_cy, icon_size, icon_size, lambda: set_state(PROFILE)),
+        ui.Button("", icon_cx_1(2), row1_cy, icon_size, icon_size, lambda: set_state(DAILY)),
+        ui.Button("", icon_cx_1(3), row1_cy, icon_size, icon_size, lambda: set_state(CALENDAR)),
+        ui.Button("", icon_cx_1(4), row1_cy, icon_size, icon_size, lambda: set_state(SHOP)),
+        # Row 2
+        ui.Button("", icon_cx_2(0), row2_cy, icon_size, icon_size, lambda: set_state(COLLECTION)),
+        ui.Button("", icon_cx_2(1), row2_cy, icon_size, icon_size, lambda: set_state(SETTINGS)),
+        ui.Button("", icon_cx_2(2), row2_cy, icon_size, icon_size, toggle_lang),
+        ui.Button("", icon_cx_2(3), row2_cy, icon_size, icon_size, quit_game),
     ]
 
     if volume_slider is None:
-        slider_y = row2_y + icon_size + 40
-        volume_slider = ui.Slider(S.WIDTH // 2 - 50, slider_y, 260, 10, 0.4)
+        slider_y = row2_y + icon_size + 55
+        volume_slider = ui.Slider(S.WIDTH // 2 - 100, slider_y, 220, 10, 0.4)
 
-    # Остальные элементы (настройки)
     if sfx_slider is None:
         sfx_slider = ui.Slider(S.WIDTH // 2 - 100, 300, 200, 10, 0.6)
         ghost_toggle = ui.Toggle(S.WIDTH // 2 + 50, 360, 60, 26, True)
@@ -710,10 +716,7 @@ while running:
         for b in menu_buttons: b.update(dt, mouse)
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
         # кастомные кнопки-хотзоны рисуются невидимо (в draw_menu свой визуал)
-        for b in menu_buttons:
-            if b.pulse > 0.3:
-                # лёгкая обводка при hover
-                pygame.draw.rect(screen, S.ACCENT, b.rect, 2, border_radius=12)
+        # hover-обводки рисуются внутри draw_menu
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
         apply_bloom(screen)
