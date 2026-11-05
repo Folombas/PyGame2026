@@ -47,3 +47,21 @@ BLOCK_SPRITES_DIR = "assets/blocks"
 
 # Sprint Mode
 SPRINT_GOAL = 40
+
+# --- Material Design Theme (Dark) ---
+MD_PRIMARY = (187, 134, 252)      # #BB86FC
+MD_PRIMARY_VARIANT = (55, 0, 179) # #3700B3
+MD_SECONDARY = (3, 218, 198)      # #03DAC6
+MD_BACKGROUND = (18, 18, 18)      # #121212
+MD_SURFACE = (30, 30, 30)         # #1E1E1E
+MD_ERROR = (176, 0, 32)           # #B00020
+MD_ON_PRIMARY = (0, 0, 0)         # #000000
+MD_ON_SECONDARY = (0, 0, 0)       # #000000
+MD_ON_BACKGROUND = (255, 255, 255) # #FFFFFF
+MD_ON_SURFACE = (255, 255, 255)   # #FFFFFF
+MD_MUTED = (180, 180, 180)
+
+# --- Fonts ---
+import os
+FONT_REGULAR = os.path.join("assets", "fonts", "Roboto-Regular.ttf")
+FONT_BOLD = os.path.join("assets", "fonts", "Roboto-Bold.ttf")
