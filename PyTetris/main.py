@@ -709,6 +709,11 @@ while running:
     if state == MENU:
         for b in menu_buttons: b.update(dt, mouse)
         ui.draw_menu(screen, menu_buttons, t, stars, meta)
+        # кастомные кнопки-хотзоны рисуются невидимо (в draw_menu свой визуал)
+        for b in menu_buttons:
+            if b.pulse > 0.3:
+                # лёгкая обводка при hover
+                pygame.draw.rect(screen, S.ACCENT, b.rect, 2, border_radius=12)
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
         apply_bloom(screen)
