@@ -58,6 +58,7 @@ last_milestone = 0
 milestone_toast = None
 milestone_toast_t = 0
 focus_lost = False
+time_scale = 1.0
 
 KONAMI_SEQ = [pygame.K_UP, pygame.K_UP, pygame.K_DOWN, pygame.K_DOWN,
               pygame.K_LEFT, pygame.K_RIGHT, pygame.K_LEFT, pygame.K_RIGHT,
@@ -624,7 +625,14 @@ while running:
         if game.game_over or game.win:
             handle_game_over()
         else:
-            game.update(dt)
+            # Slow-motion during line clear
+            global time_scale
+            if game.clearing:
+                time_scale = 0.3
+            else:
+                target = 1.0
+                time_scale += (target - time_scale) * min(1.0, dt / 80.0)
+            game.update(dt * time_scale)
             run_time += dt / 1000.0
             update_daily(meta, lines=0, score=game.score, dt=dt / 1000.0)
         draw_game(t, dt)
