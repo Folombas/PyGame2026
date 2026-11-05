@@ -29,6 +29,34 @@ F_MED    = _font(22)
 F_SMALL  = _font(17)
 F_TINY   = _font(14)
 
+
+def vertical_gradient(surf, top, bottom):
+    h = surf.get_height()
+    for y in range(h):
+        t = y / max(1, h - 1)
+        col = tuple(int(top[i] + (bottom[i] - top[i]) * t) for i in range(3))
+        pygame.draw.line(surf, col, (0, y), (surf.get_width(), y))
+
+
+def draw_gradient_panel(surf, rect, color1, color2):
+    for i in range(rect.h):
+        t = i / rect.h
+        col = (
+            int(color1[0] * (1 - t) + color2[0] * t),
+            int(color1[1] * (1 - t) + color2[1] * t),
+            int(color1[2] * (1 - t) + color2[2] * t),
+        )
+        pygame.draw.line(surf, col, (rect.x, rect.y + i), (rect.right, rect.y + i))
+
+
+def panel(surf, rect, title=None, accent=ACCENT):
+    draw_gradient_panel(surf, rect, (22, 20, 40), (10, 8, 24))
+    pygame.draw.rect(surf, accent, rect, 2, border_radius=16)
+    if title:
+        t = F_H1.render(title, True, accent)
+        surf.blit(t, t.get_rect(midtop=(rect.centerx, rect.y + 14)))
+
+
 MEDAL_COLORS = [None, (120,80,40), (205,127,50), (192,192,192), (255,215,0), (180,230,255)]
 
 def draw_medal(surf, x, y, size, tier):
