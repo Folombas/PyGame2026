@@ -92,10 +92,14 @@ def submenu_next():
     set_state(SUBMENU_STATES[(idx + 1) % len(SUBMENU_STATES)])
 
 nav_buttons = [
-    ui.Button("← НАЗАД",  S.WIDTH // 2 - 280, S.HEIGHT - 50, 180, 44, submenu_prev, accent=S.ACCENT),
-    ui.Button("В МЕНЮ",   S.WIDTH // 2,       S.HEIGHT - 50, 180, 44, lambda: set_state(MENU), accent=S.ACCENT2),
-    ui.Button("ДАЛЕЕ →",  S.WIDTH // 2 + 280, S.HEIGHT - 50, 180, 44, submenu_next, accent=S.GOLD),
+    ui.Button("НАЗАД", S.WIDTH // 2 - 280, S.HEIGHT - 50, 200, 48,
+              submenu_prev, accent=S.ACCENT, icon='left'),
+    ui.Button("В МЕНЮ", S.WIDTH // 2, S.HEIGHT - 50, 200, 48,
+              lambda: set_state(MENU), accent=S.ACCENT2, icon='home'),
+    ui.Button("ДАЛЕЕ", S.WIDTH // 2 + 280, S.HEIGHT - 50, 200, 48,
+              submenu_next, accent=S.GOLD, icon='right'),
 ]
+
 
 run_time = 0.0
 renderer = BlockRenderer()
@@ -477,7 +481,8 @@ def handle_events():
                             audio.play('pack_open')
                             fx.kick(6.0)
                         break
-        elif state == CALENDAR:
+        
+            for b in nav_buttons: b.handle(e)elif state == CALENDAR:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
@@ -486,10 +491,12 @@ def handle_events():
                     if claim_login(meta):
                         audio.play('levelup')
                         fx.kick(6.0)
-        elif state == PROFILE:
+        
+            for b in nav_buttons: b.handle(e)elif state == PROFILE:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
-        elif state == SETTINGS:
+        
+            for b in nav_buttons: b.handle(e)elif state == SETTINGS:
             settings_back.handle(e)
             if sfx_slider: sfx_slider.handle_event(e)
             if ghost_toggle: ghost_toggle.handle_event(e)
@@ -790,13 +797,17 @@ while running:
         fx.update(dt)
     elif state == SCORES:
         ui.draw_leaderboard(screen, load_scores(), meta.get('best_score', 0))
-    elif state == ACHS:
+    
+            for b in nav_buttons: b.handle(e)elif state == ACHS:
         ui.draw_achievements(screen, meta, ACHIEVEMENTS)
-    elif state == DAILY:
+    
+            for b in nav_buttons: b.handle(e)elif state == DAILY:
         ui.draw_dailies(screen, meta, get_daily_quests(), get_weekly_quests())
-    elif state == WEEKLY:
+    
+            for b in nav_buttons: b.handle(e)elif state == WEEKLY:
         ui.draw_weekly(screen, meta, get_weekly_quests())
-    elif state == SETTINGS:
+    
+            for b in nav_buttons: b.handle(e)elif state == SETTINGS:
         settings_back.update(dt, mouse)
         for obj in (sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle):
             if obj and hasattr(obj, 'update'): obj.update(dt)
@@ -804,7 +815,8 @@ while running:
                         speed_slider, grid_toggle, settings_back)
     elif state == COLLECTION:
         ui.draw_collection(screen, meta)
-    elif state == SHOP:
+    
+            for b in nav_buttons: b.handle(e)elif state == SHOP:
         ui.draw_shop(screen, meta, t)
     elif state == CALENDAR:
         ui.draw_calendar(screen, meta, t)

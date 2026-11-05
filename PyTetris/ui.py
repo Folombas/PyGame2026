@@ -126,6 +126,120 @@ btn_skin = load_skin("neon_ui_basic.png")
 daily_anim = 0.0
 
 class Button:
+    def __init__(self, label, cx, cy, w, h, on_click, accent=ACCENT, icon=None):
+        self.label = label
+        self.rect = pygame.Rect(0, 0, w, h)
+        self.rect.center = (cx, cy)
+        self.on_click = on_click
+        self.accent = accent
+        self.hovered = False
+        self.pressed = False
+        self.pulse = 0.0
+        self.press_anim = 0.0
+        self.icon = icon
+
+    def update(self, dt, mouse):
+        was_hovered = self.hovered
+        self.hovered = self.rect.collidepoint(mouse)
+        if self.hovered and not was_hovered:
+            try:
+                import audio
+                audio.play('ui_hover')
+            except Exception:
+                pass
+        target = 1.0 if self.hovered else 0.0
+        self.pulse += (target - self.pulse) * min(1.0, dt / 80.0)
+        # Press animation
+        target_press = 1.0 if self.pressed else 0.0
+        self.press_anim += (target_press - self.press_anim) * min(1.0, dt / 40.0)
+
+    def handle(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.rect.collidepoint(event.pos):
+                self.pressed = True
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            if self.pressed and self.rect.collidepoint(event.pos):
+                try:
+                    import audio
+                    audio.play('ui_click')
+                except Exception:
+                    pass
+                if self.on_click:
+                    self.on_click()
+            self.pressed = False
+
+    def draw(self, surf):
+        from settings import (MD_PRIMARY, MD_SURFACE, MD_ON_SURFACE, MD_ON_PRIMARY)
+        p = self.pulse
+        press = self.press_anim
+
+        # Кнопка "продавливается" вниз на 4 пикселя
+        y_offset = int(4 * press)
+        rect = self.rect.copy()
+        rect.y += y_offset
+
+        # Тень (уменьшается при продавливании)
+        if press < 0.9:
+            shadow_h = int(6 * (1.0 - press))
+            shadow_alpha = int(90 * (1.0 - press))
+            shadow = pygame.Surface((rect.w + 8, rect.h + shadow_h + 8), pygame.SRCALPHA)
+            pygame.draw.rect(shadow, (0, 0, 0, shadow_alpha),
+                             (4, 4, rect.w, rect.h + shadow_h), border_radius=12)
+            surf.blit(shadow, (rect.x - 4, rect.y - 4))
+
+        # Base
+        base_col = MD_SURFACE
+        if press > 0.5:
+            base_col = (14, 12, 22)  # темнее при нажатии
+        elif p > 0.5:
+            base_col = (int(MD_SURFACE[0]*0.85), int(MD_SURFACE[1]*0.85), int(MD_SURFACE[2]*0.85))
+        pygame.draw.rect(surf, base_col, rect, border_radius=12)
+
+        # Hover highlight
+        if p > 0.05 and press < 0.5:
+            highlight = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+            alpha = int(35 * p)
+            pygame.draw.rect(highlight, (*MD_PRIMARY, alpha), (0, 0, rect.w, rect.h), border_radius=12)
+            surf.blit(highlight, rect.topleft)
+
+        # Border
+        border_col = (60, 60, 60)
+        if p > 0.5:
+            border_col = self.accent
+        if press > 0.5:
+            border_col = tuple(int(c * 0.6) for c in self.accent)
+        pygame.draw.rect(surf, border_col, rect, 2, border_radius=12)
+
+        # Текст
+        txt_color = MD_ON_PRIMARY if p > 0.5 else MD_ON_SURFACE
+        if press > 0.5:
+            txt_color = tuple(int(c * 0.7) for c in txt_color)
+        txt = F_H2.render(self.label, True, txt_color)
+        txt_rect = txt.get_rect(center=rect.center)
+
+        # Иконки-стрелки
+        if self.icon == 'left':
+            txt_rect.centerx += 14
+            ax, ay = rect.x + 22, rect.centery
+            pygame.draw.line(surf, txt_color, (ax + 7, ay - 7), (ax, ay), 3)
+            pygame.draw.line(surf, txt_color, (ax, ay), (ax + 7, ay + 7), 3)
+            pygame.draw.line(surf, txt_color, (ax, ay), (ax + 12, ay), 3)
+        elif self.icon == 'right':
+            txt_rect.centerx -= 14
+            ax, ay = rect.right - 22, rect.centery
+            pygame.draw.line(surf, txt_color, (ax - 7, ay - 7), (ax, ay), 3)
+            pygame.draw.line(surf, txt_color, (ax, ay), (ax - 7, ay + 7), 3)
+            pygame.draw.line(surf, txt_color, (ax, ay), (ax - 12, ay), 3)
+        elif self.icon == 'home':
+            txt_rect.centerx += 14
+            cx_ico, cy_ico = rect.centerx - txt.get_width()//2 - 12, rect.centery
+            pygame.draw.polygon(surf, txt_color, [
+                (cx_ico - 9, cy_ico), (cx_ico, cy_ico - 8), (cx_ico + 9, cy_ico)
+            ], 2)
+            pygame.draw.rect(surf, txt_color, (cx_ico - 6, cy_ico, 12, 8), 2)
+
+        surf.blit(txt, txt_rect)
+
     def __init__(self, label, cx, cy, w, h, on_click, accent=ACCENT):
         self.label = label
         self.rect = pygame.Rect(0, 0, w, h)
