@@ -377,13 +377,31 @@ def panel(surf, rect, title=None, accent=ACCENT):
         t = F_H1.render(title, True, accent)
         surf.blit(t, t.get_rect(midtop=(rect.centerx, rect.y + 14)))
 
-def draw_playfield_frame(surf, board_x, board_y):
+def draw_playfield_frame(surf, board_x, board_y, t=0):
     pygame.draw.rect(surf, (40, 36, 70),
                      (board_x - 4, board_y - 4, BOARD_W + 8, BOARD_H + 8),
                      border_radius=10)
-    pygame.draw.rect(surf, ACCENT,
+    # Animated gradient border — pulses between cyan and pink
+    phase = (t % 3000) / 3000.0
+    if phase < 0.5:
+        k = phase / 0.5
+        col = (int(ACCENT[0] * (1-k) + ACCENT2[0] * k),
+               int(ACCENT[1] * (1-k) + ACCENT2[1] * k),
+               int(ACCENT[2] * (1-k) + ACCENT2[2] * k))
+    else:
+        k = (phase - 0.5) / 0.5
+        col = (int(ACCENT2[0] * (1-k) + ACCENT[0] * k),
+               int(ACCENT2[1] * (1-k) + ACCENT[1] * k),
+               int(ACCENT2[2] * (1-k) + ACCENT[2] * k))
+    pygame.draw.rect(surf, col,
                      (board_x - 4, board_y - 4, BOARD_W + 8, BOARD_H + 8),
                      2, border_radius=10)
+    # Corner highlights
+    for cx, cy in [(board_x - 4, board_y - 4),
+                    (board_x + BOARD_W + 4, board_y - 4),
+                    (board_x - 4, board_y + BOARD_H + 4),
+                    (board_x + BOARD_W + 4, board_y + BOARD_H + 4)]:
+        pygame.draw.circle(surf, col, (cx, cy), 4)
 
 def draw_grid_bg(surf, board_x, board_y, t=0):
     # Пульсация с использованием синуса

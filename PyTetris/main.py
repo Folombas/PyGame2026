@@ -453,7 +453,7 @@ def draw_danger_zone(surf, t):
 
 
 def draw_playfield(surf, t):
-    ui.draw_playfield_frame(surf, board_x, board_y)
+    ui.draw_playfield_frame(surf, board_x, board_y, t)
     if getattr(game, 'show_grid', True):
         ui.draw_grid_bg(surf, board_x, board_y, t)
     draw_danger_zone(surf, t)
