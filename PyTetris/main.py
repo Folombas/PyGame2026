@@ -482,7 +482,8 @@ def handle_events():
                             fx.kick(6.0)
                         break
         
-            for b in nav_buttons: b.handle(e)elif state == CALENDAR:
+            for b in nav_buttons: b.handle(e)
+            elif state == CALENDAR:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
@@ -492,11 +493,13 @@ def handle_events():
                         audio.play('levelup')
                         fx.kick(6.0)
         
-            for b in nav_buttons: b.handle(e)elif state == PROFILE:
+            for b in nav_buttons: b.handle(e)
+            elif state == PROFILE:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
         
-            for b in nav_buttons: b.handle(e)elif state == SETTINGS:
+            for b in nav_buttons: b.handle(e)
+            elif state == SETTINGS:
             settings_back.handle(e)
             if sfx_slider: sfx_slider.handle_event(e)
             if ghost_toggle: ghost_toggle.handle_event(e)
@@ -798,16 +801,20 @@ while running:
     elif state == SCORES:
         ui.draw_leaderboard(screen, load_scores(), meta.get('best_score', 0))
     
-            for b in nav_buttons: b.handle(e)elif state == ACHS:
+            for b in nav_buttons: b.handle(e)
+            elif state == ACHS:
         ui.draw_achievements(screen, meta, ACHIEVEMENTS)
     
-            for b in nav_buttons: b.handle(e)elif state == DAILY:
+            for b in nav_buttons: b.handle(e)
+            elif state == DAILY:
         ui.draw_dailies(screen, meta, get_daily_quests(), get_weekly_quests())
     
-            for b in nav_buttons: b.handle(e)elif state == WEEKLY:
+            for b in nav_buttons: b.handle(e)
+            elif state == WEEKLY:
         ui.draw_weekly(screen, meta, get_weekly_quests())
     
-            for b in nav_buttons: b.handle(e)elif state == SETTINGS:
+            for b in nav_buttons: b.handle(e)
+            elif state == SETTINGS:
         settings_back.update(dt, mouse)
         for obj in (sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle):
             if obj and hasattr(obj, 'update'): obj.update(dt)
@@ -816,7 +823,8 @@ while running:
     elif state == COLLECTION:
         ui.draw_collection(screen, meta)
     
-            for b in nav_buttons: b.handle(e)elif state == SHOP:
+            for b in nav_buttons: b.handle(e)
+            elif state == SHOP:
         ui.draw_shop(screen, meta, t)
     elif state == CALENDAR:
         ui.draw_calendar(screen, meta, t)
