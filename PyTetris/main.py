@@ -79,6 +79,24 @@ stars = ui.Starfield(S.WIDTH, S.HEIGHT, n=80)
 meta = load_meta()
 locale.LANG = meta.get('lang', 'en')
 check_streak(meta)
+
+# ============== Navigation Buttons (для всех подэкранов) ==============
+SUBMENU_STATES = [SCORES, ACHS, DAILY, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY]
+
+def submenu_prev():
+    idx = SUBMENU_STATES.index(state)
+    set_state(SUBMENU_STATES[(idx - 1) % len(SUBMENU_STATES)])
+
+def submenu_next():
+    idx = SUBMENU_STATES.index(state)
+    set_state(SUBMENU_STATES[(idx + 1) % len(SUBMENU_STATES)])
+
+nav_buttons = [
+    ui.Button("← НАЗАД",  S.WIDTH // 2 - 280, S.HEIGHT - 50, 180, 44, submenu_prev, accent=S.ACCENT),
+    ui.Button("В МЕНЮ",   S.WIDTH // 2,       S.HEIGHT - 50, 180, 44, lambda: set_state(MENU), accent=S.ACCENT2),
+    ui.Button("ДАЛЕЕ →",  S.WIDTH // 2 + 280, S.HEIGHT - 50, 180, 44, submenu_next, accent=S.GOLD),
+]
+
 run_time = 0.0
 renderer = BlockRenderer()
 
@@ -478,7 +496,8 @@ def handle_events():
             if shake_toggle: shake_toggle.handle_event(e)
             if speed_slider: speed_slider.handle_event(e)
             if grid_toggle: grid_toggle.handle_event(e)
-        elif state in (SCORES, ACHS, DAILY, COLLECTION, WEEKLY):
+        elif state in (SCORES, ACHS, DAILY, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY):
+            for b in nav_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                 set_state(MENU)
             if state == COLLECTION and e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE and C:
@@ -845,6 +864,12 @@ while running:
         screen.blit(txt, txt.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 3)))
     elif milestone_toast:
         milestone_toast = None
+
+    # Отрисовка кнопок навигации для всех подэкранов
+    if state in SUBMENU_STATES:
+        for b in nav_buttons:
+            b.update(dt, mouse)
+            b.draw(screen)
 
     draw_pack_reveal(screen, t)
 
