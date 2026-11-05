@@ -1,3 +1,4 @@
+import math
 import sys, pygame, random
 import settings as S
 from game import Game
@@ -585,10 +586,11 @@ def draw_pack_reveal(surf, t):
     global pack_reveal
     if not pack_reveal: return
     elapsed = t - pack_reveal_t
-    if elapsed > 1500:
+    duration = 1800
+    if elapsed > duration:
         pack_reveal = None
         return
-    frac = min(1.0, elapsed / 1500)
+    frac = min(1.0, elapsed / duration)
     overlay = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, int(180 * (1 - abs(frac - 0.5) * 2))))
     surf.blit(overlay, (0, 0))
@@ -596,22 +598,50 @@ def draw_pack_reveal(surf, t):
     if not C: return
     card = C.get_card_by_id(pack_reveal['card_id'])
     if not card: return
-    scale = min(1.0, frac / 0.3)
-    w, h = int(200 * scale), int(280 * scale)
     cx, cy = S.WIDTH // 2, S.HEIGHT // 2
+    base_w, base_h = 200, 280
+
+    # Flip animation: first 40% = flip in (scale_x 0 -> 1), then show
+    if frac < 0.4:
+        flip = frac / 0.4
+        scale_x = flip
+        scale_y = 1.0
+        reveal = False
+    else:
+        flip = (frac - 0.4) / 0.6
+        # slight bounce
+        bounce = 1.0 + 0.05 * math.sin(flip * math.pi * 2)
+        scale_x = bounce
+        scale_y = bounce
+        reveal = True
+
+    w, h = int(base_w * scale_x), int(base_h * scale_y)
+    if w < 4: w = 4
     rect = pygame.Rect(cx - w // 2, cy - h // 2, w, h)
     col = C.RARITY_COLORS[card['rarity']]
+
+    # Card back (while flipping)
+    if not reveal:
+        pygame.draw.rect(surf, (30, 28, 55), rect, border_radius=10)
+        pygame.draw.rect(surf, col, rect, 3, border_radius=10)
+        q = ui.F_TITLE.render("?", True, col)
+        if w > 60:
+            surf.blit(q, q.get_rect(center=rect.center))
+        return
+
+    # Foil prismatic border
     if pack_reveal.get('foil'):
         for i in range(6):
             c = [(255,100,100),(255,200,100),(200,255,100),(100,255,200),(100,200,255),(200,100,255)][i]
             pygame.draw.rect(surf, c, rect.inflate(2*i, 2*i), 2, border_radius=10)
     pygame.draw.rect(surf, (20, 18, 35), rect, border_radius=10)
     pygame.draw.rect(surf, col, rect, 3, border_radius=10)
-    name = ui.F_H1.render(locale.t(card['name_key']), True, col)
-    surf.blit(name, name.get_rect(center=(cx, cy)))
-    if pack_reveal.get('duplicate'):
-        dup = ui.F_MED.render(f"+1 dup (Lv.{pack_reveal.get('new_level', 1)})", True, S.MUTED)
-        surf.blit(dup, dup.get_rect(center=(cx, cy + 50)))
+    if w > 100:
+        name = ui.F_H1.render(locale.t(card['name_key']), True, col)
+        surf.blit(name, name.get_rect(center=(cx, cy)))
+        if pack_reveal.get('duplicate'):
+            dup = ui.F_MED.render(f"+1 dup (Lv.{pack_reveal.get('new_level', 1)})", True, S.MUTED)
+            surf.blit(dup, dup.get_rect(center=(cx, cy + 50)))
 
 
 running = True
