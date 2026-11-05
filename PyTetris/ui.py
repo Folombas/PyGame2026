@@ -1118,3 +1118,42 @@ def draw_weekly(surf, meta, weeklies):
             surf.blit(ct, (rect.right - 150, y + 12))
     hint = F_TINY.render("ESC — назад", True, MUTED)
     surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
+
+
+def draw_big_achievement_popup(surf, ach_id, meta, elapsed, duration=2500):
+    """Draw centered achievement popup with medal icon."""
+    if elapsed > duration:
+        return
+    fade = max(0.0, 1.0 - elapsed / duration)
+    scale_in = min(1.0, elapsed / 250.0)
+    # overlay
+    ov = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    ov.fill((0, 0, 0, int(120 * fade)))
+    surf.blit(ov, (0, 0))
+    # panel
+    pw, ph = 480, 180
+    px = WIDTH // 2 - pw // 2
+    py = HEIGHT // 2 - ph // 2
+    panel_rect = pygame.Rect(px, py, pw, ph)
+    pygame.draw.rect(surf, (22, 20, 40), panel_rect, border_radius=16)
+    # tier color border
+    tier = meta.get('medals', {}).get(ach_id, 1)
+    border = MEDAL_COLORS[tier] if tier < len(MEDAL_COLORS) else GOLD
+    pygame.draw.rect(surf, border, panel_rect, 3, border_radius=16)
+    # medal icon big
+    draw_medal(surf, px + 20, py + 20, 60, tier)
+    # title
+    title = F_H2.render("🏆 ACHIEVEMENT!", True, border)
+    surf.blit(title, (px + 100, py + 20))
+    # name
+    from meta import ACHIEVEMENTS
+    name_key = next((a['name_key'] for a in ACHIEVEMENTS if a['id'] == ach_id), ach_id)
+    nm = F_H1.render(locale.t(name_key), True, TEXT)
+    surf.blit(nm, (px + 100, py + 60))
+    # tier label
+    tier_names = ["", "Bronze", "Silver", "Gold", "Platinum", "Mythic"]
+    lbl = F_MED.render(f"Tier: {tier_names[tier] if tier < len(tier_names) else 'Unknown'}", True, border)
+    surf.blit(lbl, (px + 100, py + 120))
+    # hint
+    hint = F_TINY.render("Click to dismiss", True, MUTED)
+    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, py + ph - 12)))
