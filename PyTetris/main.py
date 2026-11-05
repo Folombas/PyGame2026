@@ -36,7 +36,7 @@ pygame.display.set_caption("PyTetris — Neon Edition")
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 clock = pygame.time.Clock()
 
-MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP, CALENDAR, PROFILE = range(12)
+MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY = range(13)
 state = MENU
 transition_alpha = 0
 fade_speed = 15
@@ -133,12 +133,13 @@ def rebuild_menu():
         ui.Button(locale.t("ach"),     S.WIDTH // 2, 350, 240, 28, lambda: set_state(ACHS), accent=S.ACCENT2),
         ui.Button("👤 PROFILE",        S.WIDTH // 2, 383, 240, 26, lambda: set_state(PROFILE), accent=S.ACCENT2),
         ui.Button(locale.t("daily"),   S.WIDTH // 2, 414, 240, 26, lambda: set_state(DAILY), accent=S.ACCENT),
-        ui.Button("🎁 CALENDAR",       S.WIDTH // 2, 445, 240, 26, lambda: set_state(CALENDAR), accent=S.GOLD),
-        ui.Button("🛒 SHOP",           S.WIDTH // 2, 476, 240, 26, lambda: set_state(SHOP), accent=S.GOLD),
-        ui.Button("🎴 CARDS",          S.WIDTH // 2, 507, 240, 26, lambda: set_state(COLLECTION), accent=S.ACCENT2),
-        ui.Button(locale.t("settings"),S.WIDTH // 2, 538, 240, 24, lambda: set_state(SETTINGS), accent=S.ACCENT),
-        ui.Button(locale.t("lang"),    S.WIDTH // 2, 567, 240, 24, toggle_lang, accent=S.ACCENT2),
-        ui.Button(locale.t("quit"),    S.WIDTH // 2, 596, 240, 24, quit_game, accent=S.DANGER),
+        ui.Button("📅 WEEKLY",          S.WIDTH // 2, 445, 240, 22, lambda: set_state(WEEKLY), accent=S.ACCENT),
+        ui.Button("🎁 CALENDAR",       S.WIDTH // 2, 470, 240, 22, lambda: set_state(CALENDAR), accent=S.GOLD),
+        ui.Button("🛒 SHOP",           S.WIDTH // 2, 495, 240, 22, lambda: set_state(SHOP), accent=S.GOLD),
+        ui.Button("🎴 CARDS",          S.WIDTH // 2, 520, 240, 22, lambda: set_state(COLLECTION), accent=S.ACCENT2),
+        ui.Button(locale.t("settings"),S.WIDTH // 2, 545, 240, 20, lambda: set_state(SETTINGS), accent=S.ACCENT),
+        ui.Button(locale.t("lang"),    S.WIDTH // 2, 568, 240, 20, toggle_lang, accent=S.ACCENT2),
+        ui.Button(locale.t("quit"),    S.WIDTH // 2, 591, 240, 20, quit_game, accent=S.DANGER),
     ]
     if volume_slider is None:
         volume_slider = ui.Slider(S.WIDTH // 2 - 100, 640, 200, 10, 0.4)
@@ -435,7 +436,7 @@ def handle_events():
             if shake_toggle: shake_toggle.handle_event(e)
             if speed_slider: speed_slider.handle_event(e)
             if grid_toggle: grid_toggle.handle_event(e)
-        elif state in (SCORES, ACHS, DAILY, COLLECTION):
+        elif state in (SCORES, ACHS, DAILY, COLLECTION, WEEKLY):
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
                 set_state(MENU)
             if state == COLLECTION and e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE and C:
@@ -702,6 +703,8 @@ while running:
         ui.draw_achievements(screen, meta, ACHIEVEMENTS)
     elif state == DAILY:
         ui.draw_dailies(screen, meta, get_daily_quests(), get_weekly_quests())
+    elif state == WEEKLY:
+        ui.draw_weekly(screen, meta, get_weekly_quests())
     elif state == SETTINGS:
         settings_back.update(dt, mouse)
         for obj in (sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle):

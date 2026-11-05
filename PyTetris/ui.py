@@ -1080,3 +1080,41 @@ def draw_peek_next(surf, game, x, y, t=0):
                 pygame.draw.rect(surf, piece.color, c, border_radius=2)
                 hi = tuple(min(255, k + 50) for k in piece.color)
                 pygame.draw.rect(surf, hi, c, 1, border_radius=2)
+
+
+def draw_weekly(surf, meta, weeklies):
+    from meta import weekly_progress
+    vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
+    draw_title(surf, "WEEKLY QUESTS", 40, pygame.time.get_ticks())
+    rect = pygame.Rect(WIDTH // 2 - 320, 130, 640, 420)
+    panel(surf, rect, accent=ACCENT2)
+    wp = weekly_progress(meta)
+    for i, q in enumerate(weeklies):
+        y = rect.y + 40 + i * 110
+        cur = wp.get(q['type'], 0)
+        tgt = q['target']
+        done = cur >= tgt
+        claimed = q['id'] in wp.get('done', [])
+        # desc
+        desc = F_MED.render(q['desc'], True, TEXT)
+        surf.blit(desc, (rect.x + 25, y))
+        # bar
+        bar = pygame.Rect(rect.x + 25, y + 35, 480, 16)
+        frac = min(1.0, cur / tgt) if tgt else 0
+        draw_progress_bar(surf, bar.x, bar.y, bar.w, bar.h, frac, ACCENT2 if not done else GOLD)
+        stat = F_SMALL.render(f"{int(cur)}/{tgt}", True, GOLD if done else MUTED)
+        surf.blit(stat, (bar.right + 10, bar.y - 4))
+        # reward
+        rew = F_TINY.render(f"+{q['reward_xp']} XP  +{q['reward_packs']} 📦", True, GOLD)
+        surf.blit(rew, (rect.x + 25, y + 60))
+        # claim button
+        if done and not claimed:
+            cb = pygame.Rect(rect.right - 110, y + 5, 90, 36)
+            pygame.draw.rect(surf, GOLD, cb, border_radius=6)
+            ct = F_SMALL.render("CLAIM", True, (20, 20, 20))
+            surf.blit(ct, ct.get_rect(center=cb.center))
+        elif claimed:
+            ct = F_SMALL.render(f"✓ {locale.t('claimed')}", True, ACCENT)
+            surf.blit(ct, (rect.right - 150, y + 12))
+    hint = F_TINY.render("ESC — назад", True, MUTED)
+    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
