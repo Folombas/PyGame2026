@@ -208,6 +208,8 @@ def cb_clear(rows, count):
         fx.texts.append(FloatingText(board_x + S.BOARD_W / 2, cy, txt, col, life=60))
         if count == 4:
             audio.play('combo')
+            global flash_timer
+            flash_timer = 250
         if game.combo > 1:
             combo_display = game.combo
             combo_display_t = pygame.time.get_ticks()
