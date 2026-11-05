@@ -79,3 +79,19 @@
 - 🏅 Toast достижений окрашен под тир медали
 - 🌟 Анимированное пламя стрика в меню
 - 💰 Combo XP multiplier: +25% за каждое звено
+
+## v3.4.0 — "Explosion & Polish" Update
+
+- ⏱️ Slow-motion на очистке линий (0.3x time scale)
+- 💥 Screen flash на Tetris (4 линии)
+- 🌟 Анимированная градиентная рамка playfield
+- 💫 Particle trail за падающей фигурой
+- 📊 Анимированный счётчик очков (interpolation + bounce)
+- 🎆 Level-up fireworks (из 4 углов + центр)
+- 🏆 Гигантский "LEVEL UP!" toast с slide-in
+- 🔊 Динамическая музыка (громкость растёт с уровнем)
+- 📅 Отдельный экран Weekly Quests с claim
+- 🎉 Big Achievement popup с медалью и тиром
+- 📈 AP-to-next-rank прогресс-бар в HUD
+- 🔥 Анимированное пламя стрика в HUD
+- 🎴 Card flip animation при открытии пака
