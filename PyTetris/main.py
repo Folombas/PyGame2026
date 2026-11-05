@@ -34,7 +34,7 @@ except Exception:
 
 pygame.init()
 pygame.display.set_caption("PyTetris — Neon Edition")
-screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
+screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
 clock = pygame.time.Clock()
 
 MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY = range(13)
@@ -44,7 +44,7 @@ fade_speed = 15
 flash_timer = 0
 is_new_high = False
 muted = False
-is_fullscreen = False
+is_fullscreen = True
 pack_reveal = None
 pack_reveal_t = 0
 last_unlock = None
@@ -97,7 +97,7 @@ def toggle_fullscreen():
     if is_fullscreen:
         screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
     else:
-        screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
+        screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
 
 
 def set_state(s):
