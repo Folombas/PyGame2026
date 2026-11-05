@@ -804,6 +804,33 @@ def draw_hud(surf, game, sidebar_x, t, meta):
     surf.blit(xp_txt, (bar_x + bar_w + 5, bar_y - 2))
     y += 60
 
+    # Rank progression bar
+    try:
+        from meta import get_achievement_points, get_global_rank
+        from meta import PLAYER_TITLES
+        ap = get_achievement_points(meta)
+        rank = get_global_rank(meta)
+        # next rank threshold
+        next_th = None
+        for th, _, _, _ in PLAYER_TITLES:
+            if th > ap:
+                next_th = th
+                break
+        if next_th is not None:
+            prev_th = 0
+            for th, _, _, _ in PLAYER_TITLES:
+                if th <= ap:
+                    prev_th = th
+            range_size = next_th - prev_th
+            progress = (ap - prev_th) / range_size if range_size > 0 else 1.0
+            r_lab = F_TINY.render(f"AP: {ap}/{next_th}", True, GOLD)
+            surf.blit(r_lab, (x, y))
+            rbar = pygame.Rect(x, y + 16, 200, 8)
+            draw_progress_bar(surf, rbar.x, rbar.y, rbar.w, rbar.h, progress, GOLD)
+            y += 32
+    except Exception:
+        pass
+
     # Next (3 pieces)
     nb = pygame.Rect(x, y, 200, 230)
     pygame.draw.rect(surf, (22, 20, 40), nb, border_radius=12)
