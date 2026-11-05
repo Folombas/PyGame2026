@@ -483,7 +483,7 @@ def handle_events():
                         break
         
             for b in nav_buttons: b.handle(e)
-            elif state == CALENDAR:
+        elif state == CALENDAR:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
@@ -494,12 +494,12 @@ def handle_events():
                         fx.kick(6.0)
         
             for b in nav_buttons: b.handle(e)
-            elif state == PROFILE:
+        elif state == PROFILE:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
         
             for b in nav_buttons: b.handle(e)
-            elif state == SETTINGS:
+        elif state == SETTINGS:
             settings_back.handle(e)
             if sfx_slider: sfx_slider.handle_event(e)
             if ghost_toggle: ghost_toggle.handle_event(e)
@@ -749,7 +749,7 @@ while running:
         if volume_slider: volume_slider.draw(screen)
         stars.update(dt)
         apply_bloom(screen)
-    elif state == PLAY:
+        elif state == PLAY:
         if game.game_over or game.win:
             handle_game_over()
         else:
@@ -782,7 +782,7 @@ while running:
                 audio.play('danger')
         else:
             danger_beep_timer = 0
-    elif state == PAUSE:
+        elif state == PAUSE:
         draw_game(t, dt)
         ui.draw_pause(screen)
         # Show focus hint if window is unfocused
@@ -794,41 +794,41 @@ while running:
             pass
         for b in pause_buttons: b.update(dt, mouse)
         for b in pause_buttons: b.draw(screen)
-    elif state == OVER:
+        elif state == OVER:
         for b in over_buttons: b.update(dt, mouse)
         draw_over()
         fx.update(dt)
-    elif state == SCORES:
+        elif state == SCORES:
         ui.draw_leaderboard(screen, load_scores(), meta.get('best_score', 0))
     
             for b in nav_buttons: b.handle(e)
-            elif state == ACHS:
+        elif state == ACHS:
         ui.draw_achievements(screen, meta, ACHIEVEMENTS)
     
             for b in nav_buttons: b.handle(e)
-            elif state == DAILY:
+        elif state == DAILY:
         ui.draw_dailies(screen, meta, get_daily_quests(), get_weekly_quests())
     
             for b in nav_buttons: b.handle(e)
-            elif state == WEEKLY:
+        elif state == WEEKLY:
         ui.draw_weekly(screen, meta, get_weekly_quests())
     
             for b in nav_buttons: b.handle(e)
-            elif state == SETTINGS:
+        elif state == SETTINGS:
         settings_back.update(dt, mouse)
         for obj in (sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle):
             if obj and hasattr(obj, 'update'): obj.update(dt)
         ui.draw_settings(screen, volume_slider, sfx_slider, ghost_toggle, shake_toggle,
                         speed_slider, grid_toggle, settings_back)
-    elif state == COLLECTION:
+        elif state == COLLECTION:
         ui.draw_collection(screen, meta)
     
             for b in nav_buttons: b.handle(e)
-            elif state == SHOP:
+        elif state == SHOP:
         ui.draw_shop(screen, meta, t)
-    elif state == CALENDAR:
+        elif state == CALENDAR:
         ui.draw_calendar(screen, meta, t)
-    elif state == PROFILE:
+        elif state == PROFILE:
         ui.draw_profile(screen, meta, t)
 
     if last_unlock and t - last_unlock_t < 2500:
