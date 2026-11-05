@@ -626,7 +626,14 @@ while running:
     if flash_timer > 0:
         flash_timer -= dt
 
-    if volume_slider: pygame.mixer.music.set_volume(volume_slider.val)
+    if volume_slider:
+        base_vol = volume_slider.val
+        if state == PLAY and not game.game_over:
+            # music swells with level (up to +30%)
+            boost = min(0.3, (game.level - 1) * 0.05)
+            pygame.mixer.music.set_volume(min(1.0, base_vol * (1.0 + boost)))
+        else:
+            pygame.mixer.music.set_volume(base_vol)
     if sfx_slider: audio.set_sfx_volume(sfx_slider.val)
     if shake_toggle: fx.enable_shake = shake_toggle.state
     if ghost_toggle: game.show_ghost = ghost_toggle.state
