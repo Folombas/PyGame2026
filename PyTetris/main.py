@@ -434,6 +434,7 @@ def handle_events():
         elif state == OVER:
             for b in over_buttons: b.handle(e)
         elif state == SHOP:
+            for b in nav_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 and Shop:
@@ -446,6 +447,7 @@ def handle_events():
                             fx.kick(6.0)
                         break
         elif state == CALENDAR:
+            for b in nav_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
@@ -455,6 +457,7 @@ def handle_events():
                         audio.play('levelup')
                         fx.kick(6.0)
         elif state == PROFILE:
+            for b in nav_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE:
                 set_state(MENU)
         elif state == SETTINGS:

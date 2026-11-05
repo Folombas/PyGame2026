@@ -791,9 +791,6 @@ def draw_collection(surf, meta):
                 surf.blit(ptxt, ptxt.get_rect(center=(x + cw // 2, y + ch - 20)))
         start_y += ch + 30
 
-    hint = F_TINY.render("ESC — назад", True, MUTED)
-    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
-
 def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, back_btn):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     draw_title(surf, locale.t("settings"), 60, pygame.time.get_ticks())
@@ -994,8 +991,6 @@ def draw_stats(surf, meta):
         surf.blit(l, (rect.x + 30, y))
         v = F_SMALL.render(str(val), True, TEXT)
         surf.blit(v, (rect.right - 30 - v.get_width(), y))
-    hint = F_TINY.render("ESC — назад", True, MUTED)
-    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
 
 
 def draw_shop(surf, meta, t):
@@ -1077,9 +1072,6 @@ def draw_calendar(surf, meta, t):
         bt = F_H2.render("CLAIM TODAY", True, (20, 20, 20))
         surf.blit(bt, bt.get_rect(center=btn.center))
 
-    hint = F_TINY.render("ESC — назад", True, MUTED)
-    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
-
 
 def draw_profile(surf, meta, t):
     from meta import get_player_title, get_achievement_points, get_global_rank
@@ -1121,9 +1113,6 @@ def draw_profile(surf, meta, t):
         surf.blit(l, (rect.x + 25, y))
         v = F_SMALL.render(val, True, TEXT)
         surf.blit(v, (rect.right - 25 - v.get_width(), y))
-
-    hint = F_TINY.render("ESC — назад", True, MUTED)
-    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
 
 
 def draw_animated_flame(surf, x, y, t, streak):
@@ -1237,8 +1226,6 @@ def draw_weekly(surf, meta, weeklies):
         elif claimed:
             ct = F_SMALL.render(f"✓ {locale.t('claimed')}", True, ACCENT)
             surf.blit(ct, (rect.right - 150, y + 12))
-    hint = F_TINY.render("ESC — назад", True, MUTED)
-    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
 
 
 def draw_big_achievement_popup(surf, ach_id, meta, elapsed, duration=2500):
