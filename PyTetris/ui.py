@@ -493,29 +493,102 @@ def draw_text_center(surf, text, y, font, color=TEXT):
 def draw_menu(surf, buttons, t, stars, meta=None):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     stars.draw(surf)
-    draw_title(surf, "PYTETRIS", 80, t)
-    
-    s = F_MED.render("★ Neon Edition ★", True, ACCENT)
-    surf.blit(s, s.get_rect(center=(WIDTH // 2, 140)))
-    
+
+    # Title
+    draw_title(surf, "PYTETRIS", 55, t)
+    sub = F_MED.render("★ Neon Edition ★", True, ACCENT)
+    surf.blit(sub, sub.get_rect(center=(WIDTH // 2, 105)))
+
     if meta:
-        medals = sum(1 for a in __import__('meta').ACHIEVEMENTS if meta['medals'].get(a['id'], 0) > 0)
-        cards = len(meta.get('cards', []))
-        from cards import CARDS
-        mc = F_SMALL.render(f"🏅 {medals}/10    🃏 {cards}/{len(CARDS)}", True, GOLD)
-        surf.blit(mc, mc.get_rect(center=(WIDTH // 2, 165)))
         total = meta.get('total_lines', 0)
         best = meta.get('best_score', 0)
-        stat = F_SMALL.render(f"{locale.t('total_lines')}: {total}  |  {locale.t('best_score')}: {best}", True, MUTED)
-        surf.blit(stat, stat.get_rect(center=(WIDTH // 2, 170)))
+        stat = F_SMALL.render(
+            f"Всего линий: {total}   |   Лучший счёт: {best}",
+            True, MUTED)
+        surf.blit(stat, stat.get_rect(center=(WIDTH // 2, 138)))
 
-    # Панель под кнопки
-    panel_rect = pygame.Rect(WIDTH // 2 - 160, 190, 320, 420)
-    pygame.draw.rect(surf, (12, 10, 24, 200), panel_rect, border_radius=20)
-    pygame.draw.rect(surf, ACCENT, panel_rect, 1, border_radius=20)
+    # --- Mode cards (2x2) ---
+    card_w, card_h = 220, 62
+    gap_x, gap_y = 20, 14
+    total_w = card_w * 2 + gap_x
+    start_x = (WIDTH - total_w) // 2
+    start_y = 175
 
-    for b in buttons:
-        b.draw(surf)
+    mode_cards = [
+        ('PLAY',     'классика',   ACCENT,   'ИГРАТЬ'),
+        ('SPRINT',   '40 линий',   GOLD,     'СПРИНТ'),
+        ('SURVIVAL', 'выживание',  DANGER,   'МУСОР'),
+        ('ZEN',      'без проигрыша', ACCENT2, 'ДЗЕН'),
+    ]
+
+    # Просто отрисовываем карточки — реальные кнопки уже созданы в main
+    for i, (key, sub_text, col, label) in enumerate(mode_cards):
+        col_idx = i % 2
+        row_idx = i // 2
+        cx = start_x + col_idx * (card_w + gap_x)
+        cy = start_y + row_idx * (card_h + gap_y)
+        # Карточка-фон
+        card_rect = pygame.Rect(cx, cy, card_w, card_h)
+        pygame.draw.rect(surf, (22, 20, 40), card_rect, border_radius=14)
+        pygame.draw.rect(surf, col, card_rect, 2, border_radius=14)
+        # Акцентная полоска слева
+        pygame.draw.rect(surf, col, (cx, cy, 4, card_h), border_radius=2)
+        # Название
+        lab = F_H2.render(label, True, col)
+        surf.blit(lab, (cx + 18, cy + 8))
+        # Подпись
+        sub2 = F_TINY.render(sub_text, True, MUTED)
+        surf.blit(sub2, (cx + 18, cy + card_h - 20))
+
+    # --- Section: Аккаунт ---
+    sect_y = start_y + 2 * (card_h + gap_y) + 20
+    sect = F_TINY.render("────────────────  АККАУНТ  ────────────────", True, MUTED)
+    surf.blit(sect, sect.get_rect(center=(WIDTH // 2, sect_y)))
+
+    # --- Icon grid (5 + 4) ---
+    icon_size = 54
+    icon_gap = 16
+    row1_y = sect_y + 22
+    icon_labels_1 = ['ДОСТИЖ', 'ПРОФИЛЬ', 'ДЕЙЛИКИ', 'КАЛЕНД', 'МАГАЗИН']
+    icon_colors_1 = [ACCENT2, ACCENT, ACCENT, GOLD, GOLD]
+    icon_emojis_1 = ['🏆', '👤', '📅', '🎁', '🛒']
+
+    row2_y = row1_y + icon_size + 22
+    icon_labels_2 = ['КАРТЫ', 'НАСТР', 'ЯЗЫК', 'ВЫХОД']
+    icon_colors_2 = [ACCENT2, ACCENT, ACCENT2, DANGER]
+    icon_emojis_2 = ['🎴', '⚙️', '🌐', '✖']
+
+    def draw_icon_row(labels, colors, emojis, y):
+        total = len(labels) * icon_size + (len(labels) - 1) * icon_gap
+        sx = (WIDTH - total) // 2
+        for i, (lab, col, em) in enumerate(zip(labels, colors, emojis)):
+            x = sx + i * (icon_size + icon_gap)
+            rect = pygame.Rect(x, y, icon_size, icon_size)
+            pygame.draw.rect(surf, (22, 20, 40), rect, border_radius=10)
+            pygame.draw.rect(surf, col, rect, 2, border_radius=10)
+            # Emoji
+            try:
+                font = pygame.font.SysFont('Noto Color Emoji', 28)
+                em_surf = font.render(em, True, col)
+                surf.blit(em_surf, em_surf.get_rect(center=rect.center))
+            except Exception:
+                pygame.draw.circle(surf, col, rect.center, 14, 2)
+            # Label below
+            lt = F_TINY.render(lab, True, MUTED)
+            surf.blit(lt, lt.get_rect(center=(x + icon_size // 2, y + icon_size + 8)))
+
+    draw_icon_row(icon_labels_1, icon_colors_1, icon_emojis_1, row1_y)
+    draw_icon_row(icon_labels_2, icon_colors_2, icon_emojis_2, row2_y)
+
+    # --- Volume slider ---
+    slider_y = row2_y + icon_size + 40
+    vol_lab = F_SMALL.render("🔊 ГРОМКОСТЬ", True, MUTED)
+    surf.blit(vol_lab, vol_lab.get_rect(midright=(WIDTH // 2 - 130, slider_y + 6)))
+
+    # Реальные кнопки menu_buttons уже нарисованы через кнопки в main — они невидимы поверх,
+    # потому что мы рисуем кастомный вид. Кнопки нужны только для кликов.
+
+
 def draw_pause(surf):
     draw_overlay(surf, 170)
     draw_text_center(surf, locale.t("paused"), HEIGHT // 2 - 40, F_TITLE, ACCENT)
