@@ -9,20 +9,18 @@ import i18n as locale
 
 pygame.font.init()
 def _font(size, bold=False):
-    # Пытаемся загрузить Russo One из assets
     import os
-    font_path = os.path.join('assets', 'Russo_One.ttf')
+    import settings as S
+    font_path = S.FONT_BOLD if bold else S.FONT_REGULAR
     if os.path.exists(font_path):
         try:
             return pygame.font.Font(font_path, size)
         except Exception:
             pass
-    for name in ('Inter', 'Segoe UI', 'DejaVu Sans', 'Arial'):
-        try:
-            return pygame.font.SysFont(name, size, bold=bold)
-        except Exception:
-            continue
-    return pygame.font.Font(None, size)
+    try:
+        return pygame.font.SysFont('Roboto', size, bold=bold)
+    except Exception:
+        return pygame.font.Font(None, size)
 
 F_TITLE  = _font(72, bold=True)
 F_H1     = _font(44, bold=True)

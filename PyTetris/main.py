@@ -40,7 +40,7 @@ try:
 except Exception as _e:
     print(f"⚠️ Fullscreen failed: {_e}, falling back to windowed")
     screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
-is_fullscreen = True, pygame.FULLSCREEN | pygame.SCALED)
+is_fullscreen = True
 clock = pygame.time.Clock()
 
 MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY = range(13)
