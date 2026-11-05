@@ -682,7 +682,6 @@ while running:
             handle_game_over()
         else:
             # Slow-motion during line clear
-            global time_scale
             if game.clearing:
                 time_scale = 0.3
             else:
