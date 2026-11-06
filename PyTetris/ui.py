@@ -1318,3 +1318,18 @@ def draw_tooltip(surf, text, mouse_x, mouse_y):
     pygame.draw.rect(surf, (15, 13, 25), (tx, ty, w, h), border_radius=6)
     pygame.draw.rect(surf, ACCENT, (tx, ty, w, h), 1, border_radius=6)
     surf.blit(txt_surf, (tx + pad, ty + pad))
+
+
+def draw_section_title(surf, text, icon_char, y, color=ACCENT):
+    """Красивый заголовок с иконкой слева."""
+    # Большой заголовок
+    title = F_H1.render(text, True, color)
+    icon = F_H1.render(icon_char, True, color)
+    total_w = icon.get_width() + 15 + title.get_width()
+    x0 = WIDTH // 2 - total_w // 2
+    surf.blit(icon, (x0, y - title.get_height() // 2))
+    surf.blit(title, (x0 + icon.get_width() + 15, y - title.get_height() // 2))
+    # Декоративные линии по бокам
+    line_y = y + title.get_height() // 2 + 8
+    pygame.draw.line(surf, color, (WIDTH // 2 - 220, line_y), (WIDTH // 2 - total_w // 2 - 20, line_y), 1)
+    pygame.draw.line(surf, color, (WIDTH // 2 + total_w // 2 + 20, line_y), (WIDTH // 2 + 220, line_y), 1)
