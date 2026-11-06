@@ -683,7 +683,7 @@ def draw_dailies(surf, meta, quests, weeklies=None):
     # DAILY block
     rect = pygame.Rect(WIDTH // 2 - 320, 100, 640, 260)
     panel(surf, rect, accent=ACCENT)
-    dlabel = F_H2.render(locale.t("daily").upper(), True, ACCENT)
+    dlabel = F_H2.render(locale.t("daily"), True, ACCENT)
     surf.blit(dlabel, (rect.x + 15, rect.y + 8))
     p = daily_progress(meta)
     for i, q in enumerate(quests):
@@ -722,7 +722,7 @@ def draw_dailies(surf, meta, quests, weeklies=None):
         panel(surf, wc_rect, accent=GOLD)
         wc_icon = F_H2.render("🌟", True, GOLD)
         surf.blit(wc_icon, (wc_rect.x + 12, wc_rect.y + 12))
-        wc_lbl = F_SMALL.render("WILDCARD", True, GOLD)
+        wc_lbl = F_SMALL.render(locale.t("wildcard"), True, GOLD)
         surf.blit(wc_lbl, (wc_rect.x + 55, wc_rect.y + 8))
         wc_desc = F_SMALL.render(locale.t(wc['desc_key']) if locale.t(wc['desc_key']) != wc['desc_key'] else wc['desc_key'], True, TEXT)
         surf.blit(wc_desc, (wc_rect.x + 55, wc_rect.y + 28))
@@ -738,7 +738,7 @@ def draw_dailies(surf, meta, quests, weeklies=None):
     if weeklies:
         wrect = pygame.Rect(WIDTH // 2 - 320, 430, 640, 210)
         panel(surf, wrect, accent=ACCENT2)
-        wlabel = F_H2.render(locale.t("weekly").upper(), True, ACCENT2)
+        wlabel = F_H2.render(locale.t("weekly"), True, ACCENT2)
         surf.blit(wlabel, (wrect.x + 15, wrect.y + 8))
         wp = weekly_progress(meta)
         for i, q in enumerate(weeklies):
@@ -768,7 +768,7 @@ def draw_collection(surf, meta):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     owned = meta.get('cards', {})
     packs = meta.get('unopened_packs', 0)
-    draw_title(surf, f"{locale.t('cards')}  {len(owned)}/{len(CARDS)}", 25, pygame.time.get_ticks())
+    draw_title(surf, f"{locale.t('collection_title')}  {len(owned)}/{len(CARDS)}", 25, pygame.time.get_ticks())
     if packs > 0:
         pk = F_H2.render(f"📦 {packs} {locale.t('packs')}", True, GOLD)
         surf.blit(pk, pk.get_rect(midtop=(WIDTH // 2, 70)))
@@ -970,7 +970,7 @@ def draw_stats(surf, meta):
 def draw_shop(surf, meta, t):
     from shop import PACK_PRICES
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_title(surf, "SHOP", 40, t)
+    draw_title(surf, locale.t("shop_title"), 40, t)
     coins = meta.get('coins', 0)
     cl = F_H2.render(f"🪙 {coins}", True, GOLD)
     surf.blit(cl, cl.get_rect(midtop=(WIDTH // 2, 78)))
@@ -1002,7 +1002,7 @@ def draw_shop(surf, meta, t):
 def draw_calendar(surf, meta, t):
     from meta import get_daily_calendar, LOGIN_REWARDS
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_title(surf, "DAILY REWARDS", 40, t)
+    draw_title(surf, locale.t("calendar_title"), 40, t)
     cal = get_daily_calendar(meta)
     cols = 7
     cw, ch, pad = 70, 100, 10
@@ -1051,7 +1051,7 @@ def draw_profile(surf, meta, t):
     from meta import get_player_title, get_achievement_points, get_global_rank
     import i18n as locale
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_title(surf, "PROFILE", 40, t)
+    draw_title(surf, locale.t("profile_title"), 40, t)
     # Avatar circle
     cx, cy = WIDTH // 2, 140
     pygame.draw.circle(surf, (30, 28, 55), (cx, cy), 55)
@@ -1169,7 +1169,7 @@ def draw_peek_next(surf, game, x, y, t=0):
 def draw_weekly(surf, meta, weeklies):
     from meta import weekly_progress
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
-    draw_section_title(surf, "WEEKLY QUESTS", "🔥", 60, ACCENT2)
+    draw_section_title(surf, locale.t("weekly_quests_title"), "🔥", 60, ACCENT2)
     rect = pygame.Rect(WIDTH // 2 - 320, 130, 640, 420)
     panel(surf, rect, accent=ACCENT2)
     wp = weekly_progress(meta)
