@@ -1337,16 +1337,7 @@ def draw_living_grid(surf, board_x, board_y, t=0, game=None):
                         (board_x + w_l, py),
                         (board_x + BOARD_W + w_r, py), 1)
     
-    # Уголки-маркеры (красивая деталь)
-    corner_col = (int(30 + pulse * 60), int(30 + pulse * 40), int(70 + pulse * 80))
-    pygame.draw.line(surf, corner_col, (board_x, board_y), (board_x + 15, board_y), 2)
-    pygame.draw.line(surf, corner_col, (board_x, board_y), (board_x, board_y + 15), 2)
-    pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y), (board_x + BOARD_W - 15, board_y), 2)
-    pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y), (board_x + BOARD_W, board_y + 15), 2)
-    pygame.draw.line(surf, corner_col, (board_x, board_y + BOARD_H), (board_x + 15, board_y + BOARD_H), 2)
-    pygame.draw.line(surf, corner_col, (board_x, board_y + BOARD_H), (board_x, board_y + BOARD_H - 15), 2)
-    pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y + BOARD_H), (board_x + BOARD_W - 15, board_y + BOARD_H), 2)
-    pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y + BOARD_H), (board_x + BOARD_W, board_y + BOARD_H - 15), 2)
+
 
 
 def draw_clear_rays(surf, board_x, board_y, rows, t=0):
