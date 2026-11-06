@@ -256,7 +256,7 @@ class Game:
                 self.current.y += 1
             else:
                 self.lock_timer += self.fall_ms()
-                if self.lock_timer >= 400:
+                if self.lock_timer >= 500:
                     self.lock()
                     self.lock_timer = 0
 
