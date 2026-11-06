@@ -73,22 +73,66 @@ def panel(surf, rect, title=None, accent=ACCENT):
 MEDAL_COLORS = [None, (120,80,40), (205,127,50), (192,192,192), (255,215,0), (180,230,255)]
 
 def draw_medal(surf, x, y, size, tier):
-    """tier: 0=empty, 1=bronze, 2=silver, 3=gold"""
+    """Красивые медали с блик-эффектом и звездой."""
+    import math
     rect = pygame.Rect(x, y, size, size)
-    if tier == 0:
-        pygame.draw.circle(surf, (60, 60, 80), rect.center, size // 2, 2)
-    else:
-        pygame.draw.circle(surf, MEDAL_COLORS[tier], rect.center, size // 2)
-        pygame.draw.circle(surf, (255, 255, 255), rect.center, size // 2, 2)
-        # star
-        cx, cy = rect.center
-        pts = []
-        for i in range(10):
-            ang = math.pi / 2 + i * math.pi / 5
-            r = size // 3 if i % 2 == 0 else size // 6
-            pts.append((cx + r * math.cos(ang), cy - r * math.sin(ang)))
-        pygame.draw.polygon(surf, (30, 20, 10), pts)
+    cx, cy = rect.center
 
+    # Цвета по тиру
+    MEDAL_COLORS_LIST = [
+        (120, 80, 40),    # bronze
+        (192, 192, 210),  # silver
+        (255, 215, 0),    # gold
+        (180, 240, 255),  # platinum
+        (255, 100, 220),  # mythic (фиолетово-розовый)
+    ]
+    tier_glow = [
+        (180, 120, 60),
+        (255, 255, 255),
+        (255, 240, 150),
+        (220, 255, 255),
+        (255, 180, 255),
+    ]
+
+    if tier == 0:
+        # Пустой слот
+        pygame.draw.circle(surf, (50, 48, 70), (cx, cy), size // 2)
+        pygame.draw.circle(surf, (80, 78, 100), (cx, cy), size // 2, 2)
+        return
+
+    tier = min(tier, 5)
+    base = MEDAL_COLORS_LIST[tier - 1]
+    glow = tier_glow[tier - 1]
+
+    # Внешнее свечение (glow)
+    for i in range(4, 0, -1):
+        alpha = int(50 * (5 - i) / 4)
+        glow_surf = pygame.Surface((size + 2*i*2, size + 2*i*2), pygame.SRCALPHA)
+        pygame.draw.circle(glow_surf, (*glow, alpha), (size//2 + i, size//2 + i), size//2 + i)
+        surf.blit(glow_surf, (x - i*2, y - i*2))
+
+    # Внешний круг
+    pygame.draw.circle(surf, base, (cx, cy), size // 2)
+
+    # Внутреннее затемнение (для объёма)
+    inner = tuple(int(c * 0.7) for c in base)
+    pygame.draw.circle(surf, inner, (cx, cy), int(size // 2 * 0.85))
+
+    # Блик (полукруг)
+    highlight = tuple(min(255, c + 60) for c in glow)
+    pygame.draw.circle(surf, highlight, (cx, cy - size // 8), size // 4)
+
+    # Звезда в центре
+    pts = []
+    for i in range(10):
+        ang = math.pi / 2 + i * math.pi / 5
+        r = size // 3 if i % 2 == 0 else size // 6
+        pts.append((cx + r * math.cos(ang), cy - r * math.sin(ang)))
+    star_color = (40, 25, 10) if tier <= 3 else (80, 0, 60)
+    pygame.draw.polygon(surf, star_color, pts)
+
+    # Обводка
+    pygame.draw.circle(surf, (30, 25, 15), (cx, cy), size // 2, 2)
 
 def draw_card_icon(surf, x, y, w, h, rarity, unlocked, label=""):
     """Draws a card icon with rarity color."""
