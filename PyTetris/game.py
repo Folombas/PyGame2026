@@ -43,6 +43,8 @@ class Game:
         self.level = 1
         self.combo = 0
         self.tetris_count = 0
+        self.last_move_was_rotate = False
+        self.tspin_count = 0
         self.perfect_clear = False
         self.b2b_count = 0
         self.hold_uses = 0
@@ -84,6 +86,7 @@ class Game:
         return True
 
     def move(self, dx):
+        self.last_move_was_rotate = False
         if self.valid(self.current, dx=dx):
             self.current.x += dx
             if self.on_move: self.on_move()
@@ -101,6 +104,7 @@ class Game:
                 self.current.x += dx
                 self.current.y += dy
                 self.current.shape = new
+                self.last_move_was_rotate = True
                 if self.on_rotate: self.on_rotate()
                 return True
         return False
@@ -150,8 +154,27 @@ class Game:
 
         full = [y for y in range(ROWS) if all(c is not None for c in self.grid[y])]
         if full:
+            # T-spin детект: последний ход был поворот, фигура T, 3+ угла заняты
+            is_tspin = False
+            if self.last_move_was_rotate and self.current.kind == 'T':
+                corners = [(self.current.x, self.current.y),
+                           (self.current.x + 2, self.current.y),
+                           (self.current.x, self.current.y + 2),
+                           (self.current.x + 2, self.current.y + 2)]
+                occupied = 0
+                for cx, cy in corners:
+                    if cx < 0 or cx >= COLS or cy >= ROWS:
+                        occupied += 1
+                    elif cy >= 0 and self.grid[cy][cx] is not None:
+                        occupied += 1
+                if occupied >= 3:
+                    is_tspin = True
+                    self.tspin_count += 1
             self.lines += len(full)
-            self.score += self.LINE_SCORE[len(full)] * self.level
+            base = self.LINE_SCORE[len(full)]
+            if is_tspin:
+                base = int(base * 1.5)
+            self.score += base * self.level
             self.combo += 1
             self.max_combo = max(self.max_combo, self.combo)
             if self.combo > 1:
