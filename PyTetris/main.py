@@ -114,10 +114,19 @@ grid_toggle = None
 def toggle_fullscreen():
     global is_fullscreen, screen
     is_fullscreen = not is_fullscreen
-    if is_fullscreen:
-        screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
-    else:
-        screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+    try:
+        if is_fullscreen:
+            screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+        else:
+            screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
+        # пересоздать фиксированные поверхности если были
+    except Exception as e:
+        print(f"⚠️ toggle_fullscreen: {e}")
+        is_fullscreen = False
+        try:
+            screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
+        except Exception:
+            pass
 
 
 def set_state(s):
