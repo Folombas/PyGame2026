@@ -1265,3 +1265,19 @@ def draw_big_achievement_popup(surf, ach_id, meta, elapsed, duration=2500):
     # hint
     hint = F_TINY.render("Click to dismiss", True, MUTED)
     surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, py + ph - 12)))
+
+
+def draw_minimap(surf, game, x, y, w=10, h=200):
+    """Вертикальная полоска: заполненность по столбцам."""
+    pygame.draw.rect(surf, (30, 28, 50), (x, y, w, h), border_radius=4)
+    if not game.grid:
+        return
+    for col in range(10):
+        filled = sum(1 for row in range(20) if game.grid[row][col] is not None)
+        ratio = filled / 20.0
+        bh = int(h * ratio)
+        if bh > 0:
+            color = ACCENT
+            if ratio > 0.7: color = GOLD
+            if ratio > 0.9: color = DANGER
+            pygame.draw.rect(surf, color, (x, y + h - bh, w, bh), border_radius=4)
