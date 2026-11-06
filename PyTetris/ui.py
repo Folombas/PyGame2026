@@ -1291,3 +1291,21 @@ def draw_minimap(surf, game, x, y, w=10, h=200):
             if ratio > 0.7: color = GOLD
             if ratio > 0.9: color = DANGER
             pygame.draw.rect(surf, color, (x, y + h - bh, w, bh), border_radius=4)
+
+
+def draw_tooltip(surf, text, mouse_x, mouse_y):
+    """Плавающий тултип над курсором."""
+    if not text:
+        return
+    font = F_TINY
+    txt_surf = font.render(text, True, (240, 240, 255))
+    pad = 6
+    w = txt_surf.get_width() + pad * 2
+    h = txt_surf.get_height() + pad * 2
+    tx = mouse_x + 15
+    ty = mouse_y + 15
+    if tx + w > WIDTH: tx = mouse_x - w - 10
+    if ty + h > HEIGHT: ty = mouse_y - h - 10
+    pygame.draw.rect(surf, (15, 13, 25), (tx, ty, w, h), border_radius=6)
+    pygame.draw.rect(surf, ACCENT, (tx, ty, w, h), 1, border_radius=6)
+    surf.blit(txt_surf, (tx + pad, ty + pad))

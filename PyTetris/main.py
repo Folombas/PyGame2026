@@ -893,6 +893,13 @@ while running:
             b.update(dt, mouse)
             b.draw(screen)
 
+    # Тултипы для кнопок навигации
+    if state in SUBMENU_STATES:
+        for b in nav_buttons:
+            if b.hovered and b.label:
+                tooltips = {'НАЗАД': 'Предыдущий раздел', 'В МЕНЮ': 'Вернуться в главное меню', 'ДАЛЕЕ': 'Следующий раздел'}
+                ui.draw_tooltip(screen, tooltips.get(b.label, ''), mouse[0], mouse[1])
+
     draw_pack_reveal(screen, t)
 
     if transition_alpha > 0:
