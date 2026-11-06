@@ -142,11 +142,13 @@ class Button:
         was_hovered = self.hovered
         self.hovered = self.rect.collidepoint(mouse)
         if self.hovered and not was_hovered:
-            try:
-                import audio
-                audio.play('ui_hover')
-            except Exception:
-                pass
+            # Звук только если кнопка с иконкой (nav_buttons)
+            if getattr(self, 'icon', None) is not None:
+                try:
+                    import audio
+                    audio.play('ui_hover')
+                except Exception:
+                    pass
         target = 1.0 if self.hovered else 0.0
         self.pulse += (target - self.pulse) * min(1.0, dt / 80.0)
         target_press = 1.0 if self.pressed else 0.0
