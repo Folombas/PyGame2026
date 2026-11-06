@@ -1,141 +1,43 @@
 # PyTetris — Neon Edition
 
-Современный тетрис на PyGame с неоновой эстетикой.
+Современный Тетрис на PyGame с неоновой эстетикой и RPG-прогрессией.
 
-## Возможности
-- Классический тетрис с 7-bag и wall-kicks
-- Частицы, тряска экрана, анимированное меню, звёздное небо
-- Процедурные звуки (без ассетов, чистый синтез)
-- Пауза (P/ESC)
-- 10 достижений
-- Ежедневные квесты (детерминированы по дате)
-- Топ-10 рекордов в data/scores.json
-- Ghost piece, combo, уровни
+## ✨ Особенности
 
-## Установка
+- 🌊 Живая сетка — мембрана с волнами и пульсом под бит
+- 💥 Волны очистки — расходятся от каждой линии
+- 🎮 6 режимов: классика, спринт, мусор, дзен
+- 🏆 17 достижений с 5 уровнями медалей
+- 🃏 20 коллекционных карт с 4 редкостями
+- 📅 Ежедневные и недельные квесты
+- 🛒 Магазин с 3 уровнями паков
+- 👤 Профиль с 10 званиями по AP
+- ⚡ DAS, T-spin, Perfect Clear
+- 🎯 Ghost-фигура, Danger zone, Slow-mo
+- 🎵 Чиптюн-музыка с fade in/out
+- 🖥️ F11 (fullscreen), F4 (75%/100%), F3 (FPS)
+
+## 🚀 Установка
+
     python3 -m venv .venv
     source .venv/bin/activate
     pip install -r requirements.txt
     python main.py
 
-## Управление
-    <- ->  движение
-    v      soft drop
-    ^ / Z  поворот
-    SPACE  hard drop
-    P/ESC  пауза
-    M      mute
+## 🎮 Управление
 
-## Музыка
-- "Funky Chiptune" by Eric Matyas (www.soundimage.org) — CC BY 4.0
+    ← →     движение (DAS при удержании)
+    ↓       soft drop
+    ↑ / Z   поворот
+    SPACE   hard drop
+    C       hold
+    P/ESC   пауза
+    M       mute
+    F11     fullscreen
+    F4      окно 75%/100%
+    F3      FPS
+    F5/F9   экспорт/импорт
 
-- 🔗 B2B (Back-to-Back) бонусы за подряд идущие Тетрисы
-- 🌫️ Плавные fade-переходы и динамическая сетка
+## 📦 Версия
 
-- 🎛️ Современные UI-виджеты (EasyPygameWidgets)
-- 🎚️ Ползунок громкости
-- 🏅 Иконки достижений и ежедневных заданий
-- ✨ Частицы и звуки при взаимодействии с меню
-
-- 🌍 Локализация (RU/EN) и кнопка переключения языка
-- 🎨 Обновлённый интерфейс меню и слайдер громкости
-
-- ⚙️ Экран настроек: отдельная громкость музыки/звуков, вкл/выкл призрака фигуры и тряски экрана
-
-- ⬆️ Система прокачки: опыт (XP) за линии, уровень игрока, полоса опыта в HUD
-- 🃏 Коллекционные карточки, открывающиеся с уровнем
-- 🏅 Медали для топ-3 в таблице лидеров
-- 🎚️ Новые настройки: скорость падения, отображение сетки
-
-- ✨ Эффект Bloom (свечение) с PygameShader
-- 🎬 Анимированный неоновый фон
-- 🎨 Скины и градиентные панели
-- 🔊 Новые звуковые эффекты
-
-## v3.2.0 — Economy & Meta Progression
-
-- 🪙 Монеты как валюта (за линии и партии, множитель от ранга)
-- 🏪 Магазин с 3 уровнями паков
-- 🎁 Ежедневный календарь наград (7-дневный цикл)
-- 👤 Экран профиля с 10 званиями по AP
-- 🏆 Мета-ачивки за сеты карт и открытие паков
-- 💾 Экспорт/импорт прогресса (F5/F9)
-- 🥚 Konami Code пасхалка (+5 паков, +1000 монет)
-- 🏅 Отдельные рекорды по режимам (classic/sprint/survival/zen)
-- 🔥 Стрик-множитель применяется к XP
-
-## v3.3.0 — "Juice & Zest" Update
-
-- ⚠️ Danger zone (красная пульсация при 14+ рядах)
-- 🔊 Danger beep при опасной высоте стопки
-- 💥 Landing sparks на каждом локе, тряска масштабируется от высоты
-- 🔥 Combo display (огромный текст при цепочках)
-- ⭐ Параллакс-звёзды прямо в игре
-- 🎯 Milestone toast каждые 1000 очков (+100 монет)
-- 💎 Perfect Clear: +500 монет, +1 пак, салют
-- 🚫 Auto-pause при потере фокуса окна
-- 🪙 Монеты/паки в HUD справа
-- 🔥 Стрик умножает монеты и XP
-- 🏅 Toast достижений окрашен под тир медали
-- 🌟 Анимированное пламя стрика в меню
-- 💰 Combo XP multiplier: +25% за каждое звено
-
-## v3.4.0 — "Explosion & Polish" Update
-
-- ⏱️ Slow-motion на очистке линий (0.3x time scale)
-- 💥 Screen flash на Tetris (4 линии)
-- 🌟 Анимированная градиентная рамка playfield
-- 💫 Particle trail за падающей фигурой
-- 📊 Анимированный счётчик очков (interpolation + bounce)
-- 🎆 Level-up fireworks (из 4 углов + центр)
-- 🏆 Гигантский "LEVEL UP!" toast с slide-in
-- 🔊 Динамическая музыка (громкость растёт с уровнем)
-- 📅 Отдельный экран Weekly Quests с claim
-- 🎉 Big Achievement popup с медалью и тиром
-- 📈 AP-to-next-rank прогресс-бар в HUD
-- 🔥 Анимированное пламя стрика в HUD
-- 🎴 Card flip animation при открытии пака
-
-## v3.5.0 — "Material Design & Fullscreen" Update
-
-- 🎨 Полный редизайн интерфейса в стиле Material Design (Dark Theme)
-- 🔤 Официальный шрифт Roboto для всего UI
-- 🖥️ Игра запускается в полноэкранном режиме с масштабированием (SCALED)
-- 🎯 Кнопки, слайдеры и переключатели с тенями, скруглениями и ripple-эффектами
-- 🌈 Новая палитра: Primary (фиолетовый), Secondary (бирюзовый), Surface (тёмно-серый)
-
-## v3.5.0 — "Material Design & Fullscreen" Update
-
-- 🎨 Полный редизайн интерфейса в стиле Material Design (Dark Theme)
-- 🔤 Официальный шрифт Roboto для всего UI
-- 🖥️ Игра запускается в полноэкранном режиме с масштабированием (SCALED)
-- 🎯 Кнопки, слайдеры и переключатели с тенями, скруглениями и ripple-эффектами
-- 🌈 Новая палитра: Primary (фиолетовый), Secondary (бирюзовый), Surface (тёмно-серый)
-
-## v3.6.0 — "Revival & Control" Update
-
-- 🐛 F3 debug overlay (FPS, state)
-- 👁️ NEXT peek в правом верхнем углу (пульс при локе)
-- 👻 Ghost фигура пунктирным контуром
-- ⚡ DAS (delayed auto shift) 160ms/40ms — плавное движение
-- 🔒 Lock delay 500ms — комфортный контроль фиксации
-- 🌀 T-spin детект + 1.5x бонус очков
-- 💎 Perfect Clear +500 монет + салют
-- 🔥 COMBO xN огромный попап
-- ⏱️ Slow-mo 0.3x при очистке линий
-- 📊 Плавный счётчик очков
-- 📈 Мини-карта заполнения справа
-- 🖥️ F11 (fullscreen) и F4 (75%/100%) — адаптивность
-- 🏆 T-spin и PC счётчики в HUD
-
-## v3.6.1 — "Weekend Polish" Update
-
-- 🔊 T-spin, Perfect Clear, Combo tier sounds
-- ✨ Spawn flash animation (piece appears with white flash)
-- ⚠️ Danger zone (red pulsing at 15+ stack)
-- 🎵 Smooth music fade in/out on state change
-- 💡 Hover tooltips for navigation buttons
-- 🌫️ Pause screen with blur + dark overlay
-- 🌈 Smooth fade transitions between screens
-- 📋 Section titles with icons and decorative lines
-- 🔥 Redesigned weekly quests with icons and rewards
+v3.7.0 — Living Grid
