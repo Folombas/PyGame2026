@@ -868,6 +868,19 @@ while running:
         fs.set_alpha(transition_alpha)
         screen.blit(fs, (0, 0))
 
+    if combo_display >= 2 and t - combo_display_t < 1500:
+        elapsed = t - combo_display_t
+        alpha = max(0, 255 - int(elapsed / 1500 * 255))
+        scale = 1.0 + min(0.6, elapsed / 300.0)
+        size = int(48 * scale)
+        try:
+            font = pygame.font.SysFont('Arial', size, bold=True)
+            txt = font.render(f"COMBO x{combo_display}", True, S.GOLD)
+            txt.set_alpha(alpha)
+            screen.blit(txt, txt.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2 - 100)))
+        except Exception:
+            pass
+
     if debug_overlay:
         fps = clock.get_fps()
         dbg = ui.F_TINY.render(f"FPS: {fps:.0f}  t={t}  state={state}", True, (0, 255, 0))
