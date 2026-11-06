@@ -71,6 +71,8 @@ levelup_toast = None
 levelup_toast_t = 0
 focus_lost = False
 time_scale = 1.0
+clear_rays_rows = []
+clear_rays_t = 0
 trail_timer = 0
 
 KONAMI_SEQ = [pygame.K_UP, pygame.K_UP, pygame.K_DOWN, pygame.K_DOWN,
@@ -243,6 +245,9 @@ def cb_levelup(lvl):
 def cb_clear(rows, count):
     global last_unlock, last_unlock_t, combo_display, combo_display_t, last_milestone, milestone_toast, milestone_toast_t
     audio.play('tetris' if count == 4 else 'clear')
+    global clear_rays_rows, clear_rays_t
+    clear_rays_rows = list(rows)
+    clear_rays_t = pygame.time.get_ticks()
     for y in rows:
         colors = list(S.COLORS.values())
         fx.burst_row(board_y + y * S.CELL, board_x, S.CELL, S.COLS, colors)
@@ -559,6 +564,10 @@ def draw_playfield(surf, t):
                 else:
                     kind = next((k for k, v in S.COLORS.items() if v == col), "I")
                     renderer.draw_block(surf, board_x + x*S.CELL, board_y + y*S.CELL, kind)
+    # Волны от очищенных линий (первые 600мс)
+    if clear_rays_rows and t - clear_rays_t < 600:
+        ui.draw_clear_rays(surf, board_x, board_y, clear_rays_rows, t - clear_rays_t)
+
     if not game.game_over and not game.clearing and game.show_ghost:
         gy = game.ghost_y()
         p = game.current

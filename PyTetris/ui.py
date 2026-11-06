@@ -1394,3 +1394,28 @@ def draw_living_grid(surf, board_x, board_y, t=0, game=None):
     pygame.draw.line(surf, corner_col, (board_x, board_y + BOARD_H), (board_x, board_y + BOARD_H - 15), 2)
     pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y + BOARD_H), (board_x + BOARD_W - 15, board_y + BOARD_H), 2)
     pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y + BOARD_H), (board_x + BOARD_W, board_y + BOARD_H - 15), 2)
+
+
+def draw_clear_rays(surf, board_x, board_y, rows, t=0):
+    """Волны от очищенных линий — расходятся в обе стороны."""
+    import math
+    for row in rows:
+        cy = board_y + row * CELL + CELL // 2
+        # Горизонтальная волна от центра
+        phase = (t / 300.0) % 1.0
+        for offset in range(0, BOARD_W // 2, 8):
+            alpha = int(180 * (1 - phase))
+            if alpha <= 0:
+                continue
+            # Левая волна
+            x_l = board_x + BOARD_W // 2 - offset - int(phase * 100)
+            if board_x <= x_l:
+                ray = pygame.Surface((6, 3), pygame.SRCALPHA)
+                ray.fill((255, 255, 200, alpha))
+                surf.blit(ray, (x_l, cy - 1))
+            # Правая волна
+            x_r = board_x + BOARD_W // 2 + offset + int(phase * 100)
+            if x_r <= board_x + BOARD_W:
+                ray = pygame.Surface((6, 3), pygame.SRCALPHA)
+                ray.fill((255, 255, 200, alpha))
+                surf.blit(ray, (x_r, cy - 1))
