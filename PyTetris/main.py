@@ -38,6 +38,7 @@ import os
 os.environ['SDL_VIDEO_CENTERED'] = '1'  # центрируем окно на экране
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 is_fullscreen = False
+debug_overlay = False
 clock = pygame.time.Clock()
 
 MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY = range(13)
@@ -374,7 +375,10 @@ def handle_events():
             set_state(PAUSE)
             print('⏸ Авто-пауза (потеря фокуса)')
         if e.type == pygame.KEYDOWN:
-            if e.key == pygame.K_F11:
+            if e.key == pygame.K_F3:
+                global debug_overlay
+                debug_overlay = not debug_overlay
+            elif e.key == pygame.K_F11:
                 toggle_fullscreen()
             elif e.key == pygame.K_F5:
                 from meta import export_save
@@ -849,6 +853,11 @@ while running:
         fs.fill((0, 0, 0))
         fs.set_alpha(transition_alpha)
         screen.blit(fs, (0, 0))
+
+    if debug_overlay:
+        fps = clock.get_fps()
+        dbg = ui.F_TINY.render(f"FPS: {fps:.0f}  t={t}  state={state}", True, (0, 255, 0))
+        screen.blit(dbg, (5, 5))
 
     pygame.display.flip()
 
