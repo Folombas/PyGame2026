@@ -236,11 +236,39 @@ class Game:
             if self.on_gameover: self.on_gameover()
 
     def _resolve_clear(self):
-        kept = [row for i, row in enumerate(self.grid) if i not in self.clearing]
-        while len(kept) < ROWS:
-            kept.insert(0, [None] * COLS)
-        self.grid = kept
+        """Пересобираем сетку: убираем очищенные строки, всё что выше — падает вниз."""
+        if not self.clearing:
+            return
+        # Snapshot чтобы избежать мутаций
+        clearing_set = set(self.clearing)
+        # Идём снизу вверх, собираем НЕ очищенные строки
+        kept_from_bottom = []
+        for y in range(ROWS - 1, -1, -1):
+            if y not in clearing_set:
+                kept_from_bottom.append(self.grid[y][:])
+        # Паддинг пустыми строками сверху
+        while len(kept_from_bottom) < ROWS:
+            kept_from_bottom.append([None] * COLS)
+        # Разворачиваем обратно (top → bottom)
+        self.grid = list(reversed(kept_from_bottom))
+        # Очищаем powerup_grid — все позиции сбрасываем, они уже сдвинулись
+        self.powerup_grid = {}
+        # Сброс состояния очистки
         self.clearing = []
+        self.clear_timer = 0.0
+        # DEBUG: проверяем что нет плавающих блоков
+        for y in range(ROWS - 1):
+            for x in range(COLS):
+                if self.grid[y][x] is not None:
+                    if all(self.grid[yy][x] is None for yy in range(y + 1, ROWS)):
+                        # Блок висит, под ним пусто до самого низа — это баг
+                        print(f"⚠️ FLOATING BLOCK at ({x},{y}) — принудительно опускаю")
+                        # Опускаем вниз
+                        col_y = y
+                        while col_y + 1 < ROWS and self.grid[col_y + 1][x] is None:
+                            self.grid[col_y + 1][x] = self.grid[col_y][x]
+                            self.grid[col_y][x] = None
+                            col_y += 1
 
     def push_garbage(self):
         if any(cell is not None for cell in self.grid[0]):
