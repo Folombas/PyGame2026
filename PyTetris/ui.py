@@ -861,119 +861,72 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
     back_btn.rect.y = HEIGHT - 60
     back_btn.draw(surf)
 def draw_hud(surf, game, sidebar_x, t, meta):
+    """Компактный HUD — только самое нужное."""
     x = sidebar_x
-    y = 40
-    if getattr(game, 'mode', 'classic') == 'survival':
-        labels = [(locale.t("score"), str(game.score), ACCENT),
-                  (locale.t("lines"), str(game.lines), GOLD),
-                  ("GARBAGE", f"{int(game.garbage_timer/1000)}s", S.DANGER)]
-    elif getattr(game, 'mode', 'classic') == 'sprint':
-        labels = [(locale.t("time"), f"{game.elapsed_time/1000:.1f}s", ACCENT),
-                  (locale.t("goal"), f"{game.lines}/40", GOLD)]
-    else:
-        labels = [(locale.t("score"), str(game.score), ACCENT),
-                  (locale.t("level"), str(game.level), ACCENT2),
-                  (locale.t("lines"), str(game.lines), GOLD)]
-    for label, val, col in labels:
-        l = F_SMALL.render(label, True, MUTED)
-        surf.blit(l, (x, y))
-        v = F_H2.render(val, True, col)
-        # Обводка для цифр
-        v_outline = F_H2.render(val, True, (0, 0, 0))
-        surf.blit(v_outline, (x - 1, y + 18 - 1))
-        surf.blit(v_outline, (x + 1, y + 18 + 1))
-        surf.blit(v, (x, y + 18))
-        y += 70
+    y = 30
 
-    player_level = meta.get('player_level', 1)
-    xp = meta.get('xp', 0)
-    xp_needed = meta.get('xp_needed', 100)
-    rank_lab = F_SMALL.render(locale.t("rank"), True, MUTED)
-    surf.blit(rank_lab, (x, y))
-    rank_val = F_H2.render(str(player_level), True, ACCENT)
-    surf.blit(rank_val, (x, y + 18))
-    
-    bar_x = x + 50
-    bar_y = y + 25
-    bar_w, bar_h = 140, 12
-    pygame.draw.rect(surf, (40, 36, 70), (bar_x, bar_y, bar_w, bar_h), border_radius=6)
-    fill = min(1.0, xp / xp_needed) if xp_needed else 0
-    if fill > 0:
-        pygame.draw.rect(surf, ACCENT, (bar_x, bar_y, int(bar_w * fill), bar_h), border_radius=6)
-    xp_txt = F_TINY.render(f"{xp}/{xp_needed}", True, MUTED)
-    surf.blit(xp_txt, (bar_x + bar_w + 5, bar_y - 2))
-    y += 60
+    # SCORE — большой
+    l = F_TINY.render(locale.t("score"), True, MUTED)
+    surf.blit(l, (x, y))
+    v = F_H1.render(str(game.score), True, ACCENT)
+    surf.blit(v, (x, y + 14))
+    y += 14 + 55
 
-    # Rank progression bar
-    try:
-        from meta import get_achievement_points, get_global_rank
-        from meta import PLAYER_TITLES
-        ap = get_achievement_points(meta)
-        rank = get_global_rank(meta)
-        # next rank threshold
-        next_th = None
-        for th, _, _, _ in PLAYER_TITLES:
-            if th > ap:
-                next_th = th
-                break
-        if next_th is not None:
-            prev_th = 0
-            for th, _, _, _ in PLAYER_TITLES:
-                if th <= ap:
-                    prev_th = th
-            range_size = next_th - prev_th
-            progress = (ap - prev_th) / range_size if range_size > 0 else 1.0
-            r_lab = F_TINY.render(f"AP: {ap}/{next_th}", True, GOLD)
-            surf.blit(r_lab, (x, y))
-            rbar = pygame.Rect(x, y + 16, 200, 8)
-            draw_progress_bar(surf, rbar.x, rbar.y, rbar.w, rbar.h, progress, GOLD)
-            y += 32
-    except Exception:
-        pass
+    # LEVEL + LINES в строку
+    ll = F_TINY.render(locale.t("level"), True, MUTED)
+    surf.blit(ll, (x, y))
+    lv = F_TINY.render(locale.t("lines"), True, MUTED)
+    surf.blit(lv, (x + 80, y))
+    v1 = F_H2.render(str(game.level), True, ACCENT2)
+    surf.blit(v1, (x, y + 14))
+    v2 = F_H2.render(str(game.lines), True, GOLD)
+    surf.blit(v2, (x + 80, y + 14))
+    y += 14 + 42 + 10
 
-    # Next (3 pieces)
-    nb = pygame.Rect(x, y, 200, 230)
-    pygame.draw.rect(surf, (22, 20, 40), nb, border_radius=12)
-    pygame.draw.rect(surf, ACCENT2, nb, 2, border_radius=12)
-    lab = F_SMALL.render(locale.t("next"), True, MUTED)
-    surf.blit(lab, (x + 12, y + 12))
-    
-    for i, piece in enumerate(game.next_queue):
-        draw_piece_mini(surf, piece.shape, piece.color,
-                        nb.centerx, nb.y + 60 + i * 60, cell=18)
-    
-    y += 245
-    
+    # NEXT
+    nb = pygame.Rect(x, y, 200, 90)
+    pygame.draw.rect(surf, (22, 20, 40), nb, border_radius=10)
+    pygame.draw.rect(surf, ACCENT2, nb, 2, border_radius=10)
+    lab = F_TINY.render(locale.t("next"), True, MUTED)
+    surf.blit(lab, (nb.x + 8, nb.y + 6))
+    if hasattr(game, 'next_queue') and game.next_queue:
+        p = game.next_queue[0]
+        draw_piece_mini(surf, p.shape, p.color, nb.centerx, nb.centery + 12, cell=16)
+    y += 90 + 10
+
     # HOLD
-    hb = pygame.Rect(x, y, 200, 90)
-    pygame.draw.rect(surf, (22, 20, 40), hb, border_radius=12)
-    pygame.draw.rect(surf, GOLD, hb, 2, border_radius=12)
-    hl = F_SMALL.render(locale.t("hold") + " (C)", True, MUTED)
-    surf.blit(hl, (x + 12, y + 6))
+    hb = pygame.Rect(x, y, 200, 80)
+    pygame.draw.rect(surf, (22, 20, 40), hb, border_radius=10)
+    pygame.draw.rect(surf, GOLD, hb, 2, border_radius=10)
+    lab = F_TINY.render(locale.t("hold") + " (C)", True, MUTED)
+    surf.blit(lab, (hb.x + 8, hb.y + 6))
     if game.hold:
         hc = COLORS[game.hold]
         hs = SHAPES[game.hold]
         dim = game.hold_used
         col = tuple(c // 2 for c in hc) if dim else hc
-        draw_piece_mini(surf, hs, col, hb.centerx, hb.centery + 5, cell=20)
+        draw_piece_mini(surf, hs, col, hb.centerx, hb.centery + 10, cell=16)
+    y += 80 + 12
 
-    # T-spin / PC счётчики
-    tspins = getattr(game, 'tspin_count', 0)
-    pcs = meta.get('stats', {}).get('perfect_clears', 0) if meta else 0
-    if tspins > 0:
-        tt = F_TINY.render(f"T-SPIN x{tspins}", True, ACCENT2)
-        surf.blit(tt, (x, y + 240))
-    if pcs > 0:
-        pt = F_TINY.render(f"PC x{pcs}", True, GOLD)
-        surf.blit(pt, (x, y + 258))
+    # Streak + Coins (компактно в одну строку)
+    bits = []
+    streak = meta.get('daily_streak', 0) if meta else 0
+    coins = meta.get('coins', 0) if meta else 0
+    if streak > 0: bits.append(f"🔥{streak}d")
+    if coins > 0: bits.append(f"🪙{coins}")
+    if bits:
+        info = F_TINY.render("  ".join(bits), True, GOLD)
+        surf.blit(info, (x, y))
+        y += 18
 
+    # COMBO внизу
     if game.combo > 1:
         c = F_H2.render(f"COMBO x{game.combo}", True, GOLD)
         surf.blit(c, c.get_rect(midtop=(x + 100, HEIGHT - 80)))
-    
-    hint = F_TINY.render(locale.t("controls"), True, MUTED)
-    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 20)))
 
+    # Controls hint
+    hint = F_TINY.render(locale.t("controls"), True, MUTED)
+    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 8)))
 
 def draw_stats(surf, meta):
     from meta import get_achievement_points, get_global_rank, get_ap_bonus
