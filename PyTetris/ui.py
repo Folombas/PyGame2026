@@ -569,9 +569,18 @@ def draw_menu(surf, buttons, t, stars, meta=None):
     for b in buttons:
         b.draw(surf)
 def draw_pause(surf):
-    draw_overlay(surf, 170)
-    draw_text_center(surf, locale.t("paused"), HEIGHT // 2 - 40, F_TITLE, ACCENT)
-
+    # Размытие + затемнение
+    try:
+        blurred = pygame.transform.gaussian_blur(surf, 6)
+        surf.blit(blurred, (0, 0))
+    except Exception:
+        pass
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 160))
+    surf.blit(overlay, (0, 0))
+    draw_text_center(surf, "PAUSED", HEIGHT // 2 - 40, F_TITLE, ACCENT)
+    hint = F_SMALL.render("ESC — продолжить   |   Q — в меню", True, MUTED)
+    surf.blit(hint, hint.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 40)))
 
 def draw_leaderboard(surf, scores, best):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
