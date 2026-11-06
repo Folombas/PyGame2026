@@ -39,6 +39,10 @@ os.environ['SDL_VIDEO_CENTERED'] = '1'  # центрируем окно на э�
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 is_fullscreen = False
 debug_overlay = False
+das_timer = 0
+das_direction = 0
+DAS_DELAY = 160
+DAS_REPEAT = 40
 clock = pygame.time.Clock()
 
 MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY = range(13)
@@ -412,10 +416,17 @@ def handle_events():
             for b in menu_buttons: b.handle(e)
             if volume_slider: volume_slider.handle_event(e)
         elif state == PLAY:
+            global das_timer, das_direction
             if e.type == pygame.KEYDOWN:
                 if e.key in (pygame.K_ESCAPE, pygame.K_p): set_state(PAUSE)
-                elif e.key == pygame.K_LEFT:  game.move(-1)
-                elif e.key == pygame.K_RIGHT: game.move(1)
+                elif e.key == pygame.K_LEFT:
+                    game.move(-1)
+                    das_direction = -1
+                    das_timer = 0
+                elif e.key == pygame.K_RIGHT:
+                    game.move(1)
+                    das_direction = 1
+                    das_timer = 0
                 elif e.key == pygame.K_DOWN:  game.soft_drop()
                 elif e.key == pygame.K_UP:    game.rotate(1)
                 elif e.key == pygame.K_z:     game.rotate(-1)
@@ -430,6 +441,9 @@ def handle_events():
                                      board_y + old_y * S.CELL, (255, 255, 255), count=3)
                 elif e.key == pygame.K_c:
                     if game.hold_piece(): audio.play('rotate')
+            elif e.type == pygame.KEYUP:
+                if e.key in (pygame.K_LEFT, pygame.K_RIGHT):
+                    das_direction = 0
         elif state == PAUSE:
             for b in pause_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN:
