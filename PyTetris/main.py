@@ -565,9 +565,19 @@ def draw_playfield(surf, t):
         for xx, yy in p.cells():
             dy = gy - p.y
             ui.draw_cell(surf, board_x + xx*S.CELL, board_y + (yy+dy)*S.CELL, p.color, ghost=True)
+        # Alpha-анимация появления (первые 200мс)
+        age = t - getattr(p, 'spawned_ms', t)
         for xx, yy in p.cells():
             if yy >= 0:
-                renderer.draw_block(surf, board_x + xx*S.CELL, board_y + yy*S.CELL, p.kind)
+                if age < 200:
+                    # простая "вспышка" — рисуем белым полупрозрачным сверху
+                    renderer.draw_block(surf, board_x + xx*S.CELL, board_y + yy*S.CELL, p.kind)
+                    flash_alpha = int(180 * (1 - age / 200.0))
+                    fsurf = pygame.Surface((S.CELL, S.CELL), pygame.SRCALPHA)
+                    fsurf.fill((255, 255, 255, flash_alpha))
+                    surf.blit(fsurf, (board_x + xx*S.CELL, board_y + yy*S.CELL))
+                else:
+                    renderer.draw_block(surf, board_x + xx*S.CELL, board_y + yy*S.CELL, p.kind)
 
 
 def draw_combo_hud(surf, t):
@@ -771,6 +781,8 @@ while running:
                                  game.current.color, count=1)
             run_time += dt / 1000.0
             update_daily(meta, lines=0, score=game.score, dt=dt / 1000.0)
+        if game.current.spawned_ms == 0:
+            game.current.spawned_ms = t
         draw_game(t, dt)
         fx.update(dt)
         # Danger beep when stack is high

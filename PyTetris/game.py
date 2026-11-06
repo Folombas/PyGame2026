@@ -9,6 +9,7 @@ class Piece:
         self.color = COLORS[kind]
         self.x = COLS // 2 - len(self.shape[0]) // 2
         self.y = -len(self.shape)
+        self.spawned_ms = 0
         self.powerup = random.choices([None, 'bomb', 'freeze', 'clear'], weights=[80, 8, 6, 6])[0]
 
     def cells(self, dx=0, dy=0, shape=None):
@@ -44,6 +45,7 @@ class Game:
         self.combo = 0
         self.tetris_count = 0
         self.last_move_was_rotate = False
+        self.spawned_at = 0
         self.tspin_count = 0
         self.perfect_clear = False
         self.b2b_count = 0
