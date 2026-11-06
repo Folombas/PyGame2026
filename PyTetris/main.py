@@ -39,6 +39,7 @@ os.environ['SDL_VIDEO_CENTERED'] = '1'  # центрируем окно на э�
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 is_fullscreen = False
 debug_overlay = False
+window_scale = 1.0
 das_timer = 0
 das_direction = 0
 DAS_DELAY = 160
@@ -388,7 +389,15 @@ def handle_events():
             set_state(PAUSE)
             print('⏸ Авто-пауза (потеря фокуса)')
         if e.type == pygame.KEYDOWN:
-            if e.key == pygame.K_F3:
+            if e.key == pygame.K_F4:
+                global window_scale, screen
+                window_scale = 0.75 if window_scale == 1.0 else 1.0
+                try:
+                    w2, h2 = int(S.WIDTH * window_scale), int(S.HEIGHT * window_scale)
+                    screen = pygame.display.set_mode((w2, h2))
+                except Exception:
+                    pass
+            elif e.key == pygame.K_F3:
                 global debug_overlay
                 debug_overlay = not debug_overlay
             elif e.key == pygame.K_F11:
