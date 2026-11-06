@@ -127,3 +127,15 @@
 - 📈 Мини-карта заполнения справа
 - 🖥️ F11 (fullscreen) и F4 (75%/100%) — адаптивность
 - 🏆 T-spin и PC счётчики в HUD
+
+## v3.6.1 — "Weekend Polish" Update
+
+- 🔊 T-spin, Perfect Clear, Combo tier sounds
+- ✨ Spawn flash animation (piece appears with white flash)
+- ⚠️ Danger zone (red pulsing at 15+ stack)
+- 🎵 Smooth music fade in/out on state change
+- 💡 Hover tooltips for navigation buttons
+- 🌫️ Pause screen with blur + dark overlay
+- 🌈 Smooth fade transitions between screens
+- 📋 Section titles with icons and decorative lines
+- 🔥 Redesigned weekly quests with icons and rewards
