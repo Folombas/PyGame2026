@@ -1343,3 +1343,54 @@ def draw_section_title(surf, text, icon_char, y, color=ACCENT):
     line_y = y + title.get_height() // 2 + 8
     pygame.draw.line(surf, color, (WIDTH // 2 - 220, line_y), (WIDTH // 2 - total_w // 2 - 20, line_y), 1)
     pygame.draw.line(surf, color, (WIDTH // 2 + total_w // 2 + 20, line_y), (WIDTH // 2 + 220, line_y), 1)
+
+
+def draw_living_grid(surf, board_x, board_y, t=0, game=None):
+    """ЖИВАЯ СЕТКА — неоновая мембрана с волнами и пульсом под бит."""
+    import math
+    level = getattr(game, 'level', 1) if game else 1
+    
+    # Сдвиг оттенка с уровнем (всего 10 уровней → постепенный сдвиг в тёплый)
+    hue_offset = (level - 1) * 4
+    
+    # Пульс под "бит" 128 BPM (468мс на удар)
+    beat_phase = (t % 468) / 468.0
+    pulse = max(0, 1.0 - beat_phase * 3)
+    
+    # Базовый цвет + пульс
+    r = 26 + hue_offset + pulse * 35
+    g = 22 + pulse * 25
+    b = 44 + pulse * 60
+    col = (int(max(0, min(255, r))), int(max(0, min(255, g))), int(max(0, min(255, b))))
+    
+    # Амплитуда волны
+    amp = 1.2 + pulse * 1.8
+    
+    # Вертикальные линии с волной
+    for x in range(COLS + 1):
+        px = board_x + x * CELL
+        w_top = math.sin(t / 800 + x * 0.35) * amp
+        w_bot = math.sin(t / 800 + x * 0.35 + 2.0) * amp
+        pygame.draw.line(surf, col,
+                        (px + w_top, board_y),
+                        (px + w_bot, board_y + BOARD_H), 1)
+    
+    # Горизонтальные линии с волной
+    for y in range(ROWS + 1):
+        py = board_y + y * CELL
+        w_l = math.cos(t / 800 + y * 0.35) * amp
+        w_r = math.cos(t / 800 + y * 0.35 + 2.0) * amp
+        pygame.draw.line(surf, col,
+                        (board_x + w_l, py),
+                        (board_x + BOARD_W + w_r, py), 1)
+    
+    # Уголки-маркеры (красивая деталь)
+    corner_col = (int(30 + pulse * 60), int(30 + pulse * 40), int(70 + pulse * 80))
+    pygame.draw.line(surf, corner_col, (board_x, board_y), (board_x + 15, board_y), 2)
+    pygame.draw.line(surf, corner_col, (board_x, board_y), (board_x, board_y + 15), 2)
+    pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y), (board_x + BOARD_W - 15, board_y), 2)
+    pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y), (board_x + BOARD_W, board_y + 15), 2)
+    pygame.draw.line(surf, corner_col, (board_x, board_y + BOARD_H), (board_x + 15, board_y + BOARD_H), 2)
+    pygame.draw.line(surf, corner_col, (board_x, board_y + BOARD_H), (board_x, board_y + BOARD_H - 15), 2)
+    pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y + BOARD_H), (board_x + BOARD_W - 15, board_y + BOARD_H), 2)
+    pygame.draw.line(surf, corner_col, (board_x + BOARD_W, board_y + BOARD_H), (board_x + BOARD_W, board_y + BOARD_H - 15), 2)
