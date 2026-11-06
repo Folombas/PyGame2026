@@ -948,6 +948,16 @@ def draw_hud(surf, game, sidebar_x, t, meta):
         col = tuple(c // 2 for c in hc) if dim else hc
         draw_piece_mini(surf, hs, col, hb.centerx, hb.centery + 5, cell=20)
 
+    # T-spin / PC счётчики
+    tspins = getattr(game, 'tspin_count', 0)
+    pcs = meta.get('stats', {}).get('perfect_clears', 0) if meta else 0
+    if tspins > 0:
+        tt = F_TINY.render(f"T-SPIN x{tspins}", True, ACCENT2)
+        surf.blit(tt, (x, y + 240))
+    if pcs > 0:
+        pt = F_TINY.render(f"PC x{pcs}", True, GOLD)
+        surf.blit(pt, (x, y + 258))
+
     if game.combo > 1:
         c = F_H2.render(f"COMBO x{game.combo}", True, GOLD)
         surf.blit(c, c.get_rect(midtop=(x + 100, HEIGHT - 80)))
