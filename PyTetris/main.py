@@ -261,6 +261,9 @@ def cb_clear(rows, count):
         if game.combo > 1:
             combo_display = game.combo
             combo_display_t = pygame.time.get_ticks()
+            if game.combo <= 2: audio.play('combo_low')
+            elif game.combo <= 4: audio.play('combo_mid')
+            else: audio.play('combo_hi')
 
     # Live stats
     meta['stats']['total_lines'] += count
@@ -309,7 +312,7 @@ def cb_clear(rows, count):
         meta['coins'] = meta.get('coins', 0) + 500
         meta['unopened_packs'] = meta.get('unopened_packs', 0) + 1
         save_meta(meta)
-        audio.play('milestone')
+        audio.play('pc')
         fx.kick(15.0)
         for _ in range(20):
             fx.burst(S.WIDTH // 2 + random.randint(-200, 200),
