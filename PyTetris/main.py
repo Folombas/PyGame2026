@@ -152,6 +152,10 @@ def toggle_lang():
 
 
 def quit_game():
+    try:
+        save_meta(meta)
+    except Exception:
+        pass
     pygame.quit()
     sys.exit()
 
@@ -393,6 +397,10 @@ def handle_events():
     global state, muted, konami_progress, pack_reveal, pack_reveal_t, focus_lost
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
+            try:
+                save_meta(meta)
+            except Exception:
+                pass
             pygame.quit(); sys.exit()
         if e.type == pygame.WINDOWFOCUSLOST and state == PLAY:
             set_state(PAUSE)
