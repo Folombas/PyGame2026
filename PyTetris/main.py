@@ -47,7 +47,7 @@ DAS_DELAY = 160
 DAS_REPEAT = 40
 clock = pygame.time.Clock()
 
-MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY = range(13)
+MENU, PLAY, PAUSE, OVER, SCORES, ACHS, DAILY, SETTINGS, COLLECTION, SHOP, CALENDAR, PROFILE, WEEKLY, QUIT_CONFIRM = range(14)
 state = MENU
 transition_alpha = 0
 fade_speed = 15
@@ -438,6 +438,21 @@ def handle_events():
                         print("🎉 KONAMI CODE!")
                 else:
                     konami_progress = 0
+
+        if state == QUIT_CONFIRM:
+            if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_y or e.key == pygame.K_RETURN:
+                    pygame.quit(); sys.exit()
+                elif e.key == pygame.K_n or e.key == pygame.K_ESCAPE:
+                    set_state(MENU)
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                mx, my = e.pos
+                # Yes/No кнопки: центр, y = HEIGHT//2 + 30
+                if S.WIDTH // 2 - 160 <= mx <= S.WIDTH // 2 - 20 and S.HEIGHT // 2 + 30 <= my <= S.HEIGHT // 2 + 80:
+                    pygame.quit(); sys.exit()
+                if S.WIDTH // 2 + 20 <= mx <= S.WIDTH // 2 + 160 and S.HEIGHT // 2 + 30 <= my <= S.HEIGHT // 2 + 80:
+                    set_state(MENU)
+            return
 
         if state == MENU:
             for b in menu_buttons: b.handle(e)
