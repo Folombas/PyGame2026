@@ -614,20 +614,15 @@ def draw_calendar(surf, meta, t):
         y = sy
         rect = pygame.Rect(x, y, cw, ch)
         if r['claimed']:
-            bg = (30, 50, 30)
-            border = (60, 200, 80)
+            bg, border = (30, 50, 30), (60, 200, 80)
         elif r['current']:
-            bg = (50, 40, 20)
-            border = GOLD
+            bg, border = (50, 40, 20), GOLD
         else:
-            bg = (22, 20, 40)
-            border = (80, 80, 100)
+            bg, border = (22, 20, 40), (80, 80, 100)
         pygame.draw.rect(surf, bg, rect, border_radius=8)
         pygame.draw.rect(surf, border, rect, 2, border_radius=8)
-        # day number
-        dn = F_H2.render(f"D{r['day']}", True, border)
+        dn = F_H2.render(f"Д{r['day']}", True, border)
         surf.blit(dn, dn.get_rect(midtop=(x + cw // 2, y + 8)))
-        # reward
         if r['coins'] > 0:
             ct = F_SMALL.render(f"🪙{r['coins']}", True, GOLD)
             surf.blit(ct, ct.get_rect(center=(x + cw // 2, y + 55)))
@@ -638,14 +633,14 @@ def draw_calendar(surf, meta, t):
             ck = F_H2.render("✓", True, (60, 200, 80))
             surf.blit(ck, ck.get_rect(center=(x + cw // 2, y + 90)))
 
-    # Claim button
+    # Кнопка CLAIM — точная позиция совпадает с hitbox в main.py
     cur = next((r for r in cal if r['current']), None)
     if cur:
-        btn = pygame.Rect(WIDTH // 2 - 120, sy + ch + 40, 240, 55)
+        btn = pygame.Rect(WIDTH // 2 - 120, 270, 240, 55)
         pygame.draw.rect(surf, GOLD, btn, border_radius=10)
-        bt = F_H2.render("CLAIM TODAY", True, (20, 20, 20))
+        pygame.draw.rect(surf, (255, 255, 200), btn, 2, border_radius=10)
+        bt = F_H2.render("ЗАБРАТЬ", True, (20, 20, 20))
         surf.blit(bt, bt.get_rect(center=btn.center))
-
 
 def draw_profile(surf, meta, t):
     from meta import get_player_title, get_achievement_points, get_global_rank
