@@ -428,6 +428,13 @@ def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, sp
     
     # Кнопка назад
     back_btn.rect.y = HEIGHT - 60
+    # Reset кнопка (внизу слева)
+    reset_rect = pygame.Rect(rect.x + 40, rect.bottom - 60, 180, 40)
+    pygame.draw.rect(surf, (180, 30, 30), reset_rect, border_radius=8)
+    pygame.draw.rect(surf, (255, 100, 100), reset_rect, 2, border_radius=8)
+    rt = F_SMALL.render("СБРОСИТЬ ПРОГРЕСС", True, TEXT)
+    surf.blit(rt, rt.get_rect(center=reset_rect.center))
+
     back_btn.draw(surf)
 def draw_hud(surf, game, sidebar_x, t, meta):
     """Компактный HUD — только самое нужное."""

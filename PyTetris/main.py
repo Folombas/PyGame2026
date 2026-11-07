@@ -535,6 +535,27 @@ def handle_events():
             if shake_toggle: shake_toggle.handle_event(e)
             if speed_slider: speed_slider.handle_event(e)
             if grid_toggle: grid_toggle.handle_event(e)
+            # Reset при клике
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                mx, my = e.pos
+                # Reset кнопка: rect.x + 40, rect.bottom - 60
+                # draw_settings использует rect = (WIDTH//2 - 250, 130, 500, 440)
+                reset_x = (S.WIDTH // 2 - 250) + 40
+                reset_y = (130 + 440) - 60
+                if reset_x <= mx <= reset_x + 180 and reset_y <= my <= reset_y + 40:
+                    # Сброс прогресса
+                    import meta as M
+                    meta['stats'] = {'total_lines': 0, 'best_score': 0, 'best_level': 1, 'max_combo': 0, 'tetris_count': 0, 'longest_run': 0, 'b2b_count': 0, 'perfect_clears': 0, 'hold_uses': 0, 'sprint_wins': 0, 'zen_games': 0, 'sets_done': 0, 'packs_opened': 0}
+                    meta['cards'] = {}
+                    meta['medals'] = {}
+                    meta['xp'] = 0
+                    meta['player_level'] = 1
+                    meta['coins'] = 0
+                    meta['unopened_packs'] = 0
+                    meta['completed_sets'] = []
+                    M.save_meta(meta)
+                    audio.play('levelup')
+                    print("⚠️ Прогресс сброшен")
         elif state in (SCORES, ACHS, DAILY, COLLECTION, WEEKLY):
             for b in nav_buttons: b.handle(e)
             if e.type == pygame.KEYDOWN and e.key in (pygame.K_ESCAPE, pygame.K_RETURN):
