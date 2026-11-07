@@ -39,6 +39,7 @@ os.environ['SDL_VIDEO_CENTERED'] = '1'  # центрируем окно на э�
 screen = pygame.display.set_mode((S.WIDTH, S.HEIGHT))
 is_fullscreen = False
 debug_overlay = False
+help_visible = False
 window_scale = 1.0
 das_timer = 0
 das_direction = 0
@@ -929,6 +930,36 @@ while running:
             screen.blit(txt, txt.get_rect(center=(S.WIDTH // 2, S.HEIGHT // 2 - 100)))
         except Exception:
             pass
+
+    if help_visible:
+        overlay = pygame.Surface((S.WIDTH, S.HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 220))
+        screen.blit(overlay, (0, 0))
+        title = ui.F_H1.render("УПРАВЛЕНИЕ", True, S.ACCENT)
+        screen.blit(title, title.get_rect(center=(S.WIDTH // 2, 80)))
+        controls = [
+            ("← →", "движение (DAS)"),
+            ("↓", "soft drop"),
+            ("↑ / Z", "поворот"),
+            ("SPACE", "hard drop"),
+            ("C", "hold"),
+            ("P / ESC", "пауза"),
+            ("M", "mute"),
+            ("F1", "эта справка"),
+            ("F3", "debug (FPS)"),
+            ("F4", "окно 75%/100%"),
+            ("F11", "fullscreen"),
+            ("F5 / F9", "экспорт / импорт save"),
+        ]
+        y = 160
+        for key, action in controls:
+            k = ui.F_H2.render(key, True, S.GOLD)
+            a = ui.F_MED.render(action, True, S.TEXT)
+            screen.blit(k, (S.WIDTH // 2 - 200, y))
+            screen.blit(a, (S.WIDTH // 2 - 20, y + 5))
+            y += 40
+        hint = ui.F_SMALL.render("F1 — закрыть", True, S.MUTED)
+        screen.blit(hint, hint.get_rect(center=(S.WIDTH // 2, S.HEIGHT - 50)))
 
     if debug_overlay:
         fps = clock.get_fps()
