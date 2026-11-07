@@ -233,42 +233,43 @@ def draw_achievements(surf, meta, ach_list):
     ap = get_achievement_points(meta)
     rank = get_global_rank(meta)
     draw_title(surf, locale.t("ach"), 30, pygame.time.get_ticks())
-    header = F_SMALL.render(f"{locale.t('ap')}: {ap}   |   {locale.t('rank')}: {rank}/10", True, GOLD)
+    header = F_SMALL.render(f"AP: {ap}   |   {locale.t('rank')}: {rank}/10", True, GOLD)
     surf.blit(header, header.get_rect(center=(WIDTH // 2, 75)))
 
     rect = pygame.Rect(WIDTH // 2 - 320, 100, 640, 580)
     panel(surf, rect, accent=ACCENT2)
 
-    # Группируем по категориям
     cats = ['progress', 'skill', 'endurance', 'mastery']
+    cat_names = {'progress': 'ПРОГРЕСС', 'skill': 'МАСТЕРСТВО', 'endurance': 'ВЫНОСЛИВОСТЬ', 'mastery': 'ШЕДЕВРЫ'}
     y_cursor = rect.y + 15
     for cat in cats:
         cat_ach = [a for a in ach_list if a.get('cat') == cat and (not a.get('hidden') or get_medal_tier(meta, a) > 0)]
-        if not cat_ach: continue
-        cat_label = F_SMALL.render(f"── {cat.upper()} ──", True, ACCENT)
-        surf.blit(cat_label, (rect.x + 15, y_cursor))
+        if not cat_ach:
+            continue
+        cat_label = F_SMALL.render(f"— {cat_names[cat]} —", True, ACCENT)
+        surf.blit(cat_label, (rect.centerx - cat_label.get_width() // 2, y_cursor))
         y_cursor += 22
         for a in cat_ach:
             tier = get_medal_tier(meta, a)
             cur, nxt, cur_tier = get_progress(meta, a)
-            # 5 mini medals
             for t in range(1, 6):
                 draw_medal(surf, rect.x + 15 + (t - 1) * 14, y_cursor + 4, 12, t if tier >= t else 0)
             color = ACCENT if tier > 0 else MUTED
             name = F_SMALL.render(locale.t(a['name_key']), True, color)
             surf.blit(name, (rect.x + 95, y_cursor))
-            # progress bar
-            if cur_tier < 5:
-                frac = cur / nxt if nxt else 0
-                draw_progress_bar(surf, rect.x + 320, y_cursor + 8, 250, 8, frac, MEDAL_COLORS[min(5, cur_tier + 1)] or (100,100,120))
+            if cur_tier < 5 and nxt > 0:
+                bar = pygame.Rect(rect.x + 320, y_cursor + 8, 250, 8)
+                frac = min(1.0, cur / nxt) if nxt else 0
+                draw_progress_bar(surf, bar.x, bar.y, bar.w, bar.h, frac, GOLD if tier > 0 else MUTED)
                 stat = F_TINY.render(f"{int(cur)}/{nxt}", True, MUTED)
-                surf.blit(stat, (rect.x + 610 - stat.get_width(), y_cursor - 2))
+                surf.blit(stat, (rect.right - 20 - stat.get_width(), y_cursor))
             else:
-                stat = F_TINY.render("MAX", True, GOLD)
-                surf.blit(stat, (rect.x + 610 - stat.get_width(), y_cursor))
+                mx = F_TINY.render("MAX", True, GOLD)
+                surf.blit(mx, (rect.right - 20 - mx.get_width(), y_cursor))
             y_cursor += 28
         y_cursor += 6
-        if y_cursor > rect.bottom - 30: break
+        if y_cursor > rect.bottom - 30:
+            break
 
 def draw_dailies(surf, meta, quests, weeklies=None):
     from meta import daily_progress, weekly_progress, get_streak_multiplier, get_wildcard, wildcard_progress
