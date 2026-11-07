@@ -543,28 +543,24 @@ def draw_shop(surf, meta, t):
     surf.blit(cl, cl.get_rect(midtop=(WIDTH // 2, 78)))
 
     items = [
-        ('standard', 'STANDARD PACK', '1 random card', ACCENT),
-        ('premium', 'PREMIUM PACK', 'Guaranteed Rare+', ACCENT2),
-        ('legendary', 'LEGENDARY PACK', 'Legendary boosted x5', GOLD),
+        ('standard', 'СТАНДАРТНЫЙ ПАК', '1 случайная карта', ACCENT),
+        ('premium', 'ПРЕМИУМ ПАК', 'Гарантированный Rare+', ACCENT2),
+        ('legendary', 'ЛЕГЕНДАРНЫЙ ПАК', 'Шанс легендарки ×5', GOLD),
     ]
     y = 130
     for kind, title, desc, col in items:
         rect = pygame.Rect(WIDTH // 2 - 250, y, 500, 90)
-        affordable = meta.get('coins', 0) >= PACK_PRICES[kind]
+        price = PACK_PRICES[kind]
+        affordable = coins >= price
         pygame.draw.rect(surf, (22, 20, 40), rect, border_radius=12)
         pygame.draw.rect(surf, col if affordable else (80, 80, 100), rect, 2, border_radius=12)
         tt = F_H2.render(title, True, col if affordable else (120, 120, 140))
         surf.blit(tt, (rect.x + 20, rect.y + 12))
         dd = F_SMALL.render(desc, True, MUTED)
         surf.blit(dd, (rect.x + 20, rect.y + 50))
-        # price
-        pr = F_H2.render(f"🪙 {PACK_PRICES[kind]}", True, GOLD if affordable else (100, 100, 120))
+        pr = F_H2.render(f"🪙 {price}", True, GOLD if affordable else (100, 100, 120))
         surf.blit(pr, (rect.right - 20 - pr.get_width(), rect.y + 32))
         y += 105
-
-    hint = F_TINY.render("ЛКМ — купить   ESC — назад", True, MUTED)
-    surf.blit(hint, hint.get_rect(midbottom=(WIDTH // 2, HEIGHT - 15)))
-
 
 def draw_calendar(surf, meta, t):
     from meta import get_daily_calendar, LOGIN_REWARDS
