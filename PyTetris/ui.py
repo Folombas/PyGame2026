@@ -331,23 +331,23 @@ def draw_dailies(surf, meta, quests, weeklies=None):
         pass
 
 def draw_collection(surf, meta):
-    from cards import CARDS, get_cards_by_category, get_card_level, get_card_dups_to_next, RARITY_COLORS, CATEGORIES
+    from cards import CARDS, get_cards_by_category, get_card_level, RARITY_COLORS, CATEGORIES
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
     owned = meta.get('cards', {})
     packs = meta.get('unopened_packs', 0)
     draw_title(surf, f"{locale.t('collection_title')}  {len(owned)}/{len(CARDS)}", 25, pygame.time.get_ticks())
     if packs > 0:
-        pk = F_H2.render(f"📦 {packs} {locale.t('packs')}", True, GOLD)
+        pk = F_H2.render(f"📦 {packs} паков — SPACE", True, GOLD)
         surf.blit(pk, pk.get_rect(midtop=(WIDTH // 2, 70)))
 
-    cols, cw, ch, pad = 5, 100, 120, 10
-    start_y = 120
-    cat_labels = {'beasts': 'cat_beasts', 'lands': 'cat_lands', 'artifacts': 'cat_artifacts',
-                  'signs': 'cat_signs', 'heroes': 'cat_heroes'}
-    for ci, cat in enumerate(CATEGORIES):
+    cat_names = {'beasts': 'ЗВЕРИ', 'lands': 'ЗЕМЛИ', 'artifacts': 'АРТЕФАКТЫ', 'signs': 'ЗНАКИ', 'heroes': 'ГЕРОИ'}
+    cols, cw, ch, pad = 5, 100, 110, 10
+    start_y = 115
+    for cat in CATEGORIES:
         cat_cards = get_cards_by_category(cat)
-        if not cat_cards: continue
-        label = F_SMALL.render(locale.t(cat_labels[cat]), True, ACCENT)
+        if not cat_cards:
+            continue
+        label = F_SMALL.render(cat_names[cat], True, ACCENT)
         surf.blit(label, (60, start_y))
         total_w = cols * cw + (cols - 1) * pad
         sx = (WIDTH - total_w) // 2
@@ -359,15 +359,15 @@ def draw_collection(surf, meta):
             draw_card_icon(surf, x, y, cw, ch, card['rarity'], unlocked)
             if unlocked:
                 nm = F_TINY.render(locale.t(card['name_key']), True, RARITY_COLORS[card['rarity']])
-                surf.blit(nm, nm.get_rect(center=(x + cw // 2, y + 20)))
-                lv = F_TINY.render(locale.t('card_level', n=lvl), True, GOLD if lvl >= 3 else MUTED)
-                surf.blit(lv, lv.get_rect(center=(x + cw // 2, y + ch - 20)))
+                surf.blit(nm, nm.get_rect(center=(x + cw // 2, y + 18)))
+                lv = F_TINY.render(f"Ур.{lvl}", True, GOLD if lvl >= 3 else MUTED)
+                surf.blit(lv, lv.get_rect(center=(x + cw // 2, y + ch - 18)))
             else:
                 val = meta['stats'].get(card['stat'], 0)
                 prog = f"{min(val, card['threshold'])}/{card['threshold']}"
                 ptxt = F_TINY.render(prog, True, (100, 100, 120))
-                surf.blit(ptxt, ptxt.get_rect(center=(x + cw // 2, y + ch - 20)))
-        start_y += ch + 30
+                surf.blit(ptxt, ptxt.get_rect(center=(x + cw // 2, y + ch - 18)))
+        start_y += ch + 20
 
 def draw_settings(surf, music_slider, sfx_slider, ghost_toggle, shake_toggle, speed_slider, grid_toggle, back_btn):
     vertical_gradient(surf, (18, 12, 40), (6, 4, 16))
