@@ -824,7 +824,7 @@ while running:
     elif state == ACHS:
         ui.draw_achievements(screen, meta, ACHIEVEMENTS)
     elif state == DAILY:
-        ui.draw_dailies(screen, meta, get_daily_quests(), get_weekly_quests())
+        ui.draw_dailies(screen, meta, get_daily_quests())
     elif state == WEEKLY:
         ui.draw_weekly(screen, meta, get_weekly_quests())
     elif state == SETTINGS:
