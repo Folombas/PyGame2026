@@ -1,7 +1,7 @@
-"""Звуковые эффекты: сначала WAV из assets/sfx, иначе — процедурный синтез."""
+"""Звуковые эффекты: WAV из assets/sfx, fallback на процедурный синтез."""
 import os
 import pygame
-import synth  # процедурный fallback
+import synth
 
 _sounds = {}
 _audio_ok = True
@@ -23,7 +23,7 @@ def load_all():
         if os.path.exists(path):
             try:
                 snd = pygame.mixer.Sound(path)
-                snd.set_volume(0.6)
+                snd.set_volume(0.5)
                 _sounds[name] = snd
             except Exception:
                 pass
@@ -39,7 +39,6 @@ def play(name: str):
             return
         except Exception:
             pass
-    # Fallback на процедурный
     if name in ("correct", "success"):
         synth.play_success()
     elif name in ("wrong", "error"):
