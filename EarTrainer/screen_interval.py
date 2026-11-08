@@ -4,6 +4,7 @@ import theme
 import ui
 import icons
 import audio
+from staff import Staff
 import progress
 from effects import Effects
 from trainer import Session
@@ -15,6 +16,7 @@ class IntervalScreen:
         self.level = level
         self.direction = direction
         self.session = Session("interval", level=level, direction=direction)
+        self.staff = Staff()
         self.effects = Effects()
         self.choices = self.session.current.choices(level)
         self.progress = progress.load()
@@ -32,11 +34,11 @@ class IntervalScreen:
 
     def _layout(self):
         W = theme.WIDTH
-        self.replay_rect = pygame.Rect(W // 2 - 150, 260, 300, 56)
+        self.replay_rect = pygame.Rect(W // 2 - 150, 320, 300, 50)
         bw, bh = 380, 90
         gap = 20
         sx = W // 2 - bw - gap // 2
-        sy = 400
+        sy = 380
         self.choice_rects = []
         for i in range(4):
             cx = sx + (i % 2) * (bw + gap)
@@ -48,7 +50,14 @@ class IntervalScreen:
         return f"{opt[2]}  ({opt[1]})"
 
     def _play_current(self):
-        self.session.current.play()
+        q = self.session.current
+        # Определяем две ноты интервала
+        if q.direction == "up":
+            a, b = q.root, q.root + q.semitones
+        else:
+            a, b = q.root - q.semitones, q.root
+        self.staff.set_notes([a, b])
+        q.play()
 
     def _submit(self, idx):
         opt = self.choices[idx]
@@ -140,6 +149,7 @@ class IntervalScreen:
                     return
 
     def update(self, dt, mouse):
+        self.staff.update(dt)
         self.effects.update(dt)
         if self.feedback_timer > 0:
             self.feedback_timer -= dt
@@ -158,59 +168,56 @@ class IntervalScreen:
         surf.fill(theme.MD_BG)
         p = self.progress
 
-        # ─── Верхняя панель: hearts, streak, XP ───
-        ui.draw_hearts(surf, 30, 30, p["hearts"], p["max_hearts"])
-        ui.draw_streak_badge(surf, W - 120, 25, p["streak_days"])
+        # ─── Верхняя панель: hearts, streak, level, XP ───
+        ui.draw_hearts(surf, 30, 25, p["hearts"], p["max_hearts"])
+        ui.draw_streak_badge(surf, W - 120, 20, p["streak_days"])
 
-        # XP-бар
         cur_xp, req_xp = progress.xp_progress(p)
-        ui.draw_xp_bar(surf, W // 2 - 150, 60, 300, 10, cur_xp, req_xp)
+        ui.draw_xp_bar(surf, W // 2 - 150, 55, 300, 10, cur_xp, req_xp)
         f = theme.font(14, bold=True)
         lvl = f.render(f"Уровень {p['level']}", True, theme.MD_PRIMARY)
-        surf.blit(lvl, lvl.get_rect(center=(W // 2, 40)))
+        surf.blit(lvl, lvl.get_rect(center=(W // 2, 35)))
 
         # ─── Заголовок ───
         title = "Интервалы"
-        f2 = theme.font(36, bold=True)
+        f2 = theme.font(32, bold=True)
         tw = f2.size(title)[0]
-        x0 = W // 2 - (40 + 15 + tw) // 2
-        icons.draw_music_note(surf, x0 + 20, 110, 36, theme.MD_PRIMARY)
-        surf.blit(f2.render(title, True, theme.MD_PRIMARY), (x0 + 55, 90))
+        x0 = W // 2 - (36 + 15 + tw) // 2
+        icons.draw_music_note(surf, x0 + 18, 105, 32, theme.MD_PRIMARY)
+        surf.blit(f2.render(title, True, theme.MD_PRIMARY), (x0 + 50, 88))
 
         level_name = LEVEL_TITLES.get(self.level, "?")
         direction_name = "вверх" if self.direction == "up" else "вниз"
         ui.draw_text_centered(
             surf, f"Уровень: {level_name}  ·  {direction_name}",
-            150, 16, theme.MD_MUTED,
+            130, 14, theme.MD_MUTED,
         )
 
-        # ─── Daily quest ───
-        d_done, d_tgt = progress.daily_progress(p)
-        ui.draw_daily_quests(surf, W // 2 - 200, 175, 400, d_done, d_tgt)
+        # ─── Нотный стан (новинка) ───
+        self.staff.draw(surf, W // 2, 230)
 
         # ─── Кнопка "Слушать снова" ───
         rb = theme.MD_PRIMARY if self.hover_replay else theme.MD_SURFACE
         pygame.draw.rect(surf, rb, self.replay_rect, border_radius=14)
         b = theme.MD_PRIMARY if self.hover_replay else (60, 60, 75)
         pygame.draw.rect(surf, b, self.replay_rect, 2, border_radius=14)
-        # Иконка + текст центрируем как единый блок
-        f3 = theme.font(22, bold=True)
-        txt = f3.render("Слушать снова", True, theme.MD_ON_BG if self.hover_replay else theme.MD_ON_SURFACE)
+
+        f3 = theme.font(20, bold=True)
+        txt = f3.render("Слушать снова", True,
+                        theme.MD_ON_BG if self.hover_replay else theme.MD_ON_SURFACE)
         icon_size = 22
         gap = 18
         total_w = icon_size + gap + txt.get_width()
-        start_x = self.replay_rect.centerx - total_w // 2
-        # Иконка (центр в своём слоте)
-        icons.draw_speaker(surf, start_x + icon_size // 2,
-                           self.replay_rect.centery, icon_size,
+        sx = self.replay_rect.centerx - total_w // 2
+        icons.draw_speaker(surf, sx + icon_size // 2, self.replay_rect.centery,
+                           icon_size,
                            theme.MD_ON_BG if self.hover_replay else theme.MD_ON_SURFACE)
-        # Текст (строго после иконки)
-        surf.blit(txt, (start_x + icon_size + gap,
+        surf.blit(txt, (sx + icon_size + gap,
                         self.replay_rect.centery - txt.get_height() // 2))
-        ui.draw_text_centered(surf, "нажми ПРОБЕЛ", self.replay_rect.bottom + 12, 14, theme.MD_MUTED)
 
         # ─── Вопрос ───
-        ui.draw_text_centered(surf, "Какой интервал прозвучал?", 360, 22, theme.MD_ON_BG, bold=True)
+        ui.draw_text_centered(surf, "Какой интервал прозвучал?", 340, 20,
+                              theme.MD_ON_BG, bold=True)
 
         # ─── Варианты ───
         for i, rect in enumerate(self.choice_rects):
@@ -223,30 +230,33 @@ class IntervalScreen:
             num_f = theme.font(28, bold=True)
             num = num_f.render(str(i + 1), True, theme.MD_PRIMARY if hov else theme.MD_MUTED)
             surf.blit(num, (rect.x + 18, rect.centery - 16))
-            ui.draw_text_left(surf, self._label_of(opt), rect.x + 65, rect.centery - 14, 22,
-                              theme.MD_ON_SURFACE)
+            ui.draw_text_left(surf, self._label_of(opt), rect.x + 65,
+                              rect.centery - 12, 20, theme.MD_ON_SURFACE)
 
         # ─── Обратная связь ───
         if self.feedback_timer > 0 and self.feedback_text:
-            ui.draw_text_centered(surf, self.feedback_text, 620, 26,
+            ui.draw_text_centered(surf, self.feedback_text, 620, 22,
                                   self.feedback_color, bold=True)
 
-        # ─── XP-буст (всплывающий) ───
+        # ─── XP-буст ───
         if self.xp_gain_timer > 0 and self.xp_gain_pending > 0:
             alpha = max(0, int(255 * (self.xp_gain_timer / 900)))
-            f4 = theme.font(24, bold=True)
+            f4 = theme.font(22, bold=True)
             xt = f4.render(f"+{self.xp_gain_pending} XP", True, theme.MD_GOLD)
             xt.set_alpha(alpha)
-            surf.blit(xt, xt.get_rect(center=(W // 2, 300 - (900 - self.xp_gain_timer) // 20)))
+            surf.blit(xt, xt.get_rect(center=(W // 2, 640 - (900 - self.xp_gain_timer) // 20)))
 
         # ─── Назад ───
         bb = theme.MD_SURFACE_HI if self.hover_back else theme.MD_SURFACE
         pygame.draw.rect(surf, bb, self.back_rect, border_radius=10)
         pygame.draw.rect(surf, (60, 60, 75), self.back_rect, 2, border_radius=10)
-        icons.draw_arrow_left(surf, self.back_rect.x + 30, self.back_rect.centery, 20, theme.MD_ON_SURFACE)
-        f5 = theme.font(20, bold=True)
+        icons.draw_arrow_left(surf, self.back_rect.x + 30, self.back_rect.centery,
+                              20, theme.MD_ON_SURFACE)
+        f5 = theme.font(18, bold=True)
         bt = f5.render("Назад", True, theme.MD_ON_SURFACE)
         surf.blit(bt, bt.get_rect(center=(self.back_rect.centerx + 15, self.back_rect.centery)))
 
+        # Эффекты
         self.effects.draw(surf)
         self.effects.draw_flash(surf)
+
