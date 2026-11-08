@@ -5,6 +5,7 @@ import theme
 import ui
 import icons
 from screen_interval import IntervalScreen
+from tutorial import TutorialScreen
 
 pygame.init()
 screen = pygame.display.set_mode((theme.WIDTH, theme.HEIGHT))
