@@ -3,7 +3,7 @@ import pygame
 import theme
 from theme import (
     MD_PRIMARY, MD_SURFACE, MD_SURFACE_HI, MD_ON_SURFACE, MD_ON_BG,
-    MD_MUTED, WIDTH,
+    MD_MUTED, MD_GOLD, MD_SUCCESS, MD_ERROR, MD_SECONDARY, WIDTH,
 )
 
 
