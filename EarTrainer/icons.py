@@ -68,3 +68,25 @@ def draw_bar_chart(surf, x, y, size, color):
     pygame.draw.rect(surf, color, (x - s, y + s // 3, s * 2 // 3, s * 2 // 3), 2)
     pygame.draw.rect(surf, color, (x - s // 4, y - s // 3, s * 2 // 3, s * 2 // 3), 2)
     pygame.draw.rect(surf, color, (x + s // 2, y - s, s * 2 // 3, s * 2 // 3), 2)
+
+
+def draw_hearts_icon(surf, x, y, size, color):
+    """Маленькое сердечко для туториала."""
+    pygame.draw.circle(surf, color, (x - size // 4, y - size // 4), size // 4)
+    pygame.draw.circle(surf, color, (x + size // 4, y - size // 4), size // 4)
+    pygame.draw.polygon(surf, color, [
+        (x - size // 2, y - size // 4),
+        (x + size // 2, y - size // 4),
+        (x, y + size // 2),
+    ])
+
+
+def draw_star(surf, x, y, size, color):
+    """Звезда для туториала."""
+    import math
+    pts = []
+    for i in range(10):
+        ang = math.pi / 2 + i * math.pi / 5
+        r = size // 2 if i % 2 == 0 else size // 4
+        pts.append((x + r * math.cos(ang), y - r * math.sin(ang)))
+    pygame.draw.polygon(surf, color, pts)

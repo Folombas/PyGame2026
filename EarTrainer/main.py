@@ -12,9 +12,11 @@ pygame.display.set_caption("EarTrainer — Тренажёр слуха")
 clock = pygame.time.Clock()
 
 MENU = "menu"
+TUTORIAL = 'tutorial'
 INTERVAL = "interval"
 state = MENU
 interval_screen = None
+tutorial_screen = None
 
 # Карточки с иконками: (key, label, desc, color, icon_fn)
 MODE_CARDS = [
@@ -35,6 +37,7 @@ for i, (key, _label, _desc, _color, _icon) in enumerate(MODE_CARDS):
     _card_rects[key] = pygame.Rect(cx, cy, _card_w, _card_h)
 
 _quit_rect = pygame.Rect(theme.WIDTH // 2 - 100, 540, 200, 60)
+_tutorial_rect = pygame.Rect(theme.WIDTH // 2 - 100, 480, 200, 50)
 _hovered = {k: False for k in _card_rects}
 _quit_hover = False
 
@@ -50,6 +53,7 @@ def go_menu():
     global state, interval_screen
     state = MENU
     interval_screen = None
+tutorial_screen = None
 
 
 running = True
@@ -69,12 +73,22 @@ while running:
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                 if _card_rects["interval"].collidepoint(e.pos):
                     start_interval()
+                elif _tutorial_rect.collidepoint(e.pos):
+                    global state, tutorial_screen
+                    tutorial_screen = TutorialScreen()
+                    state = TUTORIAL
                 elif _quit_rect.collidepoint(e.pos):
                     running = False
 
     if state == INTERVAL and interval_screen:
         interval_screen.update(dt, mouse)
         interval_screen.draw(screen)
+    elif state == TUTORIAL and tutorial_screen:
+        tutorial_screen.update(dt, mouse)
+        tutorial_screen.draw(screen)
+        if tutorial_screen.finished:
+            state = MENU
+            tutorial_screen = None
     else:
         for k, r in _card_rects.items():
             _hovered[k] = r.collidepoint(mouse)
@@ -105,6 +119,9 @@ while running:
         ui.draw_text_centered(screen, "Выход", _quit_rect.centery - 2, 22,
                               theme.MD_ERROR if _quit_hover else theme.MD_ON_SURFACE, bold=True)
 
+        # Кнопка туториала
+        ui.draw_text_centered(screen, "Как играть?", _tutorial_rect.centery - 2, 22,
+                              theme.MD_SECONDARY, bold=True)
         ui.draw_text_centered(screen, "Прогресс: 0 очков  ·  Стрик: 0 дней",
                               theme.HEIGHT - 40, 16, theme.MD_MUTED)
 
