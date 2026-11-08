@@ -19,10 +19,23 @@ HEIGHT = 720
 FPS = 60
 
 
+# Проверяем доступные системные шрифты один раз
+_AVAILABLE = set(pygame.font.get_fonts())  # возвращает lowercase без пробелов
+
+def _pick_font_name():
+    """Возвращает имя первого доступного шрифта с поддержкой кириллицы."""
+    candidates = ("notosans", "dejavusans", "liberationsans", "arial", "freesans")
+    for name in candidates:
+        if name in _AVAILABLE:
+            return name
+    return None
+
+_FONT_NAME = _pick_font_name()
+
 def font(size: int, bold: bool = False) -> pygame.font.Font:
-    for name in ("Roboto", "DejaVu Sans", "Arial"):
+    if _FONT_NAME:
         try:
-            return pygame.font.SysFont(name, size, bold=bold)
+            return pygame.font.SysFont(_FONT_NAME, size, bold=bold)
         except Exception:
             pass
     return pygame.font.Font(None, size)
