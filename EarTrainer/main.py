@@ -74,7 +74,6 @@ while running:
                 if _card_rects["interval"].collidepoint(e.pos):
                     start_interval()
                 elif _tutorial_rect.collidepoint(e.pos):
-                    global state, tutorial_screen
                     tutorial_screen = TutorialScreen()
                     state = TUTORIAL
                 elif _quit_rect.collidepoint(e.pos):
