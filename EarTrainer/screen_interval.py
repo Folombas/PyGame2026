@@ -32,11 +32,11 @@ class IntervalScreen:
 
     def _layout(self):
         W = theme.WIDTH
-        self.replay_rect = pygame.Rect(W // 2 - 150, 200, 300, 56)
+        self.replay_rect = pygame.Rect(W // 2 - 150, 260, 300, 56)
         bw, bh = 380, 90
         gap = 20
         sx = W // 2 - bw - gap // 2
-        sy = 380
+        sy = 400
         self.choice_rects = []
         for i in range(4):
             cx = sx + (i % 2) * (bw + gap)
@@ -200,7 +200,7 @@ class IntervalScreen:
         ui.draw_text_centered(surf, "нажми ПРОБЕЛ", self.replay_rect.bottom + 12, 14, theme.MD_MUTED)
 
         # ─── Вопрос ───
-        ui.draw_text_centered(surf, "Какой интервал прозвучал?", 340, 22, theme.MD_ON_BG, bold=True)
+        ui.draw_text_centered(surf, "Какой интервал прозвучал?", 360, 22, theme.MD_ON_BG, bold=True)
 
         # ─── Варианты ───
         for i, rect in enumerate(self.choice_rects):
