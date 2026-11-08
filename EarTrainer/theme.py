@@ -39,3 +39,6 @@ def font(size: int, bold: bool = False) -> pygame.font.Font:
         except Exception:
             pass
     return pygame.font.Font(None, size)
+
+# --- Autofix: недостающие цвета ---
+MD_ON_PRIMARY = (0, 0, 0)
