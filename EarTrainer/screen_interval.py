@@ -196,14 +196,15 @@ class IntervalScreen:
         # Иконка + текст центрируем как единый блок
         f3 = theme.font(22, bold=True)
         txt = f3.render("Слушать снова", True, theme.MD_ON_BG if self.hover_replay else theme.MD_ON_SURFACE)
-        icon_size = 26
-        gap = 14
+        icon_size = 22
+        gap = 18
         total_w = icon_size + gap + txt.get_width()
         start_x = self.replay_rect.centerx - total_w // 2
-        # Иконка
+        # Иконка (центр в своём слоте)
         icons.draw_speaker(surf, start_x + icon_size // 2,
-                           self.replay_rect.centery, icon_size, theme.MD_ON_BG)
-        # Текст
+                           self.replay_rect.centery, icon_size,
+                           theme.MD_ON_BG if self.hover_replay else theme.MD_ON_SURFACE)
+        # Текст (строго после иконки)
         surf.blit(txt, (start_x + icon_size + gap,
                         self.replay_rect.centery - txt.get_height() // 2))
         ui.draw_text_centered(surf, "нажми ПРОБЕЛ", self.replay_rect.bottom + 12, 14, theme.MD_MUTED)

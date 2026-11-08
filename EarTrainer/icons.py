@@ -2,22 +2,24 @@
 import pygame
 
 
-def draw_speaker(surf, x, y, size, color):
-    """Динамик с волнами."""
+def draw_speaker(surf, cx, cy, size, color):
+    """Динамик — строго внутри квадрата size x size вокруг центра."""
     s = size // 2
-    pts = [
-        (x - s, y - s // 2),
-        (x - s // 3, y - s // 2),
-        (x + s // 4, y - s),
-        (x + s // 4, y + s),
-        (x - s // 3, y + s // 2),
-        (x - s, y + s // 2),
-    ]
-    pygame.draw.polygon(surf, color, pts, 2)
-    for r in (s // 2, s):
-        rect = pygame.Rect(x + s // 4, y - r, r * 2, r * 2)
+    # Корпус (прямоугольник)
+    bw = s // 2
+    pygame.draw.rect(surf, color, (cx - s, cy - bw, bw, bw * 2), 2)
+    # Треугольник-раструб
+    pygame.draw.polygon(surf, color, [
+        (cx - s + bw, cy - bw),
+        (cx - s + bw + s // 2, cy - s * 2 // 3),
+        (cx - s + bw + s // 2, cy + s * 2 // 3),
+        (cx - s + bw, cy + bw),
+    ], 2)
+    # Волны — 2 дуги, строго в правой половине
+    for r in (s // 3, s * 2 // 3):
+        rect = pygame.Rect(cx + s // 4 - r, cy - r, r * 2, r * 2)
         try:
-            pygame.draw.arc(surf, color, rect, -0.6, 0.6, 2)
+            pygame.draw.arc(surf, color, rect, -0.7, 0.7, 2)
         except Exception:
             pass
 
