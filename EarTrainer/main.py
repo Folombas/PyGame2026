@@ -70,6 +70,11 @@ while running:
             interval_screen.handle(e)
             if interval_screen.back_clicked:
                 go_menu()
+        elif state == TUTORIAL and tutorial_screen:
+            tutorial_screen.handle(e)
+            if tutorial_screen.finished:
+                state = MENU
+                tutorial_screen = None
         elif state == MENU:
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                 if _card_rects["interval"].collidepoint(e.pos):
