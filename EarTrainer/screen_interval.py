@@ -193,10 +193,19 @@ class IntervalScreen:
         pygame.draw.rect(surf, rb, self.replay_rect, border_radius=14)
         b = theme.MD_PRIMARY if self.hover_replay else (60, 60, 75)
         pygame.draw.rect(surf, b, self.replay_rect, 2, border_radius=14)
-        icons.draw_speaker(surf, self.replay_rect.centerx - 90, self.replay_rect.centery, 24, theme.MD_ON_BG)
+        # Иконка + текст центрируем как единый блок
         f3 = theme.font(22, bold=True)
         txt = f3.render("Слушать снова", True, theme.MD_ON_BG if self.hover_replay else theme.MD_ON_SURFACE)
-        surf.blit(txt, txt.get_rect(center=(self.replay_rect.centerx + 15, self.replay_rect.centery)))
+        icon_size = 26
+        gap = 14
+        total_w = icon_size + gap + txt.get_width()
+        start_x = self.replay_rect.centerx - total_w // 2
+        # Иконка
+        icons.draw_speaker(surf, start_x + icon_size // 2,
+                           self.replay_rect.centery, icon_size, theme.MD_ON_BG)
+        # Текст
+        surf.blit(txt, (start_x + icon_size + gap,
+                        self.replay_rect.centery - txt.get_height() // 2))
         ui.draw_text_centered(surf, "нажми ПРОБЕЛ", self.replay_rect.bottom + 12, 14, theme.MD_MUTED)
 
         # ─── Вопрос ───
