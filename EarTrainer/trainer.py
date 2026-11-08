@@ -9,7 +9,7 @@ class IntervalQuestion:
         pool = theory.intervals_for_level(level)
         self.semitones, self.short, self.ru, self.diff = random.choice(pool)
         self.direction = direction
-        self.root = random.randint(55, 67)
+        self.root = random.randint(60, 72)
 
     def play(self):
         synth.play_interval(self.root, self.semitones, self.direction)
@@ -36,7 +36,7 @@ class ChordQuestion:
     def __init__(self, level: int = 1):
         pool = theory.chords_for_level(level)
         self.key, self.semis, self.ru, self.diff = random.choice(pool)
-        self.root = random.randint(52, 64)
+        self.root = random.randint(55, 67)
 
     def play(self):
         synth.play_chord(self.root, self.semis)
