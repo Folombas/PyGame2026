@@ -1,3 +1,4 @@
+import math
 """Переиспользуемые UI-компоненты в Material Design."""
 import pygame
 import theme
@@ -99,21 +100,24 @@ def progress_bar(surf, rect, frac, color=MD_PRIMARY):
 # ─── Геймификация ──────────────────────────────────────────
 
 def draw_hearts(surf, x, y, hearts, max_hearts, size=20):
-    """Рисует сердечки (полные/пустые)."""
+    """Красивые сердечки с плавной формой."""
     for i in range(max_hearts):
-        cx = x + i * (size + 6)
+        cx = x + i * (size + 8)
         cy = y
         full = i < hearts
-        color = (220, 40, 80) if full else (60, 40, 50)
-        # Сердечко как два круга + треугольник
-        r = size // 3
-        pygame.draw.circle(surf, color, (cx + r, cy), r)
-        pygame.draw.circle(surf, color, (cx + size - r, cy), r)
-        pygame.draw.polygon(surf, color, [
-            (cx, cy + r),
-            (cx + size, cy + r),
-            (cx + size // 2, cy + size),
-        ])
+        color = (230, 60, 100) if full else (70, 50, 60)
+        # Строим сердце из двух дуг и уголка
+        points = []
+        for t in range(0, 360, 12):
+            rad = math.radians(t)
+            px = cx + size // 2 + int(size * 0.35 * math.cos(rad))
+            py = cy + size // 2 - int(size * 0.35 * math.sin(rad) * (1.0 + 0.3 * math.cos(rad)))
+            points.append((px, py))
+        # Переворачиваем и добавляем нижний угол
+        bottom = (cx + size // 2, cy + size)
+        points.append(bottom)
+        pygame.draw.polygon(surf, color, points)
+        pygame.draw.polygon(surf, (30, 20, 30), points, 1)
 
 
 def draw_xp_bar(surf, x, y, w, h, cur, total, color=MD_PRIMARY):
