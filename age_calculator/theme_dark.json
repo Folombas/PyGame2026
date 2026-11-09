@@ -1,0 +1,31 @@
+{
+    "defaults": {
+        "font": {
+            "name": "assets/fonts/Roboto-Regular.ttf",
+            "size": "24"
+        }
+    },
+    "button": {
+        "normal_bg": "#BB86FC",
+        "hovered_bg": "#9C64D9",
+        "active_bg": "#7B3FB5",
+        "normal_text": "#000000",
+        "hovered_text": "#000000",
+        "active_text": "#000000",
+        "border_width": "0",
+        "border_radius": "20",
+        "padding": "10, 10, 10, 10"
+    },
+    "text_entry_line": {
+        "normal_bg": "#333333",
+        "normal_text": "#FFFFFF",
+        "border_radius": "10",
+        "padding": "8, 8, 8, 8"
+    },
+    "horizontal_slider": {
+        "normal_bg": "#555555",
+        "hovered_bg": "#777777",
+        "active_bg": "#BB86FC",
+        "selected_bg": "#BB86FC"
+    }
+}
