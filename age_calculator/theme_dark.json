@@ -1,7 +1,7 @@
 {
     "defaults": {
         "font": {
-            "name": "assets/fonts/Roboto-Regular.ttf",
+            "name": "dejavusans",
             "size": "24"
         }
     },

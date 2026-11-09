@@ -1,8 +1,7 @@
 import pygame
 import sys
-import pygame
-import sys
 import random
+import os
 from datetime import datetime
 import pygame_gui
 
@@ -11,6 +10,20 @@ WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Калькулятор возраста папы (Material Design)")
 clock = pygame.time.Clock()
+
+# --- Проверка наличия шрифтов ---
+font_path_bold = "assets/fonts/Roboto-Bold.ttf"
+font_path_reg = "assets/fonts/Roboto-Regular.ttf"
+
+if os.path.exists(font_path_bold) and os.path.exists(font_path_reg):
+    font_title = pygame.font.Font(font_path_bold, 40)
+    font_small = pygame.font.Font(font_path_reg, 20)
+    font_name_gui = "assets/fonts/Roboto-Regular.ttf"
+else:
+    # Если шрифты не скачались, используем системные
+    font_title = pygame.font.SysFont("dejavusans", 40, bold=True)
+    font_small = pygame.font.SysFont("dejavusans", 20)
+    font_name_gui = "dejavusans"
 
 # --- Глобальное состояние ---
 is_dark_theme = True
@@ -99,7 +112,7 @@ while running:
                         else:
                             result_text = f"Когда родился сын, папе было {years_at_birth} лет."
                             # ВЫВОДИМ ВОЗРАСТ НА СЕГОДНЯШНИЙ ДЕНЬ
-                            current_date_text = f"На сегодняшний день: папе {age_father_today} лет, сыну {age_son_today} лет."
+                            current_date_text = f"На сегодня: папе {age_father_today} лет, сыну {age_son_today} лет."
                             
                             for _ in range(150): 
                                 particles.append(Particle(WIDTH//2, 450))
@@ -127,10 +140,6 @@ while running:
     text_color = (255, 255, 255) if is_dark_theme else (50, 50, 50)
     title_color = (187, 134, 252) if is_dark_theme else (98, 0, 238)
     
-    # Шрифты
-    font_title = pygame.font.Font("assets/fonts/Roboto-Bold.ttf", 40)
-    font_small = pygame.font.Font("assets/fonts/Roboto-Regular.ttf", 20)
-    
     title_surface = font_title.render("Когда папа стал папой?", True, title_color)
     screen.blit(title_surface, (WIDTH//2 - title_surface.get_width()//2, 40))
 
@@ -141,7 +150,11 @@ while running:
 
     if result_text:
         current_font_size = int(text_size_slider.get_current_value())
-        res_font = pygame.font.Font("assets/fonts/Roboto-Bold.ttf", current_font_size)
+        if os.path.exists(font_path_bold):
+            res_font = pygame.font.Font(font_path_bold, current_font_size)
+        else:
+            res_font = pygame.font.SysFont("dejavusans", current_font_size, bold=True)
+            
         res_surface = res_font.render(result_text, True, title_color)
         screen.blit(res_surface, (WIDTH//2 - res_surface.get_width()//2, 420))
 
