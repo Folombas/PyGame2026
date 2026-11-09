@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 from datetime import datetime
+import pygame_gui
 
 pygame.init()
 WIDTH, HEIGHT = 800, 600
@@ -9,45 +10,39 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Калькулятор возраста папы")
 clock = pygame.time.Clock()
 
-BG_COLOR = (30, 30, 40)
-TEXT_COLOR = (255, 255, 255)
-INPUT_COLOR = (200, 200, 200)
-ACTIVE_COLOR = (100, 150, 255)
-ERROR_COLOR = (255, 50, 50)
+# Используем встроенные шрифты системы (DejaVu Sans)
+font_title = pygame.font.SysFont("dejavusans", 40, bold=True)
+font_main = pygame.font.SysFont("dejavusans", 28)
+font_small = pygame.font.SysFont("dejavusans", 20)
 
-font = pygame.font.SysFont('arial', 32)
-small_font = pygame.font.SysFont('arial', 24)
-title_font = pygame.font.SysFont('arial', 40, bold=True)
+manager = pygame_gui.UIManager((WIDTH, HEIGHT), 'theme.json')
 
-class InputBox:
-    def __init__(self, x, y, w, h, text=''):
-        self.rect = pygame.Rect(x, y, w, h)
-        self.color = INPUT_COLOR
-        self.text = text
-        self.txt_surface = small_font.render(text, True, (0, 0, 0))
-        self.active = False
-
-    def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if self.rect.collidepoint(event.pos):
-                self.active = not self.active
-            else:
-                self.active = False
-            self.color = ACTIVE_COLOR if self.active else INPUT_COLOR
-        if event.type == pygame.KEYDOWN:
-            if self.active:
-                if event.key == pygame.K_RETURN:
-                    pass
-                elif event.key == pygame.K_BACKSPACE:
-                    self.text = self.text[:-1]
-                else:
-                    if len(self.text) < 10: 
-                        self.text += event.unicode
-                self.txt_surface = small_font.render(self.text, True, (0, 0, 0))
-
-    def draw(self, screen):
-        pygame.draw.rect(screen, self.color, self.rect, border_radius=5)
-        screen.blit(self.txt_surface, (self.rect.x + 10, self.rect.y + 10))
+father_input = pygame_gui.elements.UITextEntryLine(
+    relative_rect=pygame.Rect((300, 150), (200, 40)),
+    manager=manager,
+    placeholder_text="ДД.ММ.ГГГГ"
+)
+son_input = pygame_gui.elements.UITextEntryLine(
+    relative_rect=pygame.Rect((300, 250), (200, 40)),
+    manager=manager,
+    placeholder_text="ДД.ММ.ГГГГ"
+)
+calculate_button = pygame_gui.elements.UIButton(
+    relative_rect=pygame.Rect((300, 350), (200, 50)),
+    text="РАССЧИТАТЬ",
+    manager=manager
+)
+text_size_slider = pygame_gui.elements.UIHorizontalSlider(
+    relative_rect=pygame.Rect((550, 450), (200, 30)),
+    start_value=32,
+    value_range=(16, 48),
+    manager=manager
+)
+theme_toggle = pygame_gui.elements.UIButton(
+    relative_rect=pygame.Rect((550, 500), (200, 40)),
+    text="Тема: Светлая",
+    manager=manager
+)
 
 class Particle:
     def __init__(self, x, y):
@@ -69,78 +64,82 @@ class Particle:
         if self.life > 0:
             pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.size)
 
-father_input = InputBox(300, 150, 200, 40)
-son_input = InputBox(300, 250, 200, 40)
-input_boxes = [father_input, son_input]
-button_rect = pygame.Rect(300, 350, 200, 50)
-
 particles = []
 result_text = ""
-result_color = TEXT_COLOR
 funny_comment = ""
+current_font_size = 32
+
+def calculate_age_on_today(birth_date_str):
+    try:
+        birth_date = datetime.strptime(birth_date_str, "%d.%m.%Y")
+        today = datetime.now()
+        age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        return age
+    except ValueError:
+        return None
 
 running = True
 while running:
+    time_delta = clock.tick(60) / 1000.0
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        
-        for box in input_boxes:
-            box.handle_event(event)
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if button_rect.collidepoint(event.pos):
-                try:
-                    d1 = datetime.strptime(father_input.text, "%d.%m.%Y")
-                    d2 = datetime.strptime(son_input.text, "%d.%m.%Y")
-                    
-                    years = d2.year - d1.year - ((d2.month, d2.day) < (d1.month, d1.day))
-                    
-                    if years < 0:
-                        result_text = "Сын родился раньше отца? О_о"
-                        result_color = ERROR_COLOR
-                        funny_comment = "Машина времени изобретена!"
-                    else:
-                        result_text = f"Отцу было {years} лет!"
-                        result_color = (100, 255, 100)
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element == calculate_button:
+                d1_str = father_input.get_text()
+                d2_str = son_input.get_text()
+                
+                age_father_today = calculate_age_on_today(d1_str)
+                age_son_today = calculate_age_on_today(d2_str)
+
+                if age_father_today is not None and age_son_today is not None:
+                    try:
+                        d1 = datetime.strptime(d1_str, "%d.%m.%Y")
+                        d2 = datetime.strptime(d2_str, "%d.%m.%Y")
+                        years_at_birth = d2.year - d1.year - ((d2.month, d2.day) < (d1.month, d1.day))
                         
-                        if years < 18:
-                            funny_comment = "Ого, папа был совсем юным!"
-                        elif 18 <= years < 30:
-                            funny_comment = "Классика жанра!"
-                        elif 30 <= years < 45:
-                            funny_comment = "Папа уже был солидным мужчиной."
-                        else:
-                            funny_comment = "Папа был мудрым человеком с опытом!"
-
-                        for _ in range(150):
+                        result_text = f"Отцу было {years_at_birth} лет, когда родился сын."
+                        funny_comment = f"Сейчас папе {age_father_today} лет, а сыну {age_son_today}."
+                        
+                        for _ in range(100):
                             particles.append(Particle(WIDTH//2, 450))
-                except ValueError:
-                    result_text = "Ошибка! Введи дату как ДД.ММ.ГГГГ"
-                    result_color = ERROR_COLOR
-                    funny_comment = "Даже ИИ не понял этот формат..."
+                    except:
+                        result_text = "Ошибка в датах!"
+                        funny_comment = ""
+                else:
+                    result_text = "Введи даты в формате ДД.ММ.ГГГГ"
+                    funny_comment = ""
 
-    screen.fill(BG_COLOR)
+            if event.ui_element == theme_toggle:
+                if theme_toggle.text == "Тема: Светлая":
+                    theme_toggle.set_text("Тема: Темная")
+                else:
+                    theme_toggle.set_text("Тема: Светлая")
 
-    title_surface = title_font.render("Когда папа стал папой?", True, (255, 200, 50))
+        manager.process_events(event)
+
+    manager.update(time_delta)
+    screen.fill((30, 30, 40))
+
+    title_surface = font_title.render("Когда папа стал папой?", True, (255, 200, 50))
     screen.blit(title_surface, (WIDTH//2 - title_surface.get_width()//2, 40))
 
-    screen.blit(small_font.render("Дата рождения ОТЦА (ДД.ММ.ГГГГ):", True, TEXT_COLOR), (300, 120))
-    screen.blit(small_font.render("Дата рождения СЫНА (ДД.ММ.ГГГГ):", True, TEXT_COLOR), (300, 220))
+    screen.blit(font_small.render("Дата рождения ОТЦА (ДД.ММ.ГГГГ):", True, (255, 255, 255)), (300, 120))
+    screen.blit(font_small.render("Дата рождения СЫНА (ДД.ММ.ГГГГ):", True, (255, 255, 255)), (300, 220))
 
-    for box in input_boxes:
-        box.draw(screen)
-
-    pygame.draw.rect(screen, (50, 200, 50), button_rect, border_radius=10)
-    btn_text = font.render("РАССЧИТАТЬ", True, (255, 255, 255))
-    screen.blit(btn_text, (button_rect.x + 20, button_rect.y + 10))
+    manager.draw_ui(screen)
 
     if result_text:
-        res_surface = font.render(result_text, True, result_color)
-        screen.blit(res_surface, (WIDTH//2 - res_surface.get_width()//2, 450))
+        current_font_size = int(text_size_slider.get_current_value())
+        res_font = pygame.font.SysFont("dejavusans", current_font_size)
+        res_surface = res_font.render(result_text, True, (100, 255, 100))
+        screen.blit(res_surface, (WIDTH//2 - res_surface.get_width()//2, 500))
+
     if funny_comment:
-        com_surface = small_font.render(funny_comment, True, (200, 200, 200))
-        screen.blit(com_surface, (WIDTH//2 - com_surface.get_width()//2, 500))
+        com_surface = font_small.render(funny_comment, True, (200, 200, 200))
+        screen.blit(com_surface, (WIDTH//2 - com_surface.get_width()//2, 560))
 
     for p in particles[:]:
         p.update()
@@ -149,7 +148,6 @@ while running:
             particles.remove(p)
 
     pygame.display.flip()
-    clock.tick(60)
 
 pygame.quit()
 sys.exit()
