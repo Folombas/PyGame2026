@@ -11,25 +11,25 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Калькулятор возраста папы (Material Design)")
 clock = pygame.time.Clock()
 
-# --- Проверка наличия шрифтов ---
-font_path_bold = "assets/fonts/Roboto-Bold.ttf"
-font_path_reg = "assets/fonts/Roboto-Regular.ttf"
+# --- Надежная загрузка шрифтов ---
+def load_font(path, size, bold=False):
+    try:
+        # Проверяем, что файл существует и его размер больше 0 байт
+        if os.path.exists(path) and os.path.getsize(path) > 0:
+            return pygame.font.Font(path, size)
+    except Exception:
+        pass
+    # Если что-то пошло не так, используем системный шрифт
+    return pygame.font.SysFont("dejavusans", size, bold=bold)
 
-if os.path.exists(font_path_bold) and os.path.exists(font_path_reg):
-    font_title = pygame.font.Font(font_path_bold, 40)
-    font_small = pygame.font.Font(font_path_reg, 20)
-    font_name_gui = "assets/fonts/Roboto-Regular.ttf"
-else:
-    # Если шрифты не скачались, используем системные
-    font_title = pygame.font.SysFont("dejavusans", 40, bold=True)
-    font_small = pygame.font.SysFont("dejavusans", 20)
-    font_name_gui = "dejavusans"
+font_title = load_font("assets/fonts/Roboto-Bold.ttf", 40, bold=True)
+font_small = load_font("assets/fonts/Roboto-Regular.ttf", 20)
 
 # --- Глобальное состояние ---
 is_dark_theme = True
 particles = []
 result_text = ""
-current_date_text = "" # Для вывода возраста на сегодня
+current_date_text = "" 
 current_font_size = 32
 
 # Менеджер UI
@@ -96,7 +96,6 @@ while running:
             if event.ui_element == calculate_button:
                 d1_str, d2_str = father_input.get_text(), son_input.get_text()
                 
-                # ВЫЧИСЛЕНИЕ ПОЛНЫХ ЛЕТ НА ТЕКУЩУЮ ДАТУ
                 age_father_today = get_full_years(d1_str)
                 age_son_today = get_full_years(d2_str)
 
@@ -111,7 +110,6 @@ while running:
                             current_date_text = ""
                         else:
                             result_text = f"Когда родился сын, папе было {years_at_birth} лет."
-                            # ВЫВОДИМ ВОЗРАСТ НА СЕГОДНЯШНИЙ ДЕНЬ
                             current_date_text = f"На сегодня: папе {age_father_today} лет, сыну {age_son_today} лет."
                             
                             for _ in range(150): 
@@ -135,7 +133,6 @@ while running:
 
     manager.update(time_delta)
     
-    # Цвета в зависимости от темы
     screen.fill((30, 30, 40) if is_dark_theme else (240, 242, 245))
     text_color = (255, 255, 255) if is_dark_theme else (50, 50, 50)
     title_color = (187, 134, 252) if is_dark_theme else (98, 0, 238)
@@ -150,15 +147,10 @@ while running:
 
     if result_text:
         current_font_size = int(text_size_slider.get_current_value())
-        if os.path.exists(font_path_bold):
-            res_font = pygame.font.Font(font_path_bold, current_font_size)
-        else:
-            res_font = pygame.font.SysFont("dejavusans", current_font_size, bold=True)
-            
+        res_font = load_font("assets/fonts/Roboto-Bold.ttf", current_font_size, bold=True)
         res_surface = res_font.render(result_text, True, title_color)
         screen.blit(res_surface, (WIDTH//2 - res_surface.get_width()//2, 420))
 
-    # Отрисовка запроса "на текущую дату"
     if current_date_text:
         com_surface = font_small.render(current_date_text, True, text_color)
         screen.blit(com_surface, (WIDTH//2 - com_surface.get_width()//2, 520))
