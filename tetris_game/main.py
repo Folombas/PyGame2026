@@ -16,21 +16,48 @@ GRID_COLOR = (40, 40, 55)
 TEXT_COLOR = (220, 220, 255)
 
 COLORS = [
-    (0, 240, 240),   # I
-    (240, 240, 0),   # O
-    (160, 32, 240),  # T
-    (0, 240, 0),     # S
-    (240, 0, 0),     # Z
-    (0, 0, 240),     # J
-    (240, 160, 0)    # L
+    (0, 240, 240),   # I - Cyan
+    (240, 240, 0),   # O - Yellow
+    (160, 32, 240),  # T - Purple
+    (0, 240, 0),     # S - Green
+    (240, 0, 0),     # Z - Red
+    (0, 0, 240),     # J - Blue
+    (240, 160, 0)    # L - Orange
 ]
 
+# ИСПРАВЛЕННЫЕ ФОРМЫ (Правильные 2D матрицы)
 SHAPES = [
-    [[1, 5, 9, 13]], [[4, 5, 8, 9]], [[1, 4, 5, 6]],
-    [[1, 2, 5, 6]], [[1, 2, 4, 5]], [[0, 1, 5, 9]], [[1, 5, 9, 8]]
+    # I
+    [[0, 0, 0, 0],
+     [1, 1, 1, 1],
+     [0, 0, 0, 0],
+     [0, 0, 0, 0]],
+    # O
+    [[1, 1],
+     [1, 1]],
+    # T
+    [[0, 1, 0],
+     [1, 1, 1],
+     [0, 0, 0]],
+    # S
+    [[0, 1, 1],
+     [1, 1, 0],
+     [0, 0, 0]],
+    # Z
+    [[1, 1, 0],
+     [0, 1, 1],
+     [0, 0, 0]],
+    # J
+    [[1, 0, 0],
+     [1, 1, 1],
+     [0, 0, 0]],
+    # L
+    [[0, 0, 1],
+     [1, 1, 1],
+     [0, 0, 0]]
 ]
 
-# --- Синтез звука (без внешних файлов) ---
+# --- Синтез звука ---
 pygame.mixer.pre_init(44100, -16, 1, 512)
 pygame.init()
 
@@ -39,22 +66,20 @@ def generate_sound(freq, duration, volume=0.1, wave_type="sine"):
     n_samples = int(round(sample_rate * duration))
     buf = array.array('h')
     for i in range(n_samples):
-        env = min(1.0, i / 100.0, (n_samples - i) / 100.0) # Сглаживание
+        env = min(1.0, i / 100.0, (n_samples - i) / 100.0)
         t = float(i) / sample_rate
         if wave_type == "sine":
             val = math.sin(2.0 * math.pi * freq * t)
-        elif wave_type == "square":
+        else:
             val = 1.0 if math.sin(2.0 * math.pi * freq * t) > 0 else -1.0
         buf.append(int(32767.0 * volume * env * val))
     return pygame.mixer.Sound(buffer=buf)
 
-# Создаем звуки
 snd_move = generate_sound(300, 0.05, 0.05, "square")
 snd_rotate = generate_sound(500, 0.08, 0.05, "sine")
 snd_drop = generate_sound(150, 0.15, 0.1, "square")
 snd_clear = generate_sound(800, 0.2, 0.1, "sine")
 
-# --- Классы визуальных эффектов ---
 class Particle:
     def __init__(self, x, y, color):
         self.x, self.y = x, y
@@ -96,15 +121,20 @@ class Piece:
     def __init__(self, shape_idx):
         self.shape_idx = shape_idx
         self.color = COLORS[shape_idx]
-        self.shape = SHAPES[shape_idx]
-        self.x = GRID_WIDTH // 2 - 2
+        # Делаем глубокую копию матрицы, чтобы не портить оригинал
+        self.shape = [row[:] for row in SHAPES[shape_idx]]
+        # Центрируем фигуру по горизонтали
+        self.x = (GRID_WIDTH - len(self.shape[0])) // 2
         self.y = 0
 
     def rotate(self, grid):
-        if self.shape_idx == 1: return
+        if self.shape_idx == 1: return # Квадрат (O) не вращаем
         old_shape = self.shape
-        self.shape = [[old_shape[len(old_shape) - 1 - j][i] for j in range(len(old_shape))] for i in range(len(old_shape[0]))]
-        if not valid_space(self, grid): self.shape = old_shape
+        # Правильное вращение 2D-матрицы по часовой стрелке
+        self.shape = [list(row) for row in zip(*self.shape[::-1])]
+        # Если после вращения вылезли за границы или в блоки - откат
+        if not valid_space(self, grid):
+            self.shape = old_shape
 
 class Tetris:
     def __init__(self):
@@ -130,10 +160,9 @@ class Tetris:
                 lines_to_clear.append(y)
                 
         for y in lines_to_clear:
-            # Взрыв частиц при сборе линии
             for x in range(GRID_WIDTH):
                 color = self.grid[y][x]
-                for _ in range(3): # 3 частицы на блок
+                for _ in range(3):
                     self.particles.append(Particle(x * BLOCK_SIZE + BLOCK_SIZE//2, y * BLOCK_SIZE + BLOCK_SIZE//2, color))
             
             del self.grid[y]
@@ -141,19 +170,16 @@ class Tetris:
             
         if lines_to_clear:
             snd_clear.play()
-            self.shake_timer = 10 # Тряска экрана
+            self.shake_timer = 10
             points = [0, 100, 300, 500, 800][len(lines_to_clear)]
             self.score += points * self.level
             self.lines_cleared += len(lines_to_clear)
-            
-            # Всплывающий текст
             self.floating_texts.append(FloatingText(WIDTH//2, HEIGHT//2, f"+{points}", (255, 255, 100)))
 
         self.level = self.lines_cleared // 10 + 1
         self.fall_speed = max(0.05, 0.5 - (self.level - 1) * 0.05)
 
     def run(self, screen, font, small_font):
-        # Логика тряски экрана
         offset_x, offset_y = 0, 0
         if self.shake_timer > 0:
             offset_x = random.randint(-4, 4)
@@ -162,41 +188,40 @@ class Tetris:
 
         screen.fill(BG_COLOR)
         
-        # Отрисовка поля со смещением (тряска)
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
                 pygame.draw.rect(screen, GRID_COLOR, (x * BLOCK_SIZE + offset_x, y * BLOCK_SIZE + offset_y, BLOCK_SIZE, BLOCK_SIZE), 1)
                 if self.grid[y][x] != (0, 0, 0):
                     pygame.draw.rect(screen, self.grid[y][x], (x * BLOCK_SIZE + offset_x, y * BLOCK_SIZE + offset_y, BLOCK_SIZE - 1, BLOCK_SIZE - 1), border_radius=4)
 
-        # Ghost Piece
         if not self.game_over:
             ghost_y = self.current_piece.y
             ghost_piece = Piece(self.current_piece.shape_idx)
             ghost_piece.shape = self.current_piece.shape
             ghost_piece.x = self.current_piece.x
+            
             while True:
                 ghost_piece.y = ghost_y + 1
                 if not valid_space(ghost_piece, self.grid): break
                 ghost_y += 1
+                
             for y in range(len(self.current_piece.shape)):
                 for x in range(len(self.current_piece.shape[y])):
                     if self.current_piece.shape[y][x] > 0:
                         pygame.draw.rect(screen, (60, 60, 80), 
                                          ((self.current_piece.x + x) * BLOCK_SIZE + offset_x, (ghost_y + y) * BLOCK_SIZE + offset_y, BLOCK_SIZE - 1, BLOCK_SIZE - 1), 2, border_radius=4)
 
-            # Текущая фигура
             for y in range(len(self.current_piece.shape)):
                 for x in range(len(self.current_piece.shape[y])):
                     if self.current_piece.shape[y][x] > 0:
                         pygame.draw.rect(screen, self.current_piece.color, 
                                          ((self.current_piece.x + x) * BLOCK_SIZE + offset_x, (self.current_piece.y + y) * BLOCK_SIZE + offset_y, BLOCK_SIZE - 1, BLOCK_SIZE - 1), border_radius=4)
 
-        # Частицы и текст
         for p in self.particles[:]:
             p.update()
             p.draw(screen, offset_x, offset_y)
             if p.life <= 0: self.particles.remove(p)
+            
         for t in self.floating_texts[:]:
             t.update()
             t.draw(screen, font, offset_x, offset_y)
@@ -279,7 +304,7 @@ def main():
                 if event.key == pygame.K_SPACE:
                     while valid_space(tetris.current_piece, tetris.grid): tetris.current_piece.y += 1
                     tetris.current_piece.y -= 1
-                    tetris.shake_timer = 5 # Легкая тряска при жестком сбросе
+                    tetris.shake_timer = 5
                     snd_drop.play()
                     lock_piece(tetris)
 
