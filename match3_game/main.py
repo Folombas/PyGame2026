@@ -3,20 +3,18 @@ import random
 import sys
 import math
 import array
-import time
 
 # --- Настройки ---
 WIDTH, HEIGHT = 800, 800
-GRID_SIZE = 8
-MARGIN = 100
+GRID_SIZE = 5
+MARGIN = 150 # Увеличили отступ, чтобы поле 5x5 было по центру
 CELL_SIZE = (WIDTH - 2 * MARGIN) // GRID_SIZE
 
-# Современная яркая палитра (Candy style)
+# Современная яркая палитра
 BG_COLOR = (30, 30, 40)
 GRID_BG_COLOR = (40, 40, 55)
 TEXT_COLOR = (255, 255, 255)
 
-# Типы камней и их цвета (6 видов)
 GEM_COLORS = [
     (255, 85, 85),   # Красный
     (85, 170, 255),  # Синий
@@ -54,12 +52,12 @@ class Particle:
         self.vy = random.uniform(-8, 8)
         self.color = color
         self.life = random.randint(20, 40)
-        self.size = random.randint(3, 7)
+        self.size = random.randint(3, 8)
 
     def update(self):
         self.x += self.vx
         self.y += self.vy
-        self.vy += 0.3 # Гравитация для частиц
+        self.vy += 0.3
         self.life -= 1
 
     def draw(self, screen):
@@ -73,41 +71,39 @@ class Gem:
         self.x, self.y = x, y
         self.type = type_idx
         self.color = GEM_COLORS[type_idx]
-        # Для анимаций (визуальные координаты)
         self.draw_x = x * CELL_SIZE + MARGIN
         self.draw_y = y * CELL_SIZE + MARGIN
 
     def draw(self, screen, selected=False):
         center = (int(self.draw_x + CELL_SIZE // 2), int(self.draw_y + CELL_SIZE // 2))
-        radius = CELL_SIZE // 2 - 5
+        radius = CELL_SIZE // 2 - 8
         
         # Тень
-        pygame.draw.circle(screen, (10, 10, 15), (center[0] + 3, center[1] + 3), radius)
+        pygame.draw.circle(screen, (10, 10, 15), (center[0] + 4, center[1] + 4), radius)
         
         # Основной камень
         pygame.draw.circle(screen, self.color, center, radius)
         
         # Блик для объема
-        highlight_color = (min(255, self.color[0] + 80), min(255, self.color[1] + 80), min(255, self.color[2] + 80))
+        highlight_color = (min(255, self.color[0] + 100), min(255, self.color[1] + 100), min(255, self.color[2] + 100))
         pygame.draw.circle(screen, highlight_color, (center[0] - radius // 3, center[1] - radius // 3), radius // 3)
         
-        # Обводка при выделении
+        # Обводка при выделении (перетаскивании)
         if selected:
-            pygame.draw.circle(screen, (255, 255, 255), center, radius + 3, 3)
+            pygame.draw.circle(screen, (255, 255, 255), center, radius + 4, 4)
 
 class Match3:
     def __init__(self):
         self.grid = []
         self.score = 0
-        self.state = "IDLE" # IDLE, SWAPPING, SWAP_BACK, REMOVING, FALLING
-        self.selected = None # (x, y)
-        self.swap_pair = None # ((x1,y1), (x2,y2))
+        self.state = "IDLE"
+        self.drag_start = None  # Координаты начала перетаскивания
+        self.swap_pair = None
         self.anim_timer = 0
         self.particles = []
         self.generate_grid()
 
     def generate_grid(self):
-        # Генерируем поле без начальных совпадений
         while True:
             self.grid = [[Gem(x, y, random.randint(0, 5)) for x in range(GRID_SIZE)] for y in range(GRID_SIZE)]
             if not self.find_matches():
@@ -115,12 +111,10 @@ class Match3:
 
     def find_matches(self):
         matches = set()
-        # Горизонтальные
         for y in range(GRID_SIZE):
             for x in range(GRID_SIZE - 2):
                 if self.grid[y][x].type == self.grid[y][x+1].type == self.grid[y][x+2].type:
                     matches.update([(x, y), (x+1, y), (x+2, y)])
-        # Вертикальные
         for x in range(GRID_SIZE):
             for y in range(GRID_SIZE - 2):
                 if self.grid[y][x].type == self.grid[y+1][x].type == self.grid[y+2][x].type:
@@ -141,7 +135,7 @@ class Match3:
             self.anim_timer += 1
             if self.anim_timer >= 10:
                 self.anim_timer = 0
-                self.execute_swap() # Возвращаем обратно
+                self.execute_swap()
                 snd_error.play()
 
         elif self.state == "REMOVING":
@@ -152,12 +146,11 @@ class Match3:
 
         elif self.state == "FALLING":
             self.anim_timer += 1
-            if self.anim_timer >= 5: # Скорость падения
+            if self.anim_timer >= 5:
                 self.anim_timer = 0
                 if not self.apply_gravity():
                     self.state = "IDLE"
                     if not self.find_matches():
-                        # Каскадные совпадения
                         self.state = "REMOVING"
                         self.anim_timer = 0
                         snd_match.play()
@@ -165,33 +158,38 @@ class Match3:
                             for _ in range(5):
                                 self.particles.append(Particle(x * CELL_SIZE + MARGIN + CELL_SIZE//2, y * CELL_SIZE + MARGIN + CELL_SIZE//2, self.grid[y][x].color))
 
-    def handle_click(self, pos):
+    def handle_mouse_down(self, pos):
         if self.state != "IDLE": return
+        mx, my = pos
+        gx = (mx - MARGIN) // CELL_SIZE
+        gy = (my - MARGIN) // CELL_SIZE
+        
+        if 0 <= gx < GRID_SIZE and 0 <= gy < GRID_SIZE:
+            self.drag_start = (gx, gy)
+
+    def handle_mouse_up(self, pos):
+        if self.state != "IDLE" or not self.drag_start: return
         
         mx, my = pos
         gx = (mx - MARGIN) // CELL_SIZE
         gy = (my - MARGIN) // CELL_SIZE
         
         if 0 <= gx < GRID_SIZE and 0 <= gy < GRID_SIZE:
-            if not self.selected:
-                self.selected = (gx, gy)
-            else:
-                sx, sy = self.selected
-                # Если кликнули по соседнему
-                if abs(sx - gx) + abs(sy - gy) == 1:
-                    self.swap_pair = ((sx, sy), (gx, gy))
-                    self.state = "SWAPPING"
-                    self.anim_timer = 0
-                    snd_swap.play()
-                # Если кликнули по тому же или дальнему
-                self.selected = (gx, gy) if not (sx == gx and sy == gy) else None
+            sx, sy = self.drag_start
+            # Если отпустили на соседнем камне
+            if abs(sx - gx) + abs(sy - gy) == 1:
+                self.swap_pair = ((sx, sy), (gx, gy))
+                self.state = "SWAPPING"
+                self.anim_timer = 0
+                snd_swap.play()
+                
+        # Сбрасываем состояние перетаскивания
+        self.drag_start = None
 
     def execute_swap(self):
         (x1, y1), (x2, y2) = self.swap_pair
-        # Меняем местами
         self.grid[y1][x1], self.grid[y2][x2] = self.grid[y2][x2], self.grid[y1][x1]
         
-        # Обновляем координаты для отрисовки (просто мгновенно для простоты, в идеале нужна интерполяция)
         self.grid[y1][x1].x, self.grid[y1][x1].y = x1, y1
         self.grid[y2][x2].x, self.grid[y2][x2].y = x2, y2
         self.grid[y1][x1].draw_x = x1 * CELL_SIZE + MARGIN
@@ -208,12 +206,12 @@ class Match3:
                 self.state = "SWAP_BACK"
         else:
             self.state = "IDLE"
-            self.selected = None
+            self.drag_start = None
 
     def remove_matches(self):
         matches = self.find_matches()
         for x, y in matches:
-            for _ in range(8): # Частицы
+            for _ in range(8):
                 self.particles.append(Particle(x * CELL_SIZE + MARGIN + CELL_SIZE//2, y * CELL_SIZE + MARGIN + CELL_SIZE//2, self.grid[y][x].color))
             self.grid[y][x] = None
         self.score += len(matches) * 10
@@ -224,7 +222,6 @@ class Match3:
         for x in range(GRID_SIZE):
             for y in range(GRID_SIZE - 1, -1, -1):
                 if self.grid[y][x] is None:
-                    # Ищем камни выше
                     for ny in range(y - 1, -1, -1):
                         if self.grid[ny][x] is not None:
                             self.grid[y][x] = self.grid[ny][x]
@@ -233,7 +230,6 @@ class Match3:
                             moved = True
                             snd_fall.play()
                             break
-        # Спавн новых камней сверху
         for x in range(GRID_SIZE):
             if self.grid[0][x] is None:
                 self.grid[0][x] = Gem(x, 0, random.randint(0, 5))
@@ -247,27 +243,27 @@ class Match3:
                     self.state = "FALLING"
                     return
                     
-        # Плавная отрисовка падения
         for x in range(GRID_SIZE):
             for y in range(GRID_SIZE):
                 gem = self.grid[y][x]
                 target_x = x * CELL_SIZE + MARGIN
                 target_y = y * CELL_SIZE + MARGIN
-                if gem.draw_x < target_x: gem.draw_x = min(gem.draw_x + 10, target_x)
-                elif gem.draw_x > target_x: gem.draw_x = max(gem.draw_x - 10, target_x)
-                if gem.draw_y < target_y: gem.draw_y = min(gem.draw_y + 10, target_y)
+                if gem.draw_x < target_x: gem.draw_x = min(gem.draw_x + 15, target_x)
+                elif gem.draw_x > target_x: gem.draw_x = max(gem.draw_x - 15, target_x)
+                if gem.draw_y < target_y: gem.draw_y = min(gem.draw_y + 15, target_y)
 
     def draw(self, screen, font):
         screen.fill(BG_COLOR)
         
         # Фон сетки
-        pygame.draw.rect(screen, GRID_BG_COLOR, (MARGIN - 10, MARGIN - 10, GRID_SIZE * CELL_SIZE + 20, GRID_SIZE * CELL_SIZE + 20), border_radius=15)
+        pygame.draw.rect(screen, GRID_BG_COLOR, (MARGIN - 15, MARGIN - 15, GRID_SIZE * CELL_SIZE + 30, GRID_SIZE * CELL_SIZE + 30), border_radius=20)
 
         for y in range(GRID_SIZE):
             for x in range(GRID_SIZE):
                 if self.grid[y][x]:
-                    is_selected = self.selected == (x, y)
-                    self.grid[y][x].draw(screen, is_selected)
+                    # Проверяем, перетаскиваем ли мы этот камень
+                    is_dragging = self.drag_start == (x, y)
+                    self.grid[y][x].draw(screen, is_dragging)
 
         for p in self.particles[:]:
             p.update()
@@ -277,11 +273,11 @@ class Match3:
 
         # UI
         score_surf = font.render(f"СЧЕТ: {self.score}", True, TEXT_COLOR)
-        screen.blit(score_surf, (MARGIN, 30))
+        screen.blit(score_surf, (MARGIN, 40))
 
 def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Match-3: Candy Blast")
+    pygame.display.set_caption("Match-3: Candy Blast (Drag & Drop)")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("dejavusans", 40, bold=True)
     small_font = pygame.font.SysFont("dejavusans", 24)
@@ -298,22 +294,26 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if state == "MENU" and event.key == pygame.K_RETURN:
                     state = "PLAYING"
-                    game = Match3() # Сброс
+                    game = Match3()
                 elif state == "PLAYING" and event.key == pygame.K_ESCAPE:
                     state = "MENU"
 
-            if event.type == pygame.MOUSEBUTTONDOWN and state == "PLAYING":
-                game.handle_click(pygame.mouse.get_pos())
+            # Обработка перетаскивания (Drag and Drop)
+            if state == "PLAYING":
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    game.handle_mouse_down(pygame.mouse.get_pos())
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    game.handle_mouse_up(pygame.mouse.get_pos())
 
         if state == "MENU":
             screen.fill(BG_COLOR)
-            title = font.render("CANDY BLAST", True, (255, 100, 150))
+            title = font.render("CANDY BLAST 5x5", True, (255, 100, 150))
             screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//3))
             
             play_txt = font.render("Нажми ENTER для игры", True, TEXT_COLOR)
             screen.blit(play_txt, (WIDTH//2 - play_txt.get_width()//2, HEIGHT//2))
             
-            rules = ["Кликни по камню, затем по соседнему,", "чтобы поменять их местами.", "Собирай 3 и более в ряд!"]
+            rules = ["Зажми камень мышкой и потяни", "на соседний камень, чтобы поменять", "Собирай 3 и более в ряд!"]
             for i, text in enumerate(rules):
                 r_surf = small_font.render(text, True, (150, 150, 180))
                 screen.blit(r_surf, (WIDTH//2 - r_surf.get_width()//2, HEIGHT//2 + 100 + i * 30))
