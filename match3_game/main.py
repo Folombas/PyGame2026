@@ -7,21 +7,16 @@ import array
 # --- Настройки ---
 WIDTH, HEIGHT = 800, 800
 GRID_SIZE = 5
-MARGIN = 150 # Увеличили отступ, чтобы поле 5x5 было по центру
+MARGIN = 150
 CELL_SIZE = (WIDTH - 2 * MARGIN) // GRID_SIZE
 
-# Современная яркая палитра
 BG_COLOR = (30, 30, 40)
 GRID_BG_COLOR = (40, 40, 55)
 TEXT_COLOR = (255, 255, 255)
 
 GEM_COLORS = [
-    (255, 85, 85),   # Красный
-    (85, 170, 255),  # Синий
-    (85, 255, 85),   # Зеленый
-    (255, 255, 85),  # Желтый
-    (255, 85, 255),  # Розовый
-    (255, 170, 85)   # Оранжевый
+    (255, 85, 85), (85, 170, 255), (85, 255, 85), 
+    (255, 255, 85), (255, 85, 255), (255, 170, 85)
 ]
 
 # --- Синтез звука ---
@@ -44,15 +39,11 @@ snd_match = generate_sound(800, 0.15, 0.1, "sine")
 snd_error = generate_sound(150, 0.2, 0.1, "square")
 snd_fall = generate_sound(300, 0.05, 0.05, "square")
 
-# --- Классы ---
 class Particle:
     def __init__(self, x, y, color):
         self.x, self.y = x, y
-        self.vx = random.uniform(-8, 8)
-        self.vy = random.uniform(-8, 8)
-        self.color = color
-        self.life = random.randint(20, 40)
-        self.size = random.randint(3, 8)
+        self.vx, self.vy = random.uniform(-8, 8), random.uniform(-8, 8)
+        self.color, self.life, self.size = color, random.randint(20, 40), random.randint(3, 8)
 
     def update(self):
         self.x += self.vx
@@ -78,17 +69,12 @@ class Gem:
         center = (int(self.draw_x + CELL_SIZE // 2), int(self.draw_y + CELL_SIZE // 2))
         radius = CELL_SIZE // 2 - 8
         
-        # Тень
         pygame.draw.circle(screen, (10, 10, 15), (center[0] + 4, center[1] + 4), radius)
-        
-        # Основной камень
         pygame.draw.circle(screen, self.color, center, radius)
         
-        # Блик для объема
         highlight_color = (min(255, self.color[0] + 100), min(255, self.color[1] + 100), min(255, self.color[2] + 100))
         pygame.draw.circle(screen, highlight_color, (center[0] - radius // 3, center[1] - radius // 3), radius // 3)
         
-        # Обводка при выделении (перетаскивании)
         if selected:
             pygame.draw.circle(screen, (255, 255, 255), center, radius + 4, 4)
 
@@ -97,7 +83,7 @@ class Match3:
         self.grid = []
         self.score = 0
         self.state = "IDLE"
-        self.drag_start = None  # Координаты начала перетаскивания
+        self.drag_start = None
         self.swap_pair = None
         self.anim_timer = 0
         self.particles = []
@@ -123,7 +109,7 @@ class Match3:
 
     def update(self):
         if self.state == "IDLE":
-            self.check_falling_state()
+            pass
             
         elif self.state == "SWAPPING":
             self.anim_timer += 1
@@ -148,43 +134,75 @@ class Match3:
             self.anim_timer += 1
             if self.anim_timer >= 5:
                 self.anim_timer = 0
-                if not self.apply_gravity():
-                    self.state = "IDLE"
-                    if not self.find_matches():
-                        self.state = "REMOVING"
-                        self.anim_timer = 0
-                        snd_match.play()
-                        for x, y in self.find_matches():
-                            for _ in range(5):
-                                self.particles.append(Particle(x * CELL_SIZE + MARGIN + CELL_SIZE//2, y * CELL_SIZE + MARGIN + CELL_SIZE//2, self.grid[y][x].color))
+                
+                moved = self.apply_gravity()
+                
+                if not moved:
+                    # Проверяем, все ли камни долетели до своих мест
+                    all_landed = True
+                    for x in range(GRID_SIZE):
+                        for y in range(GRID_SIZE):
+                            gem = self.grid[y][x]
+                            if gem:
+                                target_x = x * CELL_SIZE + MARGIN
+                                target_y = y * CELL_SIZE + MARGIN
+                                if gem.draw_x < target_x: gem.draw_x = min(gem.draw_x + 30, target_x)
+                                elif gem.draw_x > target_x: gem.draw_x = max(gem.draw_x - 30, target_x)
+                                if gem.draw_y < target_y: gem.draw_y = min(gem.draw_y + 30, target_y)
+                                elif gem.draw_y > target_y: gem.draw_y = max(gem.draw_y - 30, target_y)
+                                
+                                if gem.draw_x != target_x or gem.draw_y != target_y:
+                                    all_landed = False
+                    
+                    if all_landed:
+                        self.state = "IDLE"
+                        if self.find_matches(): # ИСПРАВЛЕНО: убрано 'not'
+                            self.state = "REMOVING"
+                            self.anim_timer = 0
+                            snd_match.play()
+                            for x, y in self.find_matches():
+                                for _ in range(5):
+                                    self.particles.append(Particle(x * CELL_SIZE + MARGIN + CELL_SIZE//2, y * CELL_SIZE + MARGIN + CELL_SIZE//2, self.grid[y][x].color))
 
     def handle_mouse_down(self, pos):
         if self.state != "IDLE": return
         mx, my = pos
-        gx = (mx - MARGIN) // CELL_SIZE
-        gy = (my - MARGIN) // CELL_SIZE
+        gx, gy = (mx - MARGIN) // CELL_SIZE, (my - MARGIN) // CELL_SIZE
         
         if 0 <= gx < GRID_SIZE and 0 <= gy < GRID_SIZE:
-            self.drag_start = (gx, gy)
+            if self.grid[gy][gx]:
+                self.drag_start = (gx, gy)
+
+    def handle_mouse_motion(self, pos):
+        if self.drag_start and self.state == "IDLE":
+            mx, my = pos
+            gx, gy = self.drag_start
+            if self.grid[gy][gx]:
+                # Камень следует за мышью
+                self.grid[gy][gx].draw_x = mx - CELL_SIZE // 2
+                self.grid[gy][gx].draw_y = my - CELL_SIZE // 2
 
     def handle_mouse_up(self, pos):
-        if self.state != "IDLE" or not self.drag_start: return
+        if not self.drag_start: return
+        sx, sy = self.drag_start
+        self.drag_start = None # Сбрасываем перетаскивание
+        
+        # Возвращаем камень на сетку визуально
+        if self.grid[sy][sx]:
+            self.grid[sy][sx].draw_x = sx * CELL_SIZE + MARGIN
+            self.grid[sy][sx].draw_y = sy * CELL_SIZE + MARGIN
+            
+        if self.state != "IDLE": return
         
         mx, my = pos
-        gx = (mx - MARGIN) // CELL_SIZE
-        gy = (my - MARGIN) // CELL_SIZE
+        gx, gy = (mx - MARGIN) // CELL_SIZE, (my - MARGIN) // CELL_SIZE
         
         if 0 <= gx < GRID_SIZE and 0 <= gy < GRID_SIZE:
-            sx, sy = self.drag_start
-            # Если отпустили на соседнем камне
             if abs(sx - gx) + abs(sy - gy) == 1:
                 self.swap_pair = ((sx, sy), (gx, gy))
                 self.state = "SWAPPING"
                 self.anim_timer = 0
                 snd_swap.play()
-                
-        # Сбрасываем состояние перетаскивания
-        self.drag_start = None
 
     def execute_swap(self):
         (x1, y1), (x2, y2) = self.swap_pair
@@ -206,7 +224,6 @@ class Match3:
                 self.state = "SWAP_BACK"
         else:
             self.state = "IDLE"
-            self.drag_start = None
 
     def remove_matches(self):
         matches = self.find_matches()
@@ -232,38 +249,29 @@ class Match3:
                             break
         for x in range(GRID_SIZE):
             if self.grid[0][x] is None:
-                self.grid[0][x] = Gem(x, 0, random.randint(0, 5))
+                new_gem = Gem(x, 0, random.randint(0, 5))
+                new_gem.draw_y = -CELL_SIZE # Появляется сверху
+                self.grid[0][x] = new_gem
                 moved = True
         return moved
 
-    def check_falling_state(self):
-        for x in range(GRID_SIZE):
-            for y in range(GRID_SIZE):
-                if self.grid[y][x] is None:
-                    self.state = "FALLING"
-                    return
-                    
-        for x in range(GRID_SIZE):
-            for y in range(GRID_SIZE):
-                gem = self.grid[y][x]
-                target_x = x * CELL_SIZE + MARGIN
-                target_y = y * CELL_SIZE + MARGIN
-                if gem.draw_x < target_x: gem.draw_x = min(gem.draw_x + 15, target_x)
-                elif gem.draw_x > target_x: gem.draw_x = max(gem.draw_x - 15, target_x)
-                if gem.draw_y < target_y: gem.draw_y = min(gem.draw_y + 15, target_y)
-
     def draw(self, screen, font):
         screen.fill(BG_COLOR)
-        
-        # Фон сетки
         pygame.draw.rect(screen, GRID_BG_COLOR, (MARGIN - 15, MARGIN - 15, GRID_SIZE * CELL_SIZE + 30, GRID_SIZE * CELL_SIZE + 30), border_radius=20)
 
+        # Рисуем все камни, КРОМЕ перетаскиваемого
         for y in range(GRID_SIZE):
             for x in range(GRID_SIZE):
                 if self.grid[y][x]:
-                    # Проверяем, перетаскиваем ли мы этот камень
-                    is_dragging = self.drag_start == (x, y)
-                    self.grid[y][x].draw(screen, is_dragging)
+                    if self.drag_start == (x, y):
+                        continue
+                    self.grid[y][x].draw(screen)
+
+        # Рисуем перетаскиваемый камень поверх всех остальных
+        if self.drag_start:
+            dx, dy = self.drag_start
+            if self.grid[dy][dx]:
+                self.grid[dy][dx].draw(screen, selected=True)
 
         for p in self.particles[:]:
             p.update()
@@ -271,7 +279,6 @@ class Match3:
             if p.life <= 0:
                 self.particles.remove(p)
 
-        # UI
         score_surf = font.render(f"СЧЕТ: {self.score}", True, TEXT_COLOR)
         screen.blit(score_surf, (MARGIN, 40))
 
@@ -298,10 +305,11 @@ def main():
                 elif state == "PLAYING" and event.key == pygame.K_ESCAPE:
                     state = "MENU"
 
-            # Обработка перетаскивания (Drag and Drop)
             if state == "PLAYING":
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     game.handle_mouse_down(pygame.mouse.get_pos())
+                elif event.type == pygame.MOUSEMOTION:
+                    game.handle_mouse_motion(pygame.mouse.get_pos())
                 elif event.type == pygame.MOUSEBUTTONUP:
                     game.handle_mouse_up(pygame.mouse.get_pos())
 
