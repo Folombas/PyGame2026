@@ -30,7 +30,7 @@ def get_cpu_usage():
         with open('/proc/stat', 'r') as f: line = f.readline()
         parts = list(map(int, line.split()[1:9]))
         total = sum(parts)
-        busy = total - parts[3] - parts[4] # total - idle - iowait
+        busy = total - parts[3] - parts[4]
         return busy, total
     except: return 0, 1
 
@@ -50,10 +50,10 @@ def get_net_usage():
     try:
         rx, tx = 0, 0
         with open('/proc/net/dev', 'r') as f:
-            lines = f.readlines()[2:] # Пропускаем заголовки
+            lines = f.readlines()[2:]
             for line in lines:
                 parts = line.split()
-                if parts[0] != 'lo:': # Игнорируем localhost
+                if parts[0] != 'lo:':
                     rx += int(parts[1])
                     tx += int(parts[9])
         return rx, tx
@@ -114,25 +114,21 @@ class Dashboard:
         self.prev_net_rx, self.prev_net_tx = new_rx, new_tx
 
     def draw_chart(self, surface, x, y, width, height, data, color, label, current_val_text):
-        # Заголовок
         surface.blit(font_main.render(label, True, TEXT_COLOR), (x, y - 30))
         surface.blit(font_small.render(current_val_text, True, color), (x + width - 100, y - 25))
         
-        # Фон графика
         chart_rect = pygame.Rect(x, y, width, height)
         pygame.draw.rect(surface, PANEL_COLOR, chart_rect)
         
-        # Сетка
         for i in range(1, 4):
             line_y = y + (height // 4) * i
             pygame.draw.line(surface, GRID_COLOR, (x, line_y), (x + width, line_y), 1)
 
-        # Линия графика
         points = []
         step_x = width / (len(data) - 1)
         for i, val in enumerate(data):
             px = x + i * step_x
-            py = y + height - (val / 100 * height) # 0-100% по высоте
+            py = y + height - (val / 100 * height)
             points.append((px, py))
             
         if len(points) > 1:
@@ -142,34 +138,28 @@ class Dashboard:
         surface.fill(BG_COLOR)
         w, h = surface.get_size()
 
-        # Header
         surface.blit(font_title.render("Mint System Dashboard v2.0", True, ACCENT_COLOR), (40, 30))
         fps_text = font_small.render(f"FPS: {int(clock.get_fps())} | Нажми F11 для фуллскрина | ESC для выхода", True, (100, 100, 100))
         surface.blit(fps_text, (w - 500, 45))
 
-        # --- Графики (Левая колонка) ---
         chart_w = w - 400
         self.draw_chart(surface, 40, 120, chart_w, 200, self.cpu_history, ACCENT_COLOR, "CPU Usage", f"{self.cpu_history[-1]:.1f}%")
         self.draw_chart(surface, 40, 380, chart_w, 200, self.ram_history, GREEN_COLOR, "RAM Usage", 
                         f"{format_bytes(self.ram_used*1024)} / {format_bytes(self.ram_total*1024)}")
 
-        # --- Правая колонка (Сеть и Инфо) ---
         right_x = w - 320
         pygame.draw.rect(surface, PANEL_COLOR, (right_x, 120, 280, 460), border_radius=10)
         
         surface.blit(font_main.render("Network Speed", True, TEXT_COLOR), (right_x + 20, 140))
         
-        # Download
         surface.blit(font_small.render("Download", True, (150, 150, 160)), (right_x + 20, 190))
         dl_text = font_main.render(format_speed(self.net_rx_speed), True, NET_COLOR)
         surface.blit(dl_text, (right_x + 20, 210))
         
-        # Upload
         surface.blit(font_small.render("Upload", True, (150, 150, 160)), (right_x + 20, 260))
         ul_text = font_main.render(format_speed(self.net_tx_speed), True, YELLOW_COLOR)
         surface.blit(ul_text, (right_x + 20, 280))
 
-        # Disk info (статично)
         surface.blit(font_main.render("Disk Usage (/)", True, TEXT_COLOR), (right_x + 20, 360))
         try:
             st = os.statvfs('/')
@@ -186,6 +176,7 @@ class Dashboard:
             pass
 
 def main():
+    global screen  # <--- ВОТ ЭТА СТРОКА ВСЁ ИСПРАВЛЯЕТ
     dashboard = Dashboard()
     running = True
     fullscreen = False
@@ -211,7 +202,6 @@ def main():
                 if not fullscreen:
                     screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
 
-        # Обновление данных раз в секунду
         if update_timer >= 1.0:
             dashboard.update_stats()
             update_timer = 0
