@@ -5,7 +5,9 @@ import time
 
 # --- Настройки ---
 WIDTH, HEIGHT = 1000, 700
+MIN_WIDTH, MIN_HEIGHT = 850, 600  # МИНИМАЛЬНЫЙ РАЗМЕР ОКНА
 FPS = 60
+
 BG_COLOR = (18, 20, 26)
 PANEL_COLOR = (28, 32, 40)
 GRID_COLOR = (40, 45, 55)
@@ -17,7 +19,7 @@ NET_COLOR = (255, 100, 200)
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-pygame.display.set_caption("Mint System Dashboard v2.0")
+pygame.display.set_caption("Mint System Dashboard v2.1 (Adaptive)")
 clock = pygame.time.Clock()
 
 font_title = pygame.font.SysFont("dejavusans", 32, bold=True)
@@ -92,7 +94,6 @@ class Dashboard:
         if dt <= 0: dt = 1
         self.last_update = now
 
-        # CPU
         new_busy, new_total = get_cpu_usage()
         d_total = new_total - self.cpu_total
         d_busy = new_busy - self.cpu_busy
@@ -101,13 +102,11 @@ class Dashboard:
         self.cpu_history.append(cpu_pct)
         self.cpu_history.pop(0)
 
-        # RAM
         self.ram_used, self.ram_total = get_ram_usage()
         ram_pct = (self.ram_used / self.ram_total * 100) if self.ram_total > 0 else 0
         self.ram_history.append(ram_pct)
         self.ram_history.pop(0)
 
-        # Network
         new_rx, new_tx = get_net_usage()
         self.net_rx_speed = max(0, (new_rx - self.prev_net_rx) / dt)
         self.net_tx_speed = max(0, (new_tx - self.prev_net_tx) / dt)
@@ -115,7 +114,11 @@ class Dashboard:
 
     def draw_chart(self, surface, x, y, width, height, data, color, label, current_val_text):
         surface.blit(font_main.render(label, True, TEXT_COLOR), (x, y - 30))
-        surface.blit(font_small.render(current_val_text, True, color), (x + width - 100, y - 25))
+        
+        # Текст значения прижимаем к правому краю графика
+        val_surf = font_small.render(current_val_text, True, color)
+        val_rect = val_surf.get_rect(topright=(x + width, y - 25))
+        surface.blit(val_surf, val_rect)
         
         chart_rect = pygame.Rect(x, y, width, height)
         pygame.draw.rect(surface, PANEL_COLOR, chart_rect)
@@ -137,18 +140,40 @@ class Dashboard:
     def draw(self, surface):
         surface.fill(BG_COLOR)
         w, h = surface.get_size()
+        
+        # --- Динамические отступы ---
+        padding = 40
+        sidebar_w = 280
+        spacing = 20
 
-        surface.blit(font_title.render("Mint System Dashboard v2.0", True, ACCENT_COLOR), (40, 30))
-        fps_text = font_small.render(f"FPS: {int(clock.get_fps())} | Нажми F11 для фуллскрина | ESC для выхода", True, (100, 100, 100))
-        surface.blit(fps_text, (w - 500, 45))
+        # Header
+        surface.blit(font_title.render("Mint System Dashboard v2.1", True, ACCENT_COLOR), (padding, 30))
+        
+        # FPS текст прижимаем к правому верхнему углу
+        fps_text = font_small.render(f"FPS: {int(clock.get_fps())} | F11: Fullscreen | ESC: Exit", True, (100, 100, 100))
+        fps_rect = fps_text.get_rect(topright=(w - padding, 45))
+        surface.blit(fps_text, fps_rect)
 
-        chart_w = w - 400
-        self.draw_chart(surface, 40, 120, chart_w, 200, self.cpu_history, ACCENT_COLOR, "CPU Usage", f"{self.cpu_history[-1]:.1f}%")
-        self.draw_chart(surface, 40, 380, chart_w, 200, self.ram_history, GREEN_COLOR, "RAM Usage", 
+        # --- Расчет размеров графиков ---
+        # Доступная ширина для графиков = общая ширина - отступы - ширина правой панели - зазор
+        avail_chart_w = w - (padding * 2) - sidebar_w - spacing
+        
+        # Доступная высота делится на два графика (CPU и RAM)
+        # Отступ сверху 120px (заголовки), снизу 40px
+        avail_h = h - 150 - 40
+        chart_h = (avail_h - spacing) // 2
+
+        # Отрисовка графиков
+        self.draw_chart(surface, padding, 120, avail_chart_w, chart_h, self.cpu_history, ACCENT_COLOR, "CPU Usage", f"{self.cpu_history[-1]:.1f}%")
+        
+        ram_y = 120 + chart_h + spacing + 30 # +30 для заголовка второго графика
+        self.draw_chart(surface, padding, ram_y, avail_chart_w, chart_h, self.ram_history, GREEN_COLOR, "RAM Usage", 
                         f"{format_bytes(self.ram_used*1024)} / {format_bytes(self.ram_total*1024)}")
 
-        right_x = w - 320
-        pygame.draw.rect(surface, PANEL_COLOR, (right_x, 120, 280, 460), border_radius=10)
+        # --- Правая колонка ---
+        right_x = w - sidebar_w - padding
+        panel_h = h - 120 - 40 # Высота панели до нижнего края
+        pygame.draw.rect(surface, PANEL_COLOR, (right_x, 120, sidebar_w, panel_h), border_radius=10)
         
         surface.blit(font_main.render("Network Speed", True, TEXT_COLOR), (right_x + 20, 140))
         
@@ -168,15 +193,16 @@ class Dashboard:
             used = total - free
             pct = (used / total) * 100
             
-            pygame.draw.rect(surface, (15, 18, 25), (right_x + 20, 400, 240, 20), border_radius=5)
-            pygame.draw.rect(surface, YELLOW_COLOR, (right_x + 20, 400, 240 * (pct/100), 20), border_radius=5)
+            bar_w = sidebar_w - 40
+            pygame.draw.rect(surface, (15, 18, 25), (right_x + 20, 400, bar_w, 20), border_radius=5)
+            pygame.draw.rect(surface, YELLOW_COLOR, (right_x + 20, 400, bar_w * (pct/100), 20), border_radius=5)
             
             surface.blit(font_small.render(f"{format_bytes(used)} / {format_bytes(total)}", True, TEXT_COLOR), (right_x + 20, 430))
         except:
             pass
 
 def main():
-    global screen  # <--- ВОТ ЭТА СТРОКА ВСЁ ИСПРАВЛЯЕТ
+    global screen
     dashboard = Dashboard()
     running = True
     fullscreen = False
@@ -198,9 +224,14 @@ def main():
                         screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
                     else:
                         screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+            
+            # --- ОБРАБОТКА ИЗМЕНЕНИЯ РАЗМЕРА ОКНА С ОГРАНИЧЕНИЕМ ---
             if event.type == pygame.VIDEORESIZE:
                 if not fullscreen:
-                    screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                    # Берем новые размеры, но не меньше минимальных
+                    new_w = max(MIN_WIDTH, event.w)
+                    new_h = max(MIN_HEIGHT, event.h)
+                    screen = pygame.display.set_mode((new_w, new_h), pygame.RESIZABLE)
 
         if update_timer >= 1.0:
             dashboard.update_stats()
