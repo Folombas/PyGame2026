@@ -2,10 +2,11 @@ import pygame
 import sys
 import os
 import time
-import subprocess  # Импортируем для вызова системных команд
+import subprocess
+import signal  # Для отправки сигнала завершения процессам
 
 # --- Настройки ---
-WIDTH, HEIGHT = 1000, 750  # Немного увеличили высоту для таблицы
+WIDTH, HEIGHT = 1000, 750
 MIN_WIDTH, MIN_HEIGHT = 850, 650
 FPS = 60
 
@@ -21,13 +22,13 @@ RED_COLOR = (255, 80, 80)
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
-pygame.display.set_caption("Mint System Dashboard v3.0 (Top Processes)")
+pygame.display.set_caption("Mint System Dashboard v3.1 (Process Killer)")
 clock = pygame.time.Clock()
 
 font_title = pygame.font.SysFont("dejavusans", 32, bold=True)
 font_main = pygame.font.SysFont("dejavusans", 22)
 font_small = pygame.font.SysFont("dejavusans", 16)
-font_mono = pygame.font.SysFont("monospace", 16)  # Моноширинный шрифт для таблицы
+font_mono = pygame.font.SysFont("monospace", 16)
 
 # --- Сбор системных метрик ---
 def get_cpu_usage():
@@ -66,23 +67,19 @@ def get_net_usage():
 
 def get_top_processes():
     try:
-        # Вызываем ps и сортируем по загрузке CPU (-pcpu), берем топ-6 (1 заголовок + 5 процессов)
         result = subprocess.run(
             ['ps', '-eo', 'pid,pcpu,pmem,comm', '--sort=-pcpu'], 
             capture_output=True, text=True
         )
         lines = result.stdout.strip().split('\n')
         processes = []
-        for line in lines[1:6]: # Пропускаем заголовок и берем 5 строк
-            # split(None, 3) разбивает строку максимум на 4 части (по первому пробелу 3 раза)
-            # Это нужно, потому что имя процесса может содержать пробелы
+        for line in lines[1:6]: 
             parts = line.split(None, 3) 
             if len(parts) == 4:
                 pid, pcpu, pmem, comm = parts
                 processes.append((pid, pcpu, pmem, comm))
         return processes
     except Exception as e:
-        print(f"Ошибка чтения процессов: {e}")
         return []
 
 def format_bytes(bytes_val):
@@ -112,6 +109,12 @@ class Dashboard:
         
         self.top_processes = []
         self.last_update = time.time()
+        
+        # Для убийства процессов
+        self.my_pid = os.getpid()
+        self.selected_idx = -1
+        self.status_msg = ""
+        self.status_timer = 0
 
     def update_stats(self):
         now = time.time()
@@ -119,7 +122,6 @@ class Dashboard:
         if dt <= 0: dt = 1
         self.last_update = now
 
-        # CPU
         new_busy, new_total = get_cpu_usage()
         d_total = new_total - self.cpu_total
         d_busy = new_busy - self.cpu_busy
@@ -128,24 +130,57 @@ class Dashboard:
         self.cpu_history.append(cpu_pct)
         self.cpu_history.pop(0)
 
-        # RAM
         self.ram_used, self.ram_total = get_ram_usage()
         ram_pct = (self.ram_used / self.ram_total * 100) if self.ram_total > 0 else 0
         self.ram_history.append(ram_pct)
         self.ram_history.pop(0)
 
-        # Network
         new_rx, new_tx = get_net_usage()
         self.net_rx_speed = max(0, (new_rx - self.prev_net_rx) / dt)
         self.net_tx_speed = max(0, (new_tx - self.prev_net_tx) / dt)
         self.prev_net_rx, self.prev_net_tx = new_rx, new_tx
 
-        # Processes
         self.top_processes = get_top_processes()
+        
+        # Если выбранный процесс исчез (например, мы его убили), сбрасываем выделение
+        if self.selected_idx >= len(self.top_processes):
+            self.selected_idx = -1
+
+        if self.status_timer > 0:
+            self.status_timer -= 1
+
+    def kill_selected(self):
+        if self.selected_idx == -1 or self.selected_idx >= len(self.top_processes):
+            return
+        
+        pid_str, _, _, comm = self.top_processes[self.selected_idx]
+        pid = int(pid_str)
+        
+        # Защита: нельзя убить себя или систему
+        if pid == self.my_pid:
+            self.status_msg = "Error: Cannot kill dashboard itself!"
+            self.status_timer = 3
+            return
+        if pid <= 1:
+            self.status_msg = "Error: Cannot kill system process!"
+            self.status_timer = 3
+            return
+
+        try:
+            os.kill(pid, signal.SIGTERM)
+            self.status_msg = f"Killed {comm} (PID: {pid})"
+            self.status_timer = 3
+            self.selected_idx = -1
+            self.update_stats() # Сразу обновляем список
+        except PermissionError:
+            self.status_msg = f"Permission denied to kill {comm}!"
+            self.status_timer = 3
+        except Exception as e:
+            self.status_msg = f"Error: {str(e)}"
+            self.status_timer = 3
 
     def draw_chart(self, surface, x, y, width, height, data, color, label, current_val_text):
         surface.blit(font_main.render(label, True, TEXT_COLOR), (x, y - 30))
-        
         val_surf = font_small.render(current_val_text, True, color)
         val_rect = val_surf.get_rect(topright=(x + width, y - 25))
         surface.blit(val_surf, val_rect)
@@ -168,13 +203,20 @@ class Dashboard:
             pygame.draw.lines(surface, color, False, points, 3)
 
     def draw_processes(self, surface, x, y, width, height):
-        # Фон панели
         pygame.draw.rect(surface, PANEL_COLOR, (x, y, width, height), border_radius=10)
-        
-        # Заголовок таблицы
         surface.blit(font_main.render("Top Processes by CPU", True, TEXT_COLOR), (x + 20, y + 15))
         
-        # Шапка
+        # Кнопка KILL
+        kill_btn_rect = pygame.Rect(x + width - 150, y + 15, 130, 30)
+        if self.selected_idx != -1:
+            pygame.draw.rect(surface, RED_COLOR, kill_btn_rect, border_radius=5)
+            k_text = font_small.render("KILL SELECTED", True, (255, 255, 255))
+            surface.blit(k_text, (kill_btn_rect.centerx - k_text.get_width()//2, kill_btn_rect.centery - k_text.get_height()//2))
+        else:
+            pygame.draw.rect(surface, (50, 50, 60), kill_btn_rect, border_radius=5)
+            k_text = font_small.render("KILL SELECTED", True, (100, 100, 100))
+            surface.blit(k_text, (kill_btn_rect.centerx - k_text.get_width()//2, kill_btn_rect.centery - k_text.get_height()//2))
+
         header_y = y + 55
         surface.blit(font_mono.render("PID", True, (150, 150, 160)), (x + 20, header_y))
         surface.blit(font_mono.render("CPU%", True, (150, 150, 160)), (x + 100, header_y))
@@ -183,25 +225,26 @@ class Dashboard:
         
         pygame.draw.line(surface, GRID_COLOR, (x + 20, header_y + 25), (x + width - 20, header_y + 25), 1)
 
-        # Строки
         row_y = header_y + 35
         for i, (pid, pcpu, pmem, comm) in enumerate(self.top_processes):
-            # Чередование цветов (зебра)
-            if i % 2 == 0:
+            # Подсветка выбранной строки
+            if i == self.selected_idx:
+                pygame.draw.rect(surface, (60, 80, 120), (x + 15, row_y - 2, width - 30, 25), border_radius=5)
+            elif i % 2 == 0:
                 pygame.draw.rect(surface, (35, 40, 50), (x + 15, row_y - 2, width - 30, 25), border_radius=5)
 
-            # Если CPU > 50%, подсвечиваем красным
             cpu_color = RED_COLOR if float(pcpu) > 50.0 else GREEN_COLOR
             
             surface.blit(font_mono.render(pid, True, TEXT_COLOR), (x + 20, row_y))
             surface.blit(font_mono.render(pcpu, True, cpu_color), (x + 100, row_y))
             surface.blit(font_mono.render(pmem, True, TEXT_COLOR), (x + 180, row_y))
             
-            # Обрезаем длинное имя команды
             cmd_str = comm[:40] + "..." if len(comm) > 40 else comm
             surface.blit(font_mono.render(cmd_str, True, TEXT_COLOR), (x + 260, row_y))
             
             row_y += 30
+            
+        return row_y # Возвращаем Y для обработки кликов
 
     def draw(self, surface):
         surface.fill(BG_COLOR)
@@ -211,33 +254,30 @@ class Dashboard:
         sidebar_w = 280
         spacing = 20
 
-        surface.blit(font_title.render("Mint System Dashboard v3.0", True, ACCENT_COLOR), (padding, 30))
+        surface.blit(font_title.render("Mint System Dashboard v3.1", True, ACCENT_COLOR), (padding, 30))
         
         fps_text = font_small.render(f"FPS: {int(clock.get_fps())} | F11: Fullscreen | ESC: Exit", True, (100, 100, 100))
         fps_rect = fps_text.get_rect(topright=(w - padding, 45))
         surface.blit(fps_text, fps_rect)
 
-        # --- Расчет высот ---
-        # Высота таблицы процессов фиксирована (например, 220px)
-        process_panel_h = 220
-        
-        # Остальное место делим на два графика
+        process_panel_h = 240
         avail_chart_h = h - 150 - 40 - process_panel_h - spacing
         chart_h = (avail_chart_h - spacing) // 2
-        
-        # Ширина графиков
         avail_chart_w = w - (padding * 2) - sidebar_w - spacing
 
-        # Отрисовка графиков
         self.draw_chart(surface, padding, 120, avail_chart_w, chart_h, self.cpu_history, ACCENT_COLOR, "CPU Usage", f"{self.cpu_history[-1]:.1f}%")
         
         ram_y = 120 + chart_h + spacing + 30
         self.draw_chart(surface, padding, ram_y, avail_chart_w, chart_h, self.ram_history, GREEN_COLOR, "RAM Usage", 
                         f"{format_bytes(self.ram_used*1024)} / {format_bytes(self.ram_total*1024)}")
 
-        # Отрисовка панели процессов (внизу слева)
         process_y = ram_y + chart_h + spacing
         self.draw_processes(surface, padding, process_y, avail_chart_w, process_panel_h)
+
+        # Статусное сообщение (например, "Process Killed")
+        if self.status_timer > 0:
+            msg_surf = font_main.render(self.status_msg, True, YELLOW_COLOR)
+            surface.blit(msg_surf, (padding, h - 40))
 
         # --- Правая колонка ---
         right_x = w - sidebar_w - padding
@@ -293,7 +333,33 @@ def main():
                         screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
                     else:
                         screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+                if event.key == pygame.K_k:
+                    dashboard.kill_selected()
             
+            # Обработка клика мыши по таблице процессов
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                w, h = screen.get_size()
+                padding = 40
+                sidebar_w = 280
+                spacing = 20
+                process_panel_h = 240
+                avail_chart_h = h - 150 - 40 - process_panel_h - spacing
+                chart_h = (avail_chart_h - spacing) // 2
+                process_y = 120 + chart_h + spacing + 30 + chart_h + spacing
+                
+                # Проверяем попадание в кнопку Kill
+                kill_btn_rect = pygame.Rect(padding + (w - (padding*2) - sidebar_w - spacing) - 150, process_y + 15, 130, 30)
+                if kill_btn_rect.collidepoint(event.pos):
+                    dashboard.kill_selected()
+                else:
+                    # Проверяем попадание в строки таблицы
+                    header_y = process_y + 55
+                    row_y_start = header_y + 35
+                    if event.pos[1] > row_y_start:
+                        clicked_row = (event.pos[1] - row_y_start) // 30
+                        if 0 <= clicked_row < len(dashboard.top_processes):
+                            dashboard.selected_idx = clicked_row
+
             if event.type == pygame.VIDEORESIZE:
                 if not fullscreen:
                     new_w = max(MIN_WIDTH, event.w)
