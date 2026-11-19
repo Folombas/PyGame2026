@@ -29,10 +29,11 @@ pygame.display.set_caption("Neon Tic-Tac-Toe")
 clock = pygame.time.Clock()
 
 # --- Загрузка шрифтов ---
+# --- Загрузка шрифтов ---
 try:
-    font_title = pygame.font.Font("assets/fonts/Orbitron.ttf", 48)
-    font_main = pygame.font.Font("assets/fonts/Orbitron.ttf", 28)
-    font_small = pygame.font.Font("assets/fonts/Orbitron.ttf", 20)
+    font_title = pygame.font.Font("assets/fonts/RussoOne.ttf", 48)
+    font_main = pygame.font.Font("assets/fonts/RussoOne.ttf", 28)
+    font_small = pygame.font.Font("assets/fonts/RussoOne.ttf", 20)
 except:
     font_title = pygame.font.SysFont("dejavusans", 48, bold=True)
     font_main = pygame.font.SysFont("dejavusans", 28, bold=True)
