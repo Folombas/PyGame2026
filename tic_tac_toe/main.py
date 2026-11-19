@@ -4,7 +4,7 @@ import math
 import random
 
 # --- Настройки ---
-WIDTH, HEIGHT = 600, 800 # Чуть увеличили высоту для нижних кнопок
+WIDTH, HEIGHT = 600, 800
 FPS = 60
 GRID_SIZE = 3
 CELL_SIZE = 140
@@ -25,7 +25,7 @@ THINKING_COLOR = (255, 200, 50)
 pygame.init()
 pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Neon Tic-Tac-Toe")
+pygame.display.set_caption("Крестики-Нолики")
 clock = pygame.time.Clock()
 
 # Шрифты
@@ -75,19 +75,17 @@ class Board:
             return True
         return False
 
-        def check_winner(self):
+    def check_winner(self):
         # Проверка строк (горизонтальные линии)
         for i in range(3):
             if self.grid[i][0] == self.grid[i][1] == self.grid[i][2] and self.grid[i][0]:
                 self.winner = self.grid[i][0]
-                # Координаты (row, col) -> линия идет вправо
                 self.win_line = ((i, 0), (i, 1), (i, 2))
                 return
         # Проверка столбцов (вертикальные линии)
         for i in range(3):
             if self.grid[0][i] == self.grid[1][i] == self.grid[2][i] and self.grid[0][i]:
                 self.winner = self.grid[0][i]
-                # Координаты (row, col) -> линия идет вниз
                 self.win_line = ((0, i), (1, i), (2, i))
                 return
         # Проверка диагоналей
@@ -148,10 +146,9 @@ def get_ai_move(board, difficulty, ai_sym, player_sym):
     if difficulty == "Легко":
         return random.choice(moves)
     elif difficulty == "Средне":
-        if random.random() < 0.6: # 60% шанс на умный ход
+        if random.random() < 0.6:
             return random.choice(moves)
     
-    # Сложно (Минимакс)
     best_score = -math.inf
     best_move = moves[0]
     for r, c in moves:
@@ -169,25 +166,22 @@ def get_ai_move(board, difficulty, ai_sym, player_sym):
 # --- Главный класс игры ---
 class Game:
     def __init__(self):
-        self.state = "MENU"  # MENU, SETTINGS, PLAYING, PAUSED, GAME_OVER
+        self.state = "MENU"
         self.board = Board()
         
-        # Настройки
         self.difficulty = "Сложно"
         self.player_symbol = 'X'
         self.sound_enabled = True
         
-        # Игровой процесс
         self.current_turn = 'X'
         self.game_over = False
         self.hover_cell = None
         
-        # Анимации и ИИ
         self.ai_thinking = False
         self.ai_timer = 0
-        self.ai_think_delay = 0.8 # 0.8 секунды на подумать
+        self.ai_think_delay = 0.8
         
-        self.piece_anims = {} # (r, c) -> progress (0.0 to 1.0)
+        self.piece_anims = {}
         
         self.reset()
 
@@ -197,8 +191,6 @@ class Game:
         self.piece_anims.clear()
         self.ai_thinking = False
         self.ai_timer = 0
-        
-        # Если игрок выбрал 'O', то ИИ ('X') ходит первым
         self.current_turn = 'X' 
         if self.player_symbol == 'O':
             self.start_ai_turn()
@@ -213,7 +205,7 @@ class Game:
 
     def execute_move(self, r, c, symbol):
         if self.board.make_move(r, c, symbol):
-            self.piece_anims[(r, c)] = 0.0 # Запуск анимации
+            self.piece_anims[(r, c)] = 0.0
             if self.sound_enabled and snd_click: snd_click.play()
             
             if self.board.winner:
@@ -228,13 +220,11 @@ class Game:
                     self.start_ai_turn()
 
     def update(self, dt):
-        # Обновление анимаций
         for k in list(self.piece_anims.keys()):
-            self.piece_anims[k] += dt * 4.0 # Скорость анимации
+            self.piece_anims[k] += dt * 4.0
             if self.piece_anims[k] > 1.0:
                 self.piece_anims[k] = 1.0
                 
-        # Логика ИИ
         if self.state == "PLAYING" and self.ai_thinking and not self.game_over:
             self.ai_timer += dt
             if self.ai_timer >= self.ai_think_delay:
@@ -245,13 +235,9 @@ class Game:
 
     def draw(self, surface):
         surface.fill(BG_COLOR)
-        
-        if self.state == "MENU":
-            self.draw_menu(surface)
-        elif self.state == "SETTINGS":
-            self.draw_settings(surface)
-        elif self.state in ("PLAYING", "PAUSED", "GAME_OVER"):
-            self.draw_game(surface)
+        if self.state == "MENU": self.draw_menu(surface)
+        elif self.state == "SETTINGS": self.draw_settings(surface)
+        elif self.state in ("PLAYING", "PAUSED", "GAME_OVER"): self.draw_game(surface)
 
     def draw_menu(self, surface):
         title = font_title.render("КРЕСТИКИ-НОЛИКИ", True, PLAYER_COLOR)
@@ -259,19 +245,16 @@ class Game:
 
         mx, my = pygame.mouse.get_pos()
         
-        # Кнопка Старт
         btn_start = pygame.Rect(WIDTH//2 - 150, 250, 300, 60)
         color = BUTTON_HOVER if btn_start.collidepoint(mx, my) else BUTTON_COLOR
         pygame.draw.rect(surface, color, btn_start, border_radius=15)
         surface.blit(font_main.render("СТАРТ ИГРЫ", True, TEXT_COLOR), (btn_start.centerx - 70, btn_start.centery - 15))
 
-        # Кнопка Настройки
         btn_settings = pygame.Rect(WIDTH//2 - 150, 340, 300, 60)
         color = BUTTON_HOVER if btn_settings.collidepoint(mx, my) else BUTTON_COLOR
         pygame.draw.rect(surface, color, btn_settings, border_radius=15)
         surface.blit(font_main.render("НАСТРОЙКИ", True, TEXT_COLOR), (btn_settings.centerx - 70, btn_settings.centery - 15))
 
-        # Кнопка Выход
         btn_exit = pygame.Rect(WIDTH//2 - 150, 430, 300, 60)
         color = BUTTON_HOVER if btn_exit.collidepoint(mx, my) else BUTTON_COLOR
         pygame.draw.rect(surface, color, btn_exit, border_radius=15)
@@ -283,61 +266,51 @@ class Game:
 
         mx, my = pygame.mouse.get_pos()
         
-        # Сложность
         btn_diff = pygame.Rect(WIDTH//2 - 200, 220, 400, 50)
         color = BUTTON_HOVER if btn_diff.collidepoint(mx, my) else BUTTON_COLOR
         pygame.draw.rect(surface, color, btn_diff, border_radius=10)
         surface.blit(font_main.render(f"Сложность: {self.difficulty}", True, TEXT_COLOR), (btn_diff.centerx - 130, btn_diff.centery - 12))
 
-        # Фигурка
         btn_sym = pygame.Rect(WIDTH//2 - 200, 290, 400, 50)
         color = BUTTON_HOVER if btn_sym.collidepoint(mx, my) else BUTTON_COLOR
         pygame.draw.rect(surface, color, btn_sym, border_radius=10)
         surface.blit(font_main.render(f"Играть за: {self.player_symbol}", True, TEXT_COLOR), (btn_sym.centerx - 90, btn_sym.centery - 12))
 
-        # Звук
         btn_snd = pygame.Rect(WIDTH//2 - 200, 360, 400, 50)
         color = BUTTON_HOVER if btn_snd.collidepoint(mx, my) else BUTTON_COLOR
         pygame.draw.rect(surface, color, btn_snd, border_radius=10)
         snd_text = "Звук: ВКЛ" if self.sound_enabled else "Звук: ВЫКЛ"
         surface.blit(font_main.render(snd_text, True, TEXT_COLOR), (btn_snd.centerx - 70, btn_snd.centery - 12))
 
-        # Назад
         btn_back = pygame.Rect(WIDTH//2 - 150, 500, 300, 50)
         color = BUTTON_HOVER if btn_back.collidepoint(mx, my) else BUTTON_COLOR
         pygame.draw.rect(surface, color, btn_back, border_radius=10)
         surface.blit(font_main.render("НАЗАД", True, TEXT_COLOR), (btn_back.centerx - 40, btn_back.centery - 12))
 
     def draw_game(self, surface):
-        # Заголовок
-        title = font_title.render("NEON TIC-TAC-TOE", True, PLAYER_COLOR)
+        title = font_title.render("КРЕСТИКИ-НОЛИКИ", True, PLAYER_COLOR)
         surface.blit(title, (WIDTH//2 - title.get_width()//2, 30))
 
-        # Подсказка о том, чей ход
         if not self.game_over:
             turn_text = "ТВОЙ ХОД" if self.current_turn == self.player_symbol else "ИИ ДУМАЕТ..."
             color = PLAYER_COLOR if self.current_turn == self.player_symbol else THINKING_COLOR
-            # Мигание для ИИ
             if self.current_turn == self.get_ai_symbol() and self.ai_thinking and int(pygame.time.get_ticks() / 300) % 2 == 0:
-                color = (100, 100, 100) # Тускнеет
+                color = (100, 100, 100)
             surface.blit(font_small.render(turn_text, True, color), (WIDTH//2 - 60, 110))
 
-        # Сетка
         for i in range(1, GRID_SIZE):
             pygame.draw.line(surface, GRID_COLOR, (GRID_OFFSET_X + i*CELL_SIZE, GRID_OFFSET_Y), (GRID_OFFSET_X + i*CELL_SIZE, GRID_OFFSET_Y + GRID_SIZE*CELL_SIZE), 3)
             pygame.draw.line(surface, GRID_COLOR, (GRID_OFFSET_X, GRID_OFFSET_Y + i*CELL_SIZE), (GRID_OFFSET_X + GRID_SIZE*CELL_SIZE, GRID_OFFSET_Y + i*CELL_SIZE), 3)
 
-        # Наведение
         if self.hover_cell and not self.game_over and self.current_turn == self.player_symbol and not self.ai_thinking:
             hr, hc = self.hover_cell
             if self.board.grid[hr][hc] is None:
                 pygame.draw.rect(surface, (30, 35, 50), (GRID_OFFSET_X + hc*CELL_SIZE, GRID_OFFSET_Y + hr*CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
-        # Фигуры с анимацией
         for r in range(GRID_SIZE):
             for c in range(GRID_SIZE):
                 if self.board.grid[r][c]:
-                    anim_progress = self.piece_anims.get((r, c), 1.0) # Если нет анимации, рисуем сразу
+                    anim_progress = self.piece_anims.get((r, c), 1.0)
                     center = (GRID_OFFSET_X + c*CELL_SIZE + CELL_SIZE//2, GRID_OFFSET_Y + r*CELL_SIZE + CELL_SIZE//2)
                     color = PLAYER_COLOR if self.board.grid[r][c] == self.player_symbol else AI_COLOR
                     
@@ -350,13 +323,11 @@ class Game:
                         if radius > 2:
                             pygame.draw.circle(surface, color, center, radius, int(8 * anim_progress))
 
-        # Линия победы
         if self.board.win_line:
             start = (GRID_OFFSET_X + self.board.win_line[0][1]*CELL_SIZE + CELL_SIZE//2, GRID_OFFSET_Y + self.board.win_line[0][0]*CELL_SIZE + CELL_SIZE//2)
             end = (GRID_OFFSET_X + self.board.win_line[2][1]*CELL_SIZE + CELL_SIZE//2, GRID_OFFSET_Y + self.board.win_line[2][0]*CELL_SIZE + CELL_SIZE//2)
             pygame.draw.line(surface, WIN_LINE_COLOR, start, end, 8)
 
-        # Статус игры
         if self.game_over:
             if self.board.winner == "Draw": msg = "НИЧЬЯ!"
             elif self.board.winner == self.player_symbol: msg = "ТЫ ПОБЕДИЛ!"
@@ -364,13 +335,11 @@ class Game:
             status = font_main.render(msg, True, WIN_LINE_COLOR)
             surface.blit(status, (WIDTH//2 - status.get_width()//2, 630))
             
-            # Кнопка Заново
             btn_rect = pygame.Rect(WIDTH//2 - 100, 680, 200, 50)
             pygame.draw.rect(surface, BUTTON_COLOR, btn_rect, border_radius=10)
             btn_text = font_main.render("ЗАНОВО", True, TEXT_COLOR)
             surface.blit(btn_text, (btn_rect.centerx - btn_text.get_width()//2, btn_rect.centery - btn_text.get_height()//2))
             
-        # Кнопка В МЕНЮ (всегда)
         btn_menu = pygame.Rect(WIDTH//2 - 100, 740, 200, 40)
         mx, my = pygame.mouse.get_pos()
         color = BUTTON_HOVER if btn_menu.collidepoint(mx, my) else BUTTON_COLOR
@@ -378,7 +347,6 @@ class Game:
         menu_text = font_small.render("В МЕНЮ", True, TEXT_COLOR)
         surface.blit(menu_text, (btn_menu.centerx - menu_text.get_width()//2, btn_menu.centery - menu_text.get_height()//2))
 
-        # Пауза
         if self.state == "PAUSED":
             overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 200))
@@ -401,15 +369,11 @@ def main():
                 running = False
                 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                if game.state == "PLAYING":
-                    game.state = "PAUSED"
-                elif game.state == "PAUSED":
-                    game.state = "PLAYING"
-                elif game.state in ("SETTINGS", "GAME_OVER"):
-                    game.state = "MENU"
+                if game.state == "PLAYING": game.state = "PAUSED"
+                elif game.state == "PAUSED": game.state = "PLAYING"
+                elif game.state in ("SETTINGS", "GAME_OVER"): game.state = "MENU"
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                # === МЕНЮ ===
                 if game.state == "MENU":
                     if pygame.Rect(WIDTH//2 - 150, 250, 300, 60).collidepoint(event.pos):
                         game.reset()
@@ -419,7 +383,6 @@ def main():
                     elif pygame.Rect(WIDTH//2 - 150, 430, 300, 60).collidepoint(event.pos):
                         running = False
                         
-                # === НАСТРОЙКИ ===
                 elif game.state == "SETTINGS":
                     if pygame.Rect(WIDTH//2 - 200, 220, 400, 50).collidepoint(event.pos):
                         diffs = ["Легко", "Средне", "Сложно"]
@@ -431,17 +394,13 @@ def main():
                     elif pygame.Rect(WIDTH//2 - 150, 500, 300, 50).collidepoint(event.pos):
                         game.state = "MENU"
 
-                # === ИГРА ===
                 elif game.state == "PLAYING":
-                    # Кнопка в меню
                     if pygame.Rect(WIDTH//2 - 100, 740, 200, 40).collidepoint(event.pos):
                         game.state = "MENU"
-                        
                     elif game.game_over:
                         if pygame.Rect(WIDTH//2 - 100, 680, 200, 50).collidepoint(event.pos):
                             game.reset()
                     else:
-                        # Клик по клетке
                         if GRID_OFFSET_X <= mx < GRID_OFFSET_X + GRID_SIZE*CELL_SIZE and GRID_OFFSET_Y <= my < GRID_OFFSET_Y + GRID_SIZE*CELL_SIZE:
                             if game.current_turn == game.player_symbol and not game.ai_thinking:
                                 c = (mx - GRID_OFFSET_X) // CELL_SIZE
