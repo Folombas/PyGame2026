@@ -75,16 +75,22 @@ class Board:
             return True
         return False
 
-    def check_winner(self):
+        def check_winner(self):
+        # Проверка строк (горизонтальные линии)
         for i in range(3):
             if self.grid[i][0] == self.grid[i][1] == self.grid[i][2] and self.grid[i][0]:
                 self.winner = self.grid[i][0]
-                self.win_line = ((0, i), (1, i), (2, i))
-                return
-            if self.grid[0][i] == self.grid[1][i] == self.grid[2][i] and self.grid[0][i]:
-                self.winner = self.grid[0][i]
+                # Координаты (row, col) -> линия идет вправо
                 self.win_line = ((i, 0), (i, 1), (i, 2))
                 return
+        # Проверка столбцов (вертикальные линии)
+        for i in range(3):
+            if self.grid[0][i] == self.grid[1][i] == self.grid[2][i] and self.grid[0][i]:
+                self.winner = self.grid[0][i]
+                # Координаты (row, col) -> линия идет вниз
+                self.win_line = ((0, i), (1, i), (2, i))
+                return
+        # Проверка диагоналей
         if self.grid[0][0] == self.grid[1][1] == self.grid[2][2] and self.grid[0][0]:
             self.winner = self.grid[0][0]
             self.win_line = ((0, 0), (1, 1), (2, 2))
@@ -93,6 +99,7 @@ class Board:
             self.winner = self.grid[0][2]
             self.win_line = ((0, 2), (1, 1), (2, 0))
             return
+        # Ничья
         if not self.available_moves():
             self.winner = "Draw"
 
@@ -247,7 +254,7 @@ class Game:
             self.draw_game(surface)
 
     def draw_menu(self, surface):
-        title = font_title.render("NEON TIC-TAC-TOE", True, PLAYER_COLOR)
+        title = font_title.render("КРЕСТИКИ-НОЛИКИ", True, PLAYER_COLOR)
         surface.blit(title, (WIDTH//2 - title.get_width()//2, 100))
 
         mx, my = pygame.mouse.get_pos()
