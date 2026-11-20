@@ -2,6 +2,7 @@ import pygame
 import sys
 import math
 import random
+import os
 
 # --- Настройки ---
 WIDTH, HEIGHT = 600, 800
@@ -27,6 +28,25 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Крестики-Нолики")
 clock = pygame.time.Clock()
 
+# --- Загрузка ассетов ---
+try:
+    # Фон (если есть)
+    bg_image = pygame.image.load("assets/background.png").convert()
+    bg_image = pygame.transform.scale(bg_image, (WIDTH, HEIGHT))
+except:
+    bg_image = None
+
+try:
+    # Спрайты X и O
+    sprite_x = pygame.image.load("assets/sprites/x.png").convert_alpha()
+    sprite_o = pygame.image.load("assets/sprites/o.png").convert_alpha()
+    # Масштабируем под размер клетки
+    sprite_x = pygame.transform.scale(sprite_x, (CELL_SIZE - 20, CELL_SIZE - 20))
+    sprite_o = pygame.transform.scale(sprite_o, (CELL_SIZE - 20, CELL_SIZE - 20))
+except:
+    sprite_x = sprite_o = None
+
+# Шрифты
 try:
     font_title = pygame.font.Font("assets/fonts/RussoOne.ttf", 44)
     font_main = pygame.font.Font("assets/fonts/RussoOne.ttf", 24)
@@ -36,6 +56,7 @@ except:
     font_main = pygame.font.SysFont("dejavusans", 24, bold=True)
     font_small = pygame.font.SysFont("dejavusans", 18)
 
+# Звуки
 try:
     snd_click = pygame.mixer.Sound("assets/sounds/click.wav")
 except:
@@ -85,7 +106,7 @@ class Particle:
             pygame.draw.circle(surface, (r, g, b), (int(self.x), int(self.y)), self.size)
 
 
-# --- Звёзды фона ---
+# --- Звёзды фона (если нет фонового изображения) ---
 class Star:
     def __init__(self):
         self.x = random.uniform(0, WIDTH)
@@ -219,17 +240,14 @@ class Game:
         self.ai_think_delay = 0.8
         self.piece_anims = {}
         
-        # Счёт
         self.wins = 0
         self.losses = 0
         self.draws = 0
         
-        # Анимации победы
         self.win_line_progress = 0.0
         self.particles = []
         self.shake_timer = 0
         
-        # Фон
         self.stars = [Star() for _ in range(60)]
         
         self.reset()
@@ -317,14 +335,23 @@ class Game:
         if self.shake_timer > 0:
             offset = (random.randint(-5, 5), random.randint(-5, 5))
         
-        surface.fill(BG_COLOR)
-        for s in self.stars: s.draw(surface)
+        # Отрисовка фона
+        if bg_image:
+            surface.blit(bg_image, (0, 0))
+        else:
+            surface.fill(BG_COLOR)
+            for s in self.stars: s.draw(surface)
         
         if self.state == "MENU": self.draw_menu(surface)
         elif self.state == "SETTINGS": self.draw_settings(surface)
         elif self.state in ("PLAYING", "PAUSED", "GAME_OVER"): self.draw_game(surface, offset)
 
     def draw_menu(self, surface):
+        # Затемняем фон для читаемости
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 120))
+        surface.blit(overlay, (0, 0))
+        
         title = font_title.render("КРЕСТИКИ-НОЛИКИ", True, PLAYER_COLOR)
         surface.blit(title, (WIDTH//2 - title.get_width()//2, 60))
 
@@ -355,6 +382,10 @@ class Game:
         surface.blit(reset_text, (btn_reset.centerx - reset_text.get_width()//2, btn_reset.centery - reset_text.get_height()//2))
 
     def draw_settings(self, surface):
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 120))
+        surface.blit(overlay, (0, 0))
+        
         title = font_title.render("НАСТРОЙКИ", True, PLAYER_COLOR)
         surface.blit(title, (WIDTH//2 - title.get_width()//2, 100))
         mx, my = pygame.mouse.get_pos()
@@ -408,16 +439,28 @@ class Game:
             for c in range(GRID_SIZE):
                 if self.board.grid[r][c]:
                     anim_progress = self.piece_anims.get((r, c), 1.0)
-                    center = (GRID_OFFSET_X + c*CELL_SIZE + CELL_SIZE//2 + ox, GRID_OFFSET_Y + r*CELL_SIZE + CELL_SIZE//2 + oy)
-                    color = PLAYER_COLOR if self.board.grid[r][c] == self.player_symbol else AI_COLOR
-                    if self.board.grid[r][c] == 'X':
-                        offset_x = 30 * anim_progress
-                        pygame.draw.line(surface, color, (center[0]-offset_x, center[1]-offset_x), (center[0]+offset_x, center[1]+offset_x), int(8 * anim_progress))
-                        pygame.draw.line(surface, color, (center[0]+offset_x, center[1]-offset_x), (center[0]-offset_x, center[1]+offset_x), int(8 * anim_progress))
+                    cell_center_x = GRID_OFFSET_X + c*CELL_SIZE + CELL_SIZE//2 + ox
+                    cell_center_y = GRID_OFFSET_Y + r*CELL_SIZE + CELL_SIZE//2 + oy
+                    
+                    # Отрисовка спрайтов с анимацией
+                    if sprite_x and sprite_o:
+                        sprite = sprite_x if self.board.grid[r][c] == 'X' else sprite_o
+                        scaled_size = int((CELL_SIZE - 20) * anim_progress)
+                        if scaled_size > 0:
+                            scaled_sprite = pygame.transform.scale(sprite, (scaled_size, scaled_size))
+                            rect = scaled_sprite.get_rect(center=(cell_center_x, cell_center_y))
+                            surface.blit(scaled_sprite, rect)
                     else:
-                        radius = int(40 * anim_progress)
-                        if radius > 2:
-                            pygame.draw.circle(surface, color, center, radius, int(8 * anim_progress))
+                        # Fallback на примитивы
+                        color = PLAYER_COLOR if self.board.grid[r][c] == self.player_symbol else AI_COLOR
+                        if self.board.grid[r][c] == 'X':
+                            offset_x = 30 * anim_progress
+                            pygame.draw.line(surface, color, (cell_center_x-offset_x, cell_center_y-offset_x), (cell_center_x+offset_x, cell_center_y+offset_x), int(8 * anim_progress))
+                            pygame.draw.line(surface, color, (cell_center_x+offset_x, cell_center_y-offset_x), (cell_center_x-offset_x, cell_center_y+offset_x), int(8 * anim_progress))
+                        else:
+                            radius = int(40 * anim_progress)
+                            if radius > 2:
+                                pygame.draw.circle(surface, color, (cell_center_x, cell_center_y), radius, int(8 * anim_progress))
 
         # Анимированная линия победы
         if self.board.win_line and self.win_line_progress > 0:
