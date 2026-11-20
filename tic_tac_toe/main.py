@@ -2,7 +2,6 @@ import pygame
 import sys
 import math
 import random
-import os
 
 # --- Настройки ---
 WIDTH, HEIGHT = 600, 800
@@ -12,15 +11,16 @@ CELL_SIZE = 140
 GRID_OFFSET_X = (WIDTH - GRID_SIZE * CELL_SIZE) // 2
 GRID_OFFSET_Y = 160
 
-BG_COLOR = (15, 15, 25)
-GRID_COLOR = (50, 50, 80)
+BG_COLOR = (15, 10, 25)
+GRID_COLOR = (30, 20, 50)
 PLAYER_COLOR = (0, 255, 255)
 AI_COLOR = (255, 50, 150)
 TEXT_COLOR = (220, 220, 255)
-BUTTON_COLOR = (40, 40, 60)
-BUTTON_HOVER = (60, 60, 90)
+BUTTON_COLOR = (30, 35, 50)
+BUTTON_HOVER = (50, 60, 80)
 WIN_LINE_COLOR = (255, 255, 100)
 THINKING_COLOR = (255, 200, 50)
+ACCENT_COLOR = (0, 180, 255)
 
 pygame.init()
 pygame.mixer.init()
@@ -30,17 +30,8 @@ clock = pygame.time.Clock()
 
 # --- Загрузка ассетов ---
 try:
-    # Фон (если есть)
-    bg_image = pygame.image.load("assets/background.png").convert()
-    bg_image = pygame.transform.scale(bg_image, (WIDTH, HEIGHT))
-except:
-    bg_image = None
-
-try:
-    # Спрайты X и O
     sprite_x = pygame.image.load("assets/sprites/x.png").convert_alpha()
     sprite_o = pygame.image.load("assets/sprites/o.png").convert_alpha()
-    # Масштабируем под размер клетки
     sprite_x = pygame.transform.scale(sprite_x, (CELL_SIZE - 20, CELL_SIZE - 20))
     sprite_o = pygame.transform.scale(sprite_o, (CELL_SIZE - 20, CELL_SIZE - 20))
 except:
@@ -76,12 +67,10 @@ snd_win = generate_tone(880, 0.3, 0.15)
 snd_lose = generate_tone(220, 0.4, 0.15)
 snd_draw = generate_tone(440, 0.2, 0.1)
 
-
-# --- Частицы (конфетти) ---
+# --- Частицы ---
 class Particle:
     def __init__(self, x, y, color):
-        self.x = x
-        self.y = y
+        self.x, self.y = x, y
         angle = random.uniform(0, math.pi * 2)
         speed = random.uniform(3, 9)
         self.vx = math.cos(angle) * speed
@@ -100,13 +89,10 @@ class Particle:
     def draw(self, surface):
         if self.life > 0:
             alpha = self.life / self.max_life
-            r = int(self.color[0] * alpha)
-            g = int(self.color[1] * alpha)
-            b = int(self.color[2] * alpha)
+            r, g, b = [int(c * alpha) for c in self.color]
             pygame.draw.circle(surface, (r, g, b), (int(self.x), int(self.y)), self.size)
 
-
-# --- Звёзды фона (если нет фонового изображения) ---
+# --- Звёзды ---
 class Star:
     def __init__(self):
         self.x = random.uniform(0, WIDTH)
@@ -124,7 +110,6 @@ class Star:
     def draw(self, surface):
         c = int(255 * self.brightness)
         pygame.draw.circle(surface, (c, c, c + 30), (int(self.x), int(self.y)), self.size)
-
 
 # --- Поле ---
 class Board:
@@ -146,30 +131,20 @@ class Board:
     def check_winner(self):
         for i in range(3):
             if self.grid[i][0] == self.grid[i][1] == self.grid[i][2] and self.grid[i][0]:
-                self.winner = self.grid[i][0]
-                self.win_line = ((i, 0), (i, 1), (i, 2))
-                return
+                self.winner, self.win_line = self.grid[i][0], ((i, 0), (i, 1), (i, 2)); return
         for i in range(3):
             if self.grid[0][i] == self.grid[1][i] == self.grid[2][i] and self.grid[0][i]:
-                self.winner = self.grid[0][i]
-                self.win_line = ((0, i), (1, i), (2, i))
-                return
+                self.winner, self.win_line = self.grid[0][i], ((0, i), (1, i), (2, i)); return
         if self.grid[0][0] == self.grid[1][1] == self.grid[2][2] and self.grid[0][0]:
-            self.winner = self.grid[0][0]
-            self.win_line = ((0, 0), (1, 1), (2, 2))
-            return
+            self.winner, self.win_line = self.grid[0][0], ((0, 0), (1, 1), (2, 2)); return
         if self.grid[0][2] == self.grid[1][1] == self.grid[2][0] and self.grid[0][2]:
-            self.winner = self.grid[0][2]
-            self.win_line = ((0, 2), (1, 1), (2, 0))
-            return
+            self.winner, self.win_line = self.grid[0][2], ((0, 2), (1, 1), (2, 0)); return
         if not self.available_moves():
             self.winner = "Draw"
 
     def reset(self):
         self.grid = [[None]*3 for _ in range(3)]
-        self.winner = None
-        self.win_line = None
-
+        self.winner = self.win_line = None
 
 # --- ИИ ---
 def minimax(board, depth, alpha, beta, is_maximizing, ai_sym, player_sym):
@@ -182,11 +157,8 @@ def minimax(board, depth, alpha, beta, is_maximizing, ai_sym, player_sym):
             board.grid[r][c] = ai_sym
             board.check_winner()
             eval = minimax(board, depth + 1, alpha, beta, False, ai_sym, player_sym)
-            board.grid[r][c] = None
-            board.winner = None
-            board.win_line = None
-            max_eval = max(max_eval, eval)
-            alpha = max(alpha, eval)
+            board.grid[r][c] = None; board.winner = None; board.win_line = None
+            max_eval = max(max_eval, eval); alpha = max(alpha, eval)
             if beta <= alpha: break
         return max_eval
     else:
@@ -195,14 +167,10 @@ def minimax(board, depth, alpha, beta, is_maximizing, ai_sym, player_sym):
             board.grid[r][c] = player_sym
             board.check_winner()
             eval = minimax(board, depth + 1, alpha, beta, True, ai_sym, player_sym)
-            board.grid[r][c] = None
-            board.winner = None
-            board.win_line = None
-            min_eval = min(min_eval, eval)
-            beta = min(beta, eval)
+            board.grid[r][c] = None; board.winner = None; board.win_line = None
+            min_eval = min(min_eval, eval); beta = min(beta, eval)
             if beta <= alpha: break
         return min_eval
-
 
 def get_ai_move(board, difficulty, ai_sym, player_sym):
     moves = board.available_moves()
@@ -216,15 +184,13 @@ def get_ai_move(board, difficulty, ai_sym, player_sym):
         board.grid[r][c] = ai_sym
         board.check_winner()
         score = minimax(board, 0, -math.inf, math.inf, False, ai_sym, player_sym)
-        board.grid[r][c] = None
-        board.winner = None
-        board.win_line = None
+        board.grid[r][c] = None; board.winner = None; board.win_line = None
         if score > best_score:
             best_score = score
             best_move = (r, c)
     return best_move
 
-
+# --- Игра ---
 class Game:
     def __init__(self):
         self.state = "MENU"
@@ -240,16 +206,11 @@ class Game:
         self.ai_think_delay = 0.8
         self.piece_anims = {}
         
-        self.wins = 0
-        self.losses = 0
-        self.draws = 0
-        
+        self.wins = 0; self.losses = 0; self.draws = 0
         self.win_line_progress = 0.0
         self.particles = []
         self.shake_timer = 0
-        
-        self.stars = [Star() for _ in range(60)]
-        
+        self.stars = [Star() for _ in range(80)]
         self.reset()
 
     def reset(self):
@@ -262,8 +223,7 @@ class Game:
         self.particles.clear()
         self.shake_timer = 0
         self.current_turn = 'X'
-        if self.player_symbol == 'O':
-            self.start_ai_turn()
+        if self.player_symbol == 'O': self.start_ai_turn()
 
     def get_ai_symbol(self):
         return 'O' if self.player_symbol == 'X' else 'X'
@@ -281,13 +241,9 @@ class Game:
             if self.board.winner:
                 self.game_over = True
                 self.win_line_progress = 0.0
-                
-                if self.board.winner == self.player_symbol:
-                    self.wins += 1
-                elif self.board.winner == self.get_ai_symbol():
-                    self.losses += 1
-                else:
-                    self.draws += 1
+                if self.board.winner == self.player_symbol: self.wins += 1
+                elif self.board.winner == self.get_ai_symbol(): self.losses += 1
+                else: self.draws += 1
                 
                 if self.board.win_line:
                     for _ in range(60):
@@ -295,8 +251,7 @@ class Game:
                         cy = GRID_OFFSET_Y + random.uniform(0, GRID_SIZE * CELL_SIZE)
                         color = PLAYER_COLOR if self.board.winner == self.player_symbol else AI_COLOR
                         self.particles.append(Particle(cx, cy, color))
-                    if self.board.winner == self.player_symbol:
-                        self.shake_timer = 20
+                    if self.board.winner == self.player_symbol: self.shake_timer = 20
                 
                 if self.sound_enabled:
                     if self.board.winner == self.player_symbol: snd_win.play()
@@ -304,8 +259,7 @@ class Game:
                     else: snd_draw.play()
             else:
                 self.current_turn = self.get_ai_symbol() if symbol == self.player_symbol else self.player_symbol
-                if self.current_turn == self.get_ai_symbol():
-                    self.start_ai_turn()
+                if self.current_turn == self.get_ai_symbol(): self.start_ai_turn()
 
     def update(self, dt):
         for k in list(self.piece_anims.keys()):
@@ -332,49 +286,43 @@ class Game:
 
     def draw(self, surface):
         offset = (0, 0)
-        if self.shake_timer > 0:
-            offset = (random.randint(-5, 5), random.randint(-5, 5))
+        if self.shake_timer > 0: offset = (random.randint(-5, 5), random.randint(-5, 5))
         
-        # Отрисовка фона
-        if bg_image:
-            surface.blit(bg_image, (0, 0))
-        else:
-            surface.fill(BG_COLOR)
-            for s in self.stars: s.draw(surface)
+        # --- Процедурный фон ---
+        surface.fill(BG_COLOR)
+        for i in range(0, WIDTH, 40): pygame.draw.line(surface, GRID_COLOR, (i, 0), (i, HEIGHT), 1)
+        for i in range(0, HEIGHT, 40): pygame.draw.line(surface, GRID_COLOR, (0, i), (WIDTH, i), 1)
+        for s in self.stars: s.draw(surface)
         
         if self.state == "MENU": self.draw_menu(surface)
         elif self.state == "SETTINGS": self.draw_settings(surface)
         elif self.state in ("PLAYING", "PAUSED", "GAME_OVER"): self.draw_game(surface, offset)
 
     def draw_menu(self, surface):
-        # Затемняем фон для читаемости
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 120))
-        surface.blit(overlay, (0, 0))
-        
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA); overlay.fill((0, 0, 0, 100)); surface.blit(overlay, (0, 0))
         title = font_title.render("КРЕСТИКИ-НОЛИКИ", True, PLAYER_COLOR)
+        for dx in [-2, 2]:
+            for dy in [-2, 2]:
+                glow = font_title.render("КРЕСТИКИ-НОЛИКИ", True, (0, 100, 100))
+                surface.blit(glow, (WIDTH//2 - title.get_width()//2 + dx, 60 + dy))
         surface.blit(title, (WIDTH//2 - title.get_width()//2, 60))
 
+        score_rect = pygame.Rect(WIDTH//2 - 180, 140, 360, 40)
+        pygame.draw.rect(surface, (20, 25, 40), score_rect, border_radius=10)
+        pygame.draw.rect(surface, ACCENT_COLOR, score_rect, 2, border_radius=10)
         score_text = font_small.render(f"Побед: {self.wins}  |  Поражений: {self.losses}  |  Ничьих: {self.draws}", True, TEXT_COLOR)
         surface.blit(score_text, (WIDTH//2 - score_text.get_width()//2, 150))
 
         mx, my = pygame.mouse.get_pos()
-        
-        btn_start = pygame.Rect(WIDTH//2 - 150, 220, 300, 60)
-        color = BUTTON_HOVER if btn_start.collidepoint(mx, my) else BUTTON_COLOR
-        pygame.draw.rect(surface, color, btn_start, border_radius=15)
-        surface.blit(font_main.render("СТАРТ ИГРЫ", True, TEXT_COLOR), (btn_start.centerx - 70, btn_start.centery - 15))
+        btns = [("СТАРТ ИГРЫ", 220, "start"), ("НАСТРОЙКИ", 310, "settings"), ("ВЫХОД", 400, "exit")]
+        for text, y_pos, action in btns:
+            btn = pygame.Rect(WIDTH//2 - 150, y_pos, 300, 60)
+            color = BUTTON_HOVER if btn.collidepoint(mx, my) else BUTTON_COLOR
+            pygame.draw.rect(surface, color, btn, border_radius=15)
+            pygame.draw.rect(surface, ACCENT_COLOR, btn, 2, border_radius=15)
+            t_surf = font_main.render(text, True, TEXT_COLOR)
+            surface.blit(t_surf, (btn.centerx - t_surf.get_width()//2, btn.centery - t_surf.get_height()//2))
 
-        btn_settings = pygame.Rect(WIDTH//2 - 150, 310, 300, 60)
-        color = BUTTON_HOVER if btn_settings.collidepoint(mx, my) else BUTTON_COLOR
-        pygame.draw.rect(surface, color, btn_settings, border_radius=15)
-        surface.blit(font_main.render("НАСТРОЙКИ", True, TEXT_COLOR), (btn_settings.centerx - 70, btn_settings.centery - 15))
-
-        btn_exit = pygame.Rect(WIDTH//2 - 150, 400, 300, 60)
-        color = BUTTON_HOVER if btn_exit.collidepoint(mx, my) else BUTTON_COLOR
-        pygame.draw.rect(surface, color, btn_exit, border_radius=15)
-        surface.blit(font_main.render("ВЫХОД", True, TEXT_COLOR), (btn_exit.centerx - 35, btn_exit.centery - 15))
-        
         btn_reset = pygame.Rect(WIDTH//2 - 100, 500, 200, 40)
         color = (80, 40, 40) if btn_reset.collidepoint(mx, my) else (50, 25, 25)
         pygame.draw.rect(surface, color, btn_reset, border_radius=8)
@@ -382,37 +330,37 @@ class Game:
         surface.blit(reset_text, (btn_reset.centerx - reset_text.get_width()//2, btn_reset.centery - reset_text.get_height()//2))
 
     def draw_settings(self, surface):
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 120))
-        surface.blit(overlay, (0, 0))
-        
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA); overlay.fill((0, 0, 0, 150)); surface.blit(overlay, (0, 0))
         title = font_title.render("НАСТРОЙКИ", True, PLAYER_COLOR)
         surface.blit(title, (WIDTH//2 - title.get_width()//2, 100))
         mx, my = pygame.mouse.get_pos()
         
-        btn_diff = pygame.Rect(WIDTH//2 - 200, 220, 400, 50)
-        color = BUTTON_HOVER if btn_diff.collidepoint(mx, my) else BUTTON_COLOR
-        pygame.draw.rect(surface, color, btn_diff, border_radius=10)
-        surface.blit(font_main.render(f"Сложность: {self.difficulty}", True, TEXT_COLOR), (btn_diff.centerx - 130, btn_diff.centery - 12))
-
-        btn_sym = pygame.Rect(WIDTH//2 - 200, 290, 400, 50)
-        color = BUTTON_HOVER if btn_sym.collidepoint(mx, my) else BUTTON_COLOR
-        pygame.draw.rect(surface, color, btn_sym, border_radius=10)
-        surface.blit(font_main.render(f"Играть за: {self.player_symbol}", True, TEXT_COLOR), (btn_sym.centerx - 90, btn_sym.centery - 12))
-
-        btn_snd = pygame.Rect(WIDTH//2 - 200, 360, 400, 50)
-        color = BUTTON_HOVER if btn_snd.collidepoint(mx, my) else BUTTON_COLOR
-        pygame.draw.rect(surface, color, btn_snd, border_radius=10)
-        snd_text = "Звук: ВКЛ" if self.sound_enabled else "Звук: ВЫКЛ"
-        surface.blit(font_main.render(snd_text, True, TEXT_COLOR), (btn_snd.centerx - 70, btn_snd.centery - 12))
+        settings = [
+            (f"Сложность: {self.difficulty}", 220, "diff"),
+            (f"Играть за: {self.player_symbol}", 290, "sym"),
+            (f"Звук: {'ВКЛ' if self.sound_enabled else 'ВЫКЛ'}", 360, "snd")
+        ]
+        for text, y_pos, action in settings:
+            btn = pygame.Rect(WIDTH//2 - 200, y_pos, 400, 50)
+            color = BUTTON_HOVER if btn.collidepoint(mx, my) else BUTTON_COLOR
+            pygame.draw.rect(surface, color, btn, border_radius=10)
+            pygame.draw.rect(surface, ACCENT_COLOR, btn, 2, border_radius=10)
+            t_surf = font_main.render(text, True, TEXT_COLOR)
+            surface.blit(t_surf, (btn.centerx - t_surf.get_width()//2, btn.centery - t_surf.get_height()//2))
 
         btn_back = pygame.Rect(WIDTH//2 - 150, 500, 300, 50)
         color = BUTTON_HOVER if btn_back.collidepoint(mx, my) else BUTTON_COLOR
         pygame.draw.rect(surface, color, btn_back, border_radius=10)
-        surface.blit(font_main.render("НАЗАД", True, TEXT_COLOR), (btn_back.centerx - 40, btn_back.centery - 12))
+        pygame.draw.rect(surface, ACCENT_COLOR, btn_back, 2, border_radius=10)
+        back_surf = font_main.render("НАЗАД", True, TEXT_COLOR)
+        surface.blit(back_surf, (btn_back.centerx - back_surf.get_width()//2, btn_back.centery - back_surf.get_height()//2))
 
     def draw_game(self, surface, offset):
         ox, oy = offset
+        # Подложка под поле
+        pygame.draw.rect(surface, (20, 25, 40), (GRID_OFFSET_X - 10 + ox, GRID_OFFSET_Y - 10 + oy, GRID_SIZE*CELL_SIZE + 20, GRID_SIZE*CELL_SIZE + 20), border_radius=15)
+        pygame.draw.rect(surface, ACCENT_COLOR, (GRID_OFFSET_X - 10 + ox, GRID_OFFSET_Y - 10 + oy, GRID_SIZE*CELL_SIZE + 20, GRID_SIZE*CELL_SIZE + 20), 2, border_radius=15)
+
         title = font_title.render("КРЕСТИКИ-НОЛИКИ", True, PLAYER_COLOR)
         surface.blit(title, (WIDTH//2 - title.get_width()//2 + ox, 20 + oy))
         
@@ -427,13 +375,13 @@ class Game:
             surface.blit(font_small.render(turn_text, True, color), (WIDTH//2 - 60 + ox, 110 + oy))
 
         for i in range(1, GRID_SIZE):
-            pygame.draw.line(surface, GRID_COLOR, (GRID_OFFSET_X + i*CELL_SIZE + ox, GRID_OFFSET_Y + oy), (GRID_OFFSET_X + i*CELL_SIZE + ox, GRID_OFFSET_Y + GRID_SIZE*CELL_SIZE + oy), 3)
-            pygame.draw.line(surface, GRID_COLOR, (GRID_OFFSET_X + ox, GRID_OFFSET_Y + i*CELL_SIZE + oy), (GRID_OFFSET_X + GRID_SIZE*CELL_SIZE + ox, GRID_OFFSET_Y + i*CELL_SIZE + oy), 3)
+            pygame.draw.line(surface, (60, 70, 100), (GRID_OFFSET_X + i*CELL_SIZE + ox, GRID_OFFSET_Y + oy), (GRID_OFFSET_X + i*CELL_SIZE + ox, GRID_OFFSET_Y + GRID_SIZE*CELL_SIZE + oy), 4)
+            pygame.draw.line(surface, (60, 70, 100), (GRID_OFFSET_X + ox, GRID_OFFSET_Y + i*CELL_SIZE + oy), (GRID_OFFSET_X + GRID_SIZE*CELL_SIZE + ox, GRID_OFFSET_Y + i*CELL_SIZE + oy), 4)
 
         if self.hover_cell and not self.game_over and self.current_turn == self.player_symbol and not self.ai_thinking:
             hr, hc = self.hover_cell
             if self.board.grid[hr][hc] is None:
-                pygame.draw.rect(surface, (30, 35, 50), (GRID_OFFSET_X + hc*CELL_SIZE + ox, GRID_OFFSET_Y + hr*CELL_SIZE + oy, CELL_SIZE, CELL_SIZE))
+                pygame.draw.rect(surface, (40, 50, 70), (GRID_OFFSET_X + hc*CELL_SIZE + ox, GRID_OFFSET_Y + hr*CELL_SIZE + oy, CELL_SIZE, CELL_SIZE))
 
         for r in range(GRID_SIZE):
             for c in range(GRID_SIZE):
@@ -442,7 +390,6 @@ class Game:
                     cell_center_x = GRID_OFFSET_X + c*CELL_SIZE + CELL_SIZE//2 + ox
                     cell_center_y = GRID_OFFSET_Y + r*CELL_SIZE + CELL_SIZE//2 + oy
                     
-                    # Отрисовка спрайтов с анимацией
                     if sprite_x and sprite_o:
                         sprite = sprite_x if self.board.grid[r][c] == 'X' else sprite_o
                         scaled_size = int((CELL_SIZE - 20) * anim_progress)
@@ -451,7 +398,6 @@ class Game:
                             rect = scaled_sprite.get_rect(center=(cell_center_x, cell_center_y))
                             surface.blit(scaled_sprite, rect)
                     else:
-                        # Fallback на примитивы
                         color = PLAYER_COLOR if self.board.grid[r][c] == self.player_symbol else AI_COLOR
                         if self.board.grid[r][c] == 'X':
                             offset_x = 30 * anim_progress
@@ -462,7 +408,6 @@ class Game:
                             if radius > 2:
                                 pygame.draw.circle(surface, color, (cell_center_x, cell_center_y), radius, int(8 * anim_progress))
 
-        # Анимированная линия победы
         if self.board.win_line and self.win_line_progress > 0:
             start = (GRID_OFFSET_X + self.board.win_line[0][1]*CELL_SIZE + CELL_SIZE//2 + ox, GRID_OFFSET_Y + self.board.win_line[0][0]*CELL_SIZE + CELL_SIZE//2 + oy)
             end = (GRID_OFFSET_X + self.board.win_line[2][1]*CELL_SIZE + CELL_SIZE//2 + ox, GRID_OFFSET_Y + self.board.win_line[2][0]*CELL_SIZE + CELL_SIZE//2 + oy)
@@ -479,6 +424,7 @@ class Game:
             surface.blit(status, (WIDTH//2 - status.get_width()//2, 630))
             btn_rect = pygame.Rect(WIDTH//2 - 100, 680, 200, 50)
             pygame.draw.rect(surface, BUTTON_COLOR, btn_rect, border_radius=10)
+            pygame.draw.rect(surface, ACCENT_COLOR, btn_rect, 2, border_radius=10)
             btn_text = font_main.render("ЗАНОВО", True, TEXT_COLOR)
             surface.blit(btn_text, (btn_rect.centerx - btn_text.get_width()//2, btn_rect.centery - btn_text.get_height()//2))
             
@@ -486,18 +432,16 @@ class Game:
         mx, my = pygame.mouse.get_pos()
         color = BUTTON_HOVER if btn_menu.collidepoint(mx, my) else BUTTON_COLOR
         pygame.draw.rect(surface, color, btn_menu, border_radius=8)
+        pygame.draw.rect(surface, ACCENT_COLOR, btn_menu, 2, border_radius=8)
         menu_text = font_small.render("В МЕНЮ", True, TEXT_COLOR)
         surface.blit(menu_text, (btn_menu.centerx - menu_text.get_width()//2, btn_menu.centery - menu_text.get_height()//2))
 
         if self.state == "PAUSED":
-            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200))
-            surface.blit(overlay, (0, 0))
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA); overlay.fill((0, 0, 0, 200)); surface.blit(overlay, (0, 0))
             pause_text = font_title.render("ПАУЗА", True, WIN_LINE_COLOR)
             surface.blit(pause_text, (WIDTH//2 - pause_text.get_width()//2, HEIGHT//2 - 50))
             cont_text = font_small.render("ESC - Продолжить", True, TEXT_COLOR)
             surface.blit(cont_text, (WIDTH//2 - cont_text.get_width()//2, HEIGHT//2 + 20))
-
 
 def main():
     game = Game()
@@ -508,7 +452,6 @@ def main():
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT: running = False
-                
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 if game.state == "PLAYING": game.state = "PAUSED"
                 elif game.state == "PAUSED": game.state = "PLAYING"
@@ -516,45 +459,34 @@ def main():
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if game.state == "MENU":
-                    if pygame.Rect(WIDTH//2 - 150, 220, 300, 60).collidepoint(event.pos):
-                        game.reset(); game.state = "PLAYING"
-                    elif pygame.Rect(WIDTH//2 - 150, 310, 300, 60).collidepoint(event.pos):
-                        game.state = "SETTINGS"
-                    elif pygame.Rect(WIDTH//2 - 150, 400, 300, 60).collidepoint(event.pos):
-                        running = False
-                    elif pygame.Rect(WIDTH//2 - 100, 500, 200, 40).collidepoint(event.pos):
-                        game.wins = 0; game.losses = 0; game.draws = 0
+                    if pygame.Rect(WIDTH//2 - 150, 220, 300, 60).collidepoint(event.pos): game.reset(); game.state = "PLAYING"
+                    elif pygame.Rect(WIDTH//2 - 150, 310, 300, 60).collidepoint(event.pos): game.state = "SETTINGS"
+                    elif pygame.Rect(WIDTH//2 - 150, 400, 300, 60).collidepoint(event.pos): running = False
+                    elif pygame.Rect(WIDTH//2 - 100, 500, 200, 40).collidepoint(event.pos): game.wins = game.losses = game.draws = 0
                         
                 elif game.state == "SETTINGS":
                     if pygame.Rect(WIDTH//2 - 200, 220, 400, 50).collidepoint(event.pos):
-                        diffs = ["Легко", "Средне", "Сложно"]
-                        game.difficulty = diffs[(diffs.index(game.difficulty) + 1) % 3]
+                        diffs = ["Легко", "Средне", "Сложно"]; game.difficulty = diffs[(diffs.index(game.difficulty) + 1) % 3]
                     elif pygame.Rect(WIDTH//2 - 200, 290, 400, 50).collidepoint(event.pos):
                         game.player_symbol = 'O' if game.player_symbol == 'X' else 'X'
                     elif pygame.Rect(WIDTH//2 - 200, 360, 400, 50).collidepoint(event.pos):
                         game.sound_enabled = not game.sound_enabled
-                    elif pygame.Rect(WIDTH//2 - 150, 500, 300, 50).collidepoint(event.pos):
-                        game.state = "MENU"
+                    elif pygame.Rect(WIDTH//2 - 150, 500, 300, 50).collidepoint(event.pos): game.state = "MENU"
 
                 elif game.state == "PLAYING":
-                    if pygame.Rect(WIDTH//2 - 100, 740, 200, 40).collidepoint(event.pos):
-                        game.state = "MENU"
+                    if pygame.Rect(WIDTH//2 - 100, 740, 200, 40).collidepoint(event.pos): game.state = "MENU"
                     elif game.game_over:
-                        if pygame.Rect(WIDTH//2 - 100, 680, 200, 50).collidepoint(event.pos):
-                            game.reset()
+                        if pygame.Rect(WIDTH//2 - 100, 680, 200, 50).collidepoint(event.pos): game.reset()
                     else:
                         if GRID_OFFSET_X <= mx < GRID_OFFSET_X + GRID_SIZE*CELL_SIZE and GRID_OFFSET_Y <= my < GRID_OFFSET_Y + GRID_SIZE*CELL_SIZE:
                             if game.current_turn == game.player_symbol and not game.ai_thinking:
-                                c = (mx - GRID_OFFSET_X) // CELL_SIZE
-                                r = (my - GRID_OFFSET_Y) // CELL_SIZE
-                                if game.board.grid[r][c] is None:
-                                    game.execute_move(r, c, game.player_symbol)
+                                c = (mx - GRID_OFFSET_X) // CELL_SIZE; r = (my - GRID_OFFSET_Y) // CELL_SIZE
+                                if game.board.grid[r][c] is None: game.execute_move(r, c, game.player_symbol)
 
             if event.type == pygame.MOUSEMOTION and game.state == "PLAYING" and not game.game_over:
                 if GRID_OFFSET_X <= mx < GRID_OFFSET_X + GRID_SIZE*CELL_SIZE and GRID_OFFSET_Y <= my < GRID_OFFSET_Y + GRID_SIZE*CELL_SIZE:
                     game.hover_cell = ((my - GRID_OFFSET_Y) // CELL_SIZE, (mx - GRID_OFFSET_X) // CELL_SIZE)
-                else:
-                    game.hover_cell = None
+                else: game.hover_cell = None
 
         game.update(dt)
         game.draw(screen)
@@ -562,7 +494,6 @@ def main():
 
     pygame.quit()
     sys.exit()
-
 
 if __name__ == "__main__":
     main()
